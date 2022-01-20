@@ -53,7 +53,8 @@
 
 -type digital_wallet_params() :: #{
     id := binary(),
-    data := digital_wallet_data()
+    payment_service := payment_service(),
+    token => binary()
 }.
 
 -type bank_card() :: #{
@@ -74,6 +75,9 @@
 -type token() :: binary().
 -type bin() :: binary().
 -type payment_system() :: #{
+    id := binary()
+}.
+-type payment_service() :: #{
     id := binary()
 }.
 
@@ -116,11 +120,9 @@
 
 -type digital_wallet() :: #{
     id := binary(),
-    data := digital_wallet_data()
+    payment_service := payment_service(),
+    token => binary()
 }.
-
--type digital_wallet_data() ::
-    {webmoney, #{}}.
 
 -export_type([resource_descriptor/0]).
 -export_type([resource/0]).
@@ -273,15 +275,17 @@ create_crypto_wallet(#{
 
 -spec create_digital_wallet(resource_digital_wallet_params()) -> {ok, resource()}.
 create_digital_wallet(#{
-    digital_wallet := #{
+    digital_wallet := Wallet = #{
         id := ID,
-        data := Data
+        payment_service := PaymentService
     }
 }) ->
+    Token = maps:get(token, Wallet, undefined),
     {ok,
         {digital_wallet, #{
-            digital_wallet => #{
+            digital_wallet => genlib_map:compact(#{
                 id => ID,
-                data => Data
-            }
+                payment_service => PaymentService,
+                token => Token
+            })
         }}}.
