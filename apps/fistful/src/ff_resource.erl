@@ -142,6 +142,8 @@
 -export_type([card_type/0]).
 
 -export([get_bin_data/2]).
+-export([check_resource/1]).
+-export([check_resource/2]).
 -export([create_resource/1]).
 -export([create_resource/2]).
 -export([create_bank_card_basic/3]).
@@ -217,6 +219,20 @@ get_bin_data(Token, undefined) ->
     ff_bin_data:get(Token, undefined);
 get_bin_data(Token, {bank_card, ResourceID}) ->
     ff_bin_data:get(Token, ResourceID).
+
+-spec check_resource(resource()) ->
+    valid | no_return().
+check_resource(Resource) ->
+    check_resource(ff_domain_config:head(), Resource).
+
+-spec check_resource(ff_domain_config:revision(), resource()) ->
+    valid | no_return().
+check_resource(Revision, {digital_wallet, #{digital_wallet := #{payment_service := PaymentService}}}) ->
+    MarshalledPaymentService = ff_dmsl_codec:marshal(payment_service, PaymentService),
+    {ok, _} = ff_domain_config:object(Revision, MarshalledPaymentService),
+    valid;
+check_resource(_, _) ->
+    valid.
 
 -spec create_resource(resource_params()) ->
     {ok, resource()}
