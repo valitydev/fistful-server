@@ -229,7 +229,7 @@ check_resource(Resource) ->
     valid | no_return().
 check_resource(Revision, {digital_wallet, #{digital_wallet := #{payment_service := PaymentService}}}) ->
     MarshalledPaymentService = ff_dmsl_codec:marshal(payment_service, PaymentService),
-    {ok, _} = ff_domain_config:object(Revision, MarshalledPaymentService),
+    {ok, _} = ff_domain_config:object(Revision, {payment_service, MarshalledPaymentService}),
     valid;
 check_resource(_, _) ->
     valid.
