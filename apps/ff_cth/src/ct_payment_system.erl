@@ -62,9 +62,6 @@ do_setup(Options0, C0) ->
     C1 = ct_helper:makeup_cfg([ct_helper:woody_ctx()], [{services, services(Options)} | C0]),
     ok = ct_helper:set_context(C1),
     ok = setup_dominant(Options, C1),
-    ok = ct_keyring:init(C1),
-    %% TODO rewrite timer , check keyring status from cds health checker
-    ok = timer:sleep(5000),
     ok = configure_processing_apps(Options),
     ok = ct_helper:unset_context(),
     [{payment_system, Processing0} | C1].
@@ -89,6 +86,10 @@ start_processing_apps(Options) ->
                 ip => {127, 0, 0, 1},
                 port => 8222,
                 handlers => [
+                    {
+                        <<"/bank">>,
+                        {{dmsl_withdrawals_provider_adapter_thrift, 'Adapter'}, {ff_ct_provider_handler, []}}
+                    },
                     {
                         <<"/quotebank">>,
                         {{dmsl_withdrawals_provider_adapter_thrift, 'Adapter'}, {ff_ct_provider_handler, []}}
@@ -550,7 +551,7 @@ domain_config(Options, C) ->
 
         ct_domain:inspector(?insp(1), <<"Low Life">>, ?prx(1), #{<<"risk_score">> => <<"low">>}),
         ct_domain:proxy(?prx(1), <<"Inspector proxy">>),
-        ct_domain:proxy(?prx(2), <<"Mocket proxy">>, <<"http://adapter-mocketbank:8022/proxy/mocketbank/p2p-credit">>),
+        ct_domain:proxy(?prx(2), <<"Mocket proxy">>, <<"http://localhost:8222/bank">>),
         ct_domain:proxy(?prx(3), <<"Quote proxy">>, <<"http://localhost:8222/quotebank">>),
         ct_domain:proxy(?prx(6), <<"Down proxy">>, <<"http://localhost:8222/downbank">>),
         ct_domain:proxy(?prx(7), <<"Another down proxy">>, <<"http://localhost:8222/downbank2">>),
