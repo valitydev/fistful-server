@@ -11,4 +11,6 @@ erl_crash.dump
 /.idea/
 *.beam
 /test/log/
-.image.dev
+# make stuff
+/.image.*
+Makefile.env

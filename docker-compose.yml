@@ -1,0 +1,99 @@
+version: '3'
+services:
+
+  testrunner:
+    image: $DEV_IMAGE_TAG
+    build:
+      dockerfile: Dockerfile.dev
+      context: .
+      args:
+        OTP_VERSION: $OTP_VERSION
+        THRIFT_VERSION: $THRIFT_VERSION
+    volumes:
+      - .:$PWD
+    hostname: fistful-server
+    depends_on:
+      # FIXME: Switch all service_started to service_healthy when its possible to debug its problems
+      machinegun:
+        condition: service_healthy
+      dominant:
+        condition: service_started
+      party-management:
+        condition: service_started
+      shumway:
+        condition: service_started
+    working_dir: $PWD
+    command: /sbin/init
+
+  dominant:
+    image: ghcr.io/valitydev/dominant:sha-8bd7828
+    command: /opt/dominant/bin/dominant foreground
+    depends_on:
+      machinegun:
+        condition: service_healthy
+    healthcheck:
+      test: "curl http://localhost:8022/"
+      interval: 5s
+      timeout: 1s
+      retries: 20
+
+  machinegun:
+    image: docker.io/rbkmoney/machinegun:c05a8c18cd4f7966d70b6ad84cac9429cdfe37ae
+    command: /opt/machinegun/bin/machinegun foreground
+    volumes:
+      - ./test/machinegun/config.yaml:/opt/machinegun/etc/config.yaml
+      - ./test/machinegun/cookie:/opt/machinegun/etc/cookie
+    healthcheck:
+      test: "curl http://localhost:8022/"
+      interval: 5s
+      timeout: 1s
+      retries: 20
+
+  shumway:
+    image: docker.io/rbkmoney/shumway:44eb989065b27be619acd16b12ebdb2288b46c36
+    restart: unless-stopped
+    entrypoint:
+      - java
+      - -Xmx512m
+      - -jar
+      - /opt/shumway/shumway.jar
+      - --spring.datasource.url=jdbc:postgresql://shumway-db:5432/shumway
+      - --spring.datasource.username=postgres
+      - --spring.datasource.password=postgres
+      - --management.metrics.export.statsd.enabled=false
+    depends_on:
+      shumway-db:
+        condition: service_healthy
+    healthcheck:
+      test: "curl http://localhost:8022/"
+      interval: 5s
+      timeout: 1s
+      retries: 20
+
+  party-management:
+    image: ghcr.io/valitydev/party-management:sha-a405fce
+    command: /opt/party-management/bin/party-management foreground
+    depends_on:
+      machinegun:
+        condition: service_healthy
+      dominant:
+        condition: service_started
+      shumway:
+        condition: service_started
+    healthcheck:
+      test: "curl http://localhost:8022/"
+      interval: 5s
+      timeout: 1s
+      retries: 20
+
+  shumway-db:
+    image: docker.io/library/postgres:9.6
+    environment:
+      - POSTGRES_DB=shumway
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5

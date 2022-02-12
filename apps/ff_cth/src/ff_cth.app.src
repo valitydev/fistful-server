@@ -7,8 +7,7 @@
         stdlib,
         genlib,
         woody,
-        damsel,
-        cds_proto
+        damsel
     ]},
     {env, []},
     {modules, []},

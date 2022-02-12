@@ -11,11 +11,14 @@
 DOTENV := $(shell grep -v '^\#' .env)
 
 # Development images
-DEV_IMAGE_TAG = wapi-dev
+DEV_IMAGE_TAG = $(TEST_CONTAINER_NAME)-dev
 DEV_IMAGE_ID = $(file < .image.dev)
 
-DOCKER ?= docker
+OCKER ?= docker
+DOCKERCOMPOSE ?= docker-compose
+DOCKERCOMPOSE_W_ENV = DEV_IMAGE_TAG=$(DEV_IMAGE_TAG) $(DOCKERCOMPOSE)
 REBAR ?= rebar3
+TEST_CONTAINER_NAME ?= testrunner
 
 all: compile
 
@@ -24,7 +27,7 @@ all: compile
 dev-image: .image.dev
 
 .image.dev: Dockerfile.dev .env
-	$(DOCKER) build $(DOTENV:%=--build-arg %) -f Dockerfile.dev -t $(DEV_IMAGE_TAG) .
+	env $(DOTENV) $(DOCKERCOMPOSE_W_ENV) build $(TEST_CONTAINER_NAME)
 	$(DOCKER) image ls -q -f "reference=$(DEV_IMAGE_ID)" | head -n1 > $@
 
 clean-dev-image:
@@ -37,6 +40,8 @@ DOCKER_WC_OPTIONS := -v $(PWD):$(PWD) --workdir $(PWD)
 DOCKER_WC_EXTRA_OPTIONS ?= --rm
 DOCKER_RUN = $(DOCKER) run -t $(DOCKER_WC_OPTIONS) $(DOCKER_WC_EXTRA_OPTIONS)
 
+DOCKERCOMPOSE_RUN = $(DOCKERCOMPOSE_W_ENV) run --rm $(DOCKER_WC_OPTIONS)
+
 # Utility tasks
 
 wc-shell: dev-image
@@ -44,6 +49,17 @@ wc-shell: dev-image
 
 wc-%: dev-image
 	$(DOCKER_RUN) $(DEV_IMAGE_TAG) make $*
+
+#  TODO docker compose down doesn't work yet
+wdeps-shell: dev-image
+	$(DOCKERCOMPOSE_RUN) $(TEST_CONTAINER_NAME) su; \
+	$(DOCKERCOMPOSE_W_ENV) down
+
+wdeps-%: dev-image
+	$(DOCKERCOMPOSE_RUN) -T $(TEST_CONTAINER_NAME) make $*; \
+	res=$$?; \
+	$(DOCKERCOMPOSE_W_ENV) down; \
+	exit $$res
 
 # Rebar tasks
 
