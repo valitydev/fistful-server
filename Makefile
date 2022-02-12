@@ -14,7 +14,7 @@ DOTENV := $(shell grep -v '^\#' .env)
 DEV_IMAGE_TAG = $(TEST_CONTAINER_NAME)-dev
 DEV_IMAGE_ID = $(file < .image.dev)
 
-OCKER ?= docker
+DOCKER ?= docker
 DOCKERCOMPOSE ?= docker-compose
 DOCKERCOMPOSE_W_ENV = DEV_IMAGE_TAG=$(DEV_IMAGE_TAG) $(DOCKERCOMPOSE)
 REBAR ?= rebar3

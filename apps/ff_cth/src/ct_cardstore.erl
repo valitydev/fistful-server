@@ -12,7 +12,7 @@
         exp_date => {integer(), integer()},
         cardholder_name => binary()
     }.
-bank_card(PAN, ExpDate, C) ->
+bank_card(PAN, ExpDate, _C) ->
     #{
         token => PAN,
         bin => binary:part(PAN, {0, 6}),
