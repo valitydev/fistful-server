@@ -22,7 +22,7 @@
     ]},
     {env, []},
     {maintainers, [
-        "Andrey Mayorov <mav@empayre.com>"
+        "Andrey Mayorov <a.mayorov@rbkmoney.com>"
     ]},
     {licenses, ["Apache 2.0"]},
     {links, ["https://github.com/valitydev/fistful-server"]}
