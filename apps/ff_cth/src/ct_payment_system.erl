@@ -62,8 +62,6 @@ do_setup(Options0, C0) ->
     C1 = ct_helper:makeup_cfg([ct_helper:woody_ctx()], [{services, services(Options)} | C0]),
     ok = ct_helper:set_context(C1),
     ok = setup_dominant(Options, C1),
-    %% TODO rewrite timer , check keyring status from cds health checker
-    ok = timer:sleep(5000),
     ok = configure_processing_apps(Options),
     ok = ct_helper:unset_context(),
     [{payment_system, Processing0} | C1].
@@ -499,7 +497,7 @@ domain_config(Options, C) ->
                                 {condition,
                                     {payment_tool,
                                         {digital_wallet, #domain_DigitalWalletCondition{
-                                            definition = {provider_is_deprecated, webmoney}
+                                            definition = {payment_service_is, ?pmtsrv(<<"webmoney">>)}
                                         }}}},
                             then_ = {value, [?prv(3)]}
                         },
@@ -553,7 +551,7 @@ domain_config(Options, C) ->
 
         ct_domain:inspector(?insp(1), <<"Low Life">>, ?prx(1), #{<<"risk_score">> => <<"low">>}),
         ct_domain:proxy(?prx(1), <<"Inspector proxy">>),
-        ct_domain:proxy(?prx(2), <<"Mocket proxy">>, <<"http://http://localhost:8222/bank">>),
+        ct_domain:proxy(?prx(2), <<"Mocket proxy">>, <<"http://localhost:8222/bank">>),
         ct_domain:proxy(?prx(3), <<"Quote proxy">>, <<"http://localhost:8222/quotebank">>),
         ct_domain:proxy(?prx(6), <<"Down proxy">>, <<"http://localhost:8222/downbank">>),
         ct_domain:proxy(?prx(7), <<"Another down proxy">>, <<"http://localhost:8222/downbank2">>),
