@@ -17,7 +17,6 @@
         dmt_client,
         shumpune_proto,
         party_client,
-        id_proto,
         binbase_proto
     ]},
     {env, []},
