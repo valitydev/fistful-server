@@ -230,11 +230,7 @@ services(Options) ->
         eventsink => "http://machinegun:8022/v1/event_sink",
         automaton => "http://machinegun:8022/v1/automaton",
         accounter => "http://shumway:8022/shumpune",
-        kds => "http://kds:8022/v2/keyring",
-        cds => "http://cds:8022/v2/storage",
-        identdocstore => "http://cds:8022/v1/identity_document_storage",
         partymgmt => "http://party-management:8022/v1/processing/partymgmt",
-        identification => "http://identification:8022/v1/identification",
         binbase => "http://localhost:8222/binbase"
     },
     maps:get(services, Options, Default).
