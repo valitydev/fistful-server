@@ -440,7 +440,7 @@ create(Params) ->
             PartyRevision,
             DomainRevision
         ),
-        valid = unwrap(validate_withdrawal_creation(Terms, Body, Wallet, Destination)),
+        valid = unwrap(validate_withdrawal_creation(Terms, Body, Wallet, Destination, Resource)),
 
         TransferParams = genlib_map:compact(#{
             wallet_id => WalletID,
@@ -1167,10 +1167,14 @@ construct_payment_tool({bank_card, #{bank_card := ResourceBankCard}}) ->
     }};
 construct_payment_tool({crypto_wallet, #{crypto_wallet := #{currency := {Currency, _}}}}) ->
     {crypto_currency_deprecated, Currency};
-construct_payment_tool({digital_wallet, #{digital_wallet := Wallet = #{
-    id := ID,
-    payment_service := PaymentService
-}}}) ->
+construct_payment_tool(
+    {digital_wallet, #{
+        digital_wallet := Wallet = #{
+            id := ID,
+            payment_service := PaymentService
+        }
+    }}
+) ->
     Token = maps:get(token, Wallet, undefined),
     {digital_wallet, #domain_DigitalWallet{
         id = ID,
@@ -1209,7 +1213,7 @@ get_quote(Params = #{destination_id := DestinationID, body := Body, wallet_id :=
             PartyRevision,
             DomainRevision
         ),
-        valid = unwrap(validate_withdrawal_creation(Terms, Body, Wallet, Destination)),
+        valid = unwrap(validate_withdrawal_creation(Terms, Body, Wallet, Destination, Resource)),
         GetQuoteParams = #{
             base_params => Params,
             identity => Identity,
@@ -1361,12 +1365,13 @@ get_current_session_status(Withdrawal) ->
 
 %% Withdrawal validators
 
--spec validate_withdrawal_creation(terms(), body(), wallet(), destination()) ->
+-spec validate_withdrawal_creation(terms(), body(), wallet(), destination(), destination_resource()) ->
     {ok, valid}
     | {error, create_error()}.
-validate_withdrawal_creation(Terms, Body, Wallet, Destination) ->
+validate_withdrawal_creation(Terms, Body, Wallet, Destination, Resource) ->
     do(fun() ->
-        valid = unwrap(terms, validate_withdrawal_creation_terms(Terms, Body)),
+        Method = ff_resource:resource_method(Resource),
+        valid = unwrap(terms, validate_withdrawal_creation_terms(Terms, Body, Method)),
         valid = unwrap(validate_withdrawal_currency(Body, Wallet, Destination)),
         valid = unwrap(validate_destination_status(Destination)),
         valid = unwrap(validate_withdrawal_providers(Wallet, Destination))
@@ -1382,11 +1387,11 @@ validate_withdrawal_providers(Wallet, Destination) ->
         false -> {error, {identity_providers_mismatch, {WalletProvider, DestinationProvider}}}
     end.
 
--spec validate_withdrawal_creation_terms(terms(), body()) ->
+-spec validate_withdrawal_creation_terms(terms(), body(), ff_resource:resource_method()) ->
     {ok, valid}
     | {error, ff_party:validate_withdrawal_creation_error()}.
-validate_withdrawal_creation_terms(Terms, Body) ->
-    ff_party:validate_withdrawal_creation(Terms, Body).
+validate_withdrawal_creation_terms(Terms, Body, Method) ->
+    ff_party:validate_withdrawal_creation(Terms, Body, Method).
 
 -spec validate_withdrawal_currency(body(), wallet(), destination()) ->
     {ok, valid}

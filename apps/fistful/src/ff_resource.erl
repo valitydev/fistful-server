@@ -81,6 +81,10 @@
     id := binary()
 }.
 
+-type resource_method() ::
+    {bank_card, {payment_system, payment_system()}}
+    | {digital_wallet, {payment_service, payment_service()}}.
+
 -type payment_system_deprecated() :: ff_bin_data:payment_system_deprecated().
 -type masked_pan() :: binary().
 -type bank_name() :: binary().
@@ -127,6 +131,7 @@
 -export_type([resource_descriptor/0]).
 -export_type([resource/0]).
 -export_type([resource_params/0]).
+-export_type([resource_method/0]).
 -export_type([bank_card/0]).
 -export_type([crypto_wallet/0]).
 -export_type([digital_wallet/0]).
@@ -159,6 +164,7 @@
 -export([exp_date/1]).
 -export([cardholder_name/1]).
 -export([resource_descriptor/1]).
+-export([resource_method/1]).
 
 %% Pipeline
 
@@ -211,6 +217,15 @@ resource_descriptor({bank_card, #{bank_card := #{bin_data_id := ID}}}) ->
     {bank_card, ID};
 resource_descriptor(_) ->
     undefined.
+
+-spec resource_method(resource()) ->
+    resource_method() | undefiend.
+resource_method({bank_card, #{payment_system := PaymentSystem}}) ->
+    {bank_card, {payment_system, PaymentSystem}};
+resource_method({digital_wallet, #{payment_service := PaymentService}}) ->
+    {digital_wallet, {payment_service, PaymentService}};
+resource_method(_) ->
+    undefiend.
 
 -spec get_bin_data(binary(), resource_descriptor() | undefined) ->
     {ok, bin_data()}

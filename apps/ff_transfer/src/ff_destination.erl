@@ -178,9 +178,23 @@ create(Params) ->
         Identity = ff_identity_machine:identity(unwrap(identity, ff_identity_machine:get(IdentityID))),
         accessible = unwrap(identity, ff_identity:is_accessible(Identity)),
         valid = ff_resource:check_resource(Resource),
+        Method = ff_resource:resource_method(Resource),
+        PartyID = ff_identity:party(Identity),
+        ContractID = ff_identity:contract(Identity),
+        CreatedAt = ff_time:now(),
+        {ok, PartyRevision} = ff_party:get_revision(PartyID),
+        DomainRevision = ff_domain_config:head(),
+        {ok, Terms} = ff_party:get_contract_terms(
+            PartyID,
+            ContractID,
+            #{},
+            CreatedAt,
+            PartyRevision,
+            DomainRevision
+        ),
+        valid = unwrap(ff_party:validate_withdrawal_method(Terms, Method)),
         Currency = unwrap(currency, ff_currency:get(CurrencyID)),
         Events = unwrap(ff_account:create(ID, Identity, Currency)),
-        CreatedAt = ff_time:now(),
         [
             {created,
                 genlib_map:compact(#{
