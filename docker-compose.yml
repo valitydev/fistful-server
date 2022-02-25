@@ -13,7 +13,6 @@ services:
       - .:$PWD
     hostname: fistful-server
     depends_on:
-      # FIXME: Switch all service_started to service_healthy when its possible to debug its problems
       machinegun:
         condition: service_healthy
       dominant:
