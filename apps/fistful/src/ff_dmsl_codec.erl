@@ -90,6 +90,18 @@ unmarshal(sub_failure, #domain_SubFailure{
         code => unmarshal(string, Code),
         sub => maybe_unmarshal(sub_failure, SubFailure)
     });
+unmarshal(payment_method_ref, #domain_PaymentMethodRef{
+    id = PaymentMethod
+}) ->
+    #{id => unmarshal(payment_method, PaymentMethod)};
+unmarshal(payment_method, {generic, #domain_GenericPaymentMethod{payment_service = PaymentService}}) ->
+    {generic, #{payment_service => unmarshal(payment_service, PaymentService)}};
+unmarshal(payment_method, {digital_wallet, PaymentServiceRef}) ->
+    {digital_wallet, unmarshal(payment_service, PaymentServiceRef)};
+unmarshal(payment_method, {crypto_currency, CryptoCurrencyRef}) ->
+    {crypto_currency, unmarshal(crypto_currency, CryptoCurrencyRef)};
+unmarshal(payment_method, {bank_card, #domain_BankCardPaymentMethod{payment_system = PaymentSystem}}) ->
+    {bank_card, #{payment_system => unmarshal(payment_system, PaymentSystem)}};
 unmarshal(cash, #domain_Cash{
     amount = Amount,
     currency = CurrencyRef
@@ -177,6 +189,12 @@ unmarshal(payment_system, #'domain_PaymentSystemRef'{
         id => unmarshal(string, ID)
     };
 unmarshal(payment_service, #'domain_PaymentServiceRef'{
+    id = ID
+}) ->
+    #{
+        id => unmarshal(string, ID)
+    };
+unmarshal(crypto_currency, #'domain_CryptoCurrencyRef'{
     id = ID
 }) ->
     #{

@@ -98,6 +98,7 @@
 -export([set_blocking/1]).
 
 -export([create/1]).
+-export([get_withdrawal_methods/1]).
 
 -export([apply_event/2]).
 
@@ -192,6 +193,24 @@ create(Params = #{id := ID, name := Name, party := Party, provider := ProviderID
                 })}
         ]
     end).
+
+-spec get_withdrawal_methods(identity_state()) ->
+    ordsets:ordset(ff_party:method_ref()).
+get_withdrawal_methods(Identity) ->
+    PartyID = ff_identity:party(Identity),
+    ContractID = ff_identity:contract(Identity),
+    CreatedAt = ff_time:now(),
+    {ok, PartyRevision} = ff_party:get_revision(PartyID),
+    DomainRevision = ff_domain_config:head(),
+    {ok, Terms} = ff_party:get_contract_terms(
+        PartyID,
+        ContractID,
+        #{},
+        CreatedAt,
+        PartyRevision,
+        DomainRevision
+    ),
+    ff_party:get_withdrawal_methods(Terms).
 
 %%
 

@@ -55,11 +55,13 @@
 -export_type([validate_account_creation_error/0]).
 -export_type([get_contract_terms_error/0]).
 -export_type([validate_withdrawal_creation_error/0]).
+-export_type([withdrawal_method_validation_error/0]).
 -export_type([validate_w2w_transfer_creation_error/0]).
 -export_type([cash/0]).
 -export_type([cash_range/0]).
 -export_type([attempt_limit/0]).
 -export_type([provision_term_set/0]).
+-export_type([method_ref/0]).
 
 -type inaccessibility() ::
     {inaccessible, blocked | suspended}.
@@ -74,6 +76,7 @@
 -export([change_contractor_level/3]).
 -export([validate_account_creation/2]).
 -export([validate_withdrawal_method/2]).
+-export([get_withdrawal_methods/1]).
 -export([validate_withdrawal_creation/3]).
 -export([validate_deposit_creation/2]).
 -export([validate_w2w_transfer_creation/2]).
@@ -378,14 +381,20 @@ validate_account_creation(Terms, CurrencyID) ->
     Result :: {ok, valid} | {error, Error},
     Error :: withdrawal_method_validation_error().
 validate_withdrawal_method(Terms, Method) ->
-    #domain_TermSet{wallets = WalletTerms} = Terms,
     do(fun() ->
-        #domain_WalletServiceTerms{withdrawals = WithdrawalTerms} = WalletTerms,
-        #domain_WithdrawalServiceTerms{methods = MethodsSelector} = WithdrawalTerms,
-        {ok, valid} = do_validate_terms_is_reduced([{withdrawal_methods, MethodsSelector}]),
-        {value, Methods} = MethodsSelector,
+        Methods = get_withdrawal_methods(Terms),
         valid = unwrap(validate_withdrawal_terms_method(Method, Methods))
     end).
+
+-spec get_withdrawal_methods(terms()) ->
+    ordsets:ordset(method_ref()).
+get_withdrawal_methods(Terms) ->
+    #domain_TermSet{wallets = WalletTerms} = Terms,
+    #domain_WalletServiceTerms{withdrawals = WithdrawalTerms} = WalletTerms,
+    #domain_WithdrawalServiceTerms{methods = MethodsSelector} = WithdrawalTerms,
+    {ok, valid} = do_validate_terms_is_reduced([{withdrawal_methods, MethodsSelector}]),
+    {value, Methods} = MethodsSelector,
+    Methods.
 
 -spec validate_withdrawal_creation(terms(), cash(), method()) -> Result when
     Result :: {ok, valid} | {error, Error},

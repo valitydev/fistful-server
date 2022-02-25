@@ -39,6 +39,8 @@ handle_function_('Create', {Params, Ctx}, Opts) ->
             woody_error:raise(business, #fistful_CurrencyNotFound{});
         {error, {party, _Inaccessible}} ->
             woody_error:raise(business, #fistful_PartyInaccessible{});
+        {error, {terms, _ForbiddenWithdrawalMethod}} ->
+            woody_error:raise(business, #fistful_ForbiddenWithdrawalMethod{});
         {error, exists} ->
             handle_function_('Get', {ID, #'EventRange'{}}, Opts);
         {error, Error} ->

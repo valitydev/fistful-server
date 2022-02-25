@@ -48,6 +48,8 @@ handle_function_('GetQuote', {MarshaledParams}, _Opts) ->
                 amount = ff_codec:marshal(cash, Cash),
                 allowed_range = ff_codec:marshal(cash_range, Range)
             });
+        {error, {terms, {terms_violation, {not_allowed_withdrawal_method, _}}}} ->
+            woody_error:raise(business, #fistful_ForbiddenWithdrawalMethod{});
         {error, {inconsistent_currency, {Withdrawal, Wallet, Destination}}} ->
             woody_error:raise(business, #wthd_InconsistentWithdrawalCurrency{
                 withdrawal_currency = ff_codec:marshal(currency_ref, Withdrawal),
@@ -93,6 +95,8 @@ handle_function_('Create', {MarshaledParams, MarshaledContext}, Opts) ->
                 amount = ff_codec:marshal(cash, Cash),
                 allowed_range = ff_codec:marshal(cash_range, Range)
             });
+        {error, {terms, {terms_violation, {not_allowed_withdrawal_method, _}}}} ->
+            woody_error:raise(business, #fistful_ForbiddenWithdrawalMethod{});
         {error, {inconsistent_currency, {Withdrawal, Wallet, Destination}}} ->
             woody_error:raise(business, #wthd_InconsistentWithdrawalCurrency{
                 withdrawal_currency = ff_codec:marshal(currency_ref, Withdrawal),

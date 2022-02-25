@@ -64,6 +64,7 @@
     {identity, notfound}
     | {currency, notfound}
     | ff_account:create_error()
+    | {terms, ff_party:withdrawal_method_validation_error()}
     | {identity, ff_party:inaccessibility()}.
 
 -export_type([id/0]).
@@ -192,7 +193,7 @@ create(Params) ->
             PartyRevision,
             DomainRevision
         ),
-        valid = unwrap(ff_party:validate_withdrawal_method(Terms, Method)),
+        valid = unwrap(terms, ff_party:validate_withdrawal_method(Terms, Method)),
         Currency = unwrap(currency, ff_currency:get(CurrencyID)),
         Events = unwrap(ff_account:create(ID, Identity, Currency)),
         [

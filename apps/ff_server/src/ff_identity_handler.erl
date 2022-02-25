@@ -51,6 +51,21 @@ handle_function_('Get', {ID, EventRange}, _Opts) ->
         {error, notfound} ->
             woody_error:raise(business, #fistful_IdentityNotFound{})
     end;
+handle_function_('GetWithdrawalMethods', {ID}, _Opts) ->
+    case ff_identity_machine:get(ID) of
+        {ok, Machine} ->
+            DmslMethods = ff_identity:get_withdrawal_methods(ff_identity_machine:identity(Machine)),
+            Methods = lists:map(
+                fun(DmslMethod) ->
+                    Method = ff_dmsl_codec:unmarshal(payment_method_ref, DmslMethod),
+                    ff_codec:marshal(withdrawal_method, Method)
+                end,
+                DmslMethods
+            ),
+            {ok, Methods};
+        {error, notfound} ->
+            woody_error:raise(business, #fistful_IdentityNotFound{})
+    end;
 handle_function_('GetContext', {ID}, _Opts) ->
     case ff_identity_machine:get(ID, {undefined, 0}) of
         {ok, Machine} ->

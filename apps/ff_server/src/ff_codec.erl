@@ -65,6 +65,16 @@ marshal(blocking, unblocked) ->
     unblocked;
 marshal(identity_provider, Provider) when is_binary(Provider) ->
     Provider;
+marshal(withdrawal_method, #{id := {generic, #{payment_service := PaymentService}}}) ->
+    {generic, marshal(payment_service, PaymentService)};
+marshal(withdrawal_method, #{id := {digital_wallet, PaymentService}}) ->
+    {digital_wallet, marshal(payment_service, PaymentService)};
+marshal(withdrawal_method, #{id := {crypto_currency, CryptoCurrencyRef}}) ->
+    {crypto_currency, marshal(crypto_currency_ref, CryptoCurrencyRef)};
+marshal(withdrawal_method, #{id := {bank_card, #{payment_system := PaymentSystem}}}) ->
+    {bank_card, #'fistful_BankCardWithdrawalMethod'{
+        payment_system = marshal(payment_system, PaymentSystem)
+    }};
 marshal(
     transaction_info,
     TransactionInfo = #{
@@ -205,6 +215,10 @@ marshal(payment_service, #{id := Ref}) when is_binary(Ref) ->
     };
 marshal(payment_system, #{id := Ref}) when is_binary(Ref) ->
     #'PaymentSystemRef'{
+        id = Ref
+    };
+marshal(crypto_currency_ref, #{id := Ref}) ->
+    #'CryptoCurrencyRef'{
         id = Ref
     };
 marshal(payment_system_deprecated, V) when is_atom(V) ->
