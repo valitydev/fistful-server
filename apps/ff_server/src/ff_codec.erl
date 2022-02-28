@@ -142,6 +142,10 @@ marshal(resource, {digital_wallet, #{digital_wallet := DigitalWallet}}) ->
     {digital_wallet, #'ResourceDigitalWallet'{
         digital_wallet = marshal(digital_wallet, DigitalWallet)
     }};
+marshal(resource, {generic, #{generic := Generic}}) ->
+    {generic, #'ResourceGeneric'{
+        generic = marshal(generic_resource, Generic)
+    }};
 marshal(resource_descriptor, {bank_card, BinDataID}) ->
     {bank_card, #'ResourceDescriptorBankCard'{
         bin_data_id = marshal(msgpack, BinDataID)
@@ -185,6 +189,11 @@ marshal(digital_wallet, Wallet = #{id := ID, payment_service := PaymentService})
         id = marshal(string, ID),
         token = maybe_marshal(string, maps:get(token, Wallet, undefined)),
         payment_service = marshal(payment_service, PaymentService)
+    };
+marshal(generic_resource, Generic = #{provider := PaymentService}) ->
+    #'ResourceGenericData'{
+        provider = marshal(payment_service, PaymentService),
+        data = maybe_marshal(content, maps:get(data, Generic, undefined))
     };
 marshal(exp_date, {Month, Year}) ->
     #'BankCardExpDate'{
@@ -231,6 +240,11 @@ marshal(cash, {Amount, CurrencyRef}) ->
     #'Cash'{
         amount = marshal(amount, Amount),
         currency = marshal(currency_ref, CurrencyRef)
+    };
+marshal(content, #{type := Type, data := Data}) ->
+    #'Content'{
+        type = marshal(string, Type),
+        data = Data
     };
 marshal(cash_range, {{BoundLower, CashLower}, {BoundUpper, CashUpper}}) ->
     #'CashRange'{
@@ -417,6 +431,10 @@ unmarshal(resource, {digital_wallet, #'ResourceDigitalWallet'{digital_wallet = D
     {digital_wallet, #{
         digital_wallet => unmarshal(digital_wallet, DigitalWallet)
     }};
+unmarshal(resource, {generic, #'ResourceGeneric'{generic = GenericResource}}) ->
+    {generic, #{
+        generic => unmarshal(generic_resource, GenericResource)
+    }};
 unmarshal(resource_descriptor, {bank_card, BankCard}) ->
     {bank_card, unmarshal(msgpack, BankCard#'ResourceDescriptorBankCard'.bin_data_id)};
 unmarshal(bank_card_auth_data, {session_data, #'SessionAuthData'{id = ID}}) ->
@@ -484,6 +502,16 @@ unmarshal(digital_wallet, #'DigitalWallet'{id = ID, payment_service = PaymentSer
         id => unmarshal(string, ID),
         payment_service => unmarshal(payment_service, PaymentService),
         token => maybe_unmarshal(string, Token)
+    });
+unmarshal(generic_resource, #'ResourceGenericData'{provider = PaymentService, data = Data}) ->
+    genlib_map:compact(#{
+        provider => unmarshal(payment_service, PaymentService),
+        data => maybe_unmarshal(content, Data)
+    });
+unmarshal(content, #'Content'{type = Type, data = Data}) ->
+    genlib_map:compact(#{
+        type => unmarshal(string, Type),
+        data => Data
     });
 unmarshal(payment_service, #'PaymentServiceRef'{id = Ref}) when is_binary(Ref) ->
     #{
@@ -624,6 +652,24 @@ bank_card_codec_test() ->
         }
     ),
     ?assertEqual(BankCard, unmarshal(bank_card, Decoded)).
+
+-spec generic_resource_codec_test() -> _.
+generic_resource_codec_test() ->
+    GenericResource = #{
+        provider => #{id => <<"foo">>},
+        data => #{type => <<"type">>, data => <<"data">>}
+    },
+    Type = {struct, struct, {ff_proto_base_thrift, 'ResourceGenericData'}},
+    Binary = ff_proto_utils:serialize(Type, marshal(generic_resource, GenericResource)),
+    Decoded = ff_proto_utils:deserialize(Type, Binary),
+    ?assertEqual(
+        Decoded,
+        #'ResourceGenericData'{
+            provider = #'PaymentServiceRef'{id = <<"foo">>},
+            data = #'Content'{type = <<"type">>, data = <<"data">>}
+        }
+    ),
+    ?assertEqual(GenericResource, unmarshal(generic_resource, Decoded)).
 
 -spec fees_codec_test() -> _.
 fees_codec_test() ->
