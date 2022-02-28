@@ -81,9 +81,9 @@ services:
         condition: service_started
     healthcheck:
       test: "/opt/party-management/bin/party-management ping"
-      interval: 5s
-      timeout: 1s
-      retries: 20
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   shumway-db:
     image: docker.io/library/postgres:9.6
