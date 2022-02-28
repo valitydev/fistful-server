@@ -20,21 +20,21 @@ services:
       party-management:
         condition: service_healthy
       shumway:
-        condition: service_started
+        condition: service_healthy
     working_dir: $PWD
     command: /sbin/init
 
   dominant:
-    image: ghcr.io/valitydev/dominant:sha-8bd7828
+    image: ghcr.io/valitydev/dominant:sha-0b47590
     command: /opt/dominant/bin/dominant foreground
     depends_on:
       machinegun:
         condition: service_healthy
     healthcheck:
       test: "/opt/dominant/bin/dominant ping"
-      interval: 5s
-      timeout: 1s
-      retries: 20
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   machinegun:
     image: docker.io/rbkmoney/machinegun:c05a8c18cd4f7966d70b6ad84cac9429cdfe37ae
@@ -64,21 +64,21 @@ services:
       shumway-db:
         condition: service_healthy
     healthcheck:
-      test: "curl http://localhost:8022/"
+      test: "curl http://localhost:8023/actuator/health"
       interval: 5s
       timeout: 1s
       retries: 20
 
   party-management:
-    image: ghcr.io/valitydev/party-management:sha-a405fce
+    image: ghcr.io/valitydev/party-management:sha-e456e24
     command: /opt/party-management/bin/party-management foreground
     depends_on:
       machinegun:
         condition: service_healthy
       dominant:
-        condition: service_healthy
-      shumway:
         condition: service_started
+      shumway:
+        condition: service_healthy
     healthcheck:
       test: "/opt/party-management/bin/party-management ping"
       interval: 10s
@@ -91,6 +91,7 @@ services:
       - POSTGRES_DB=shumway
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+      - SERVICE_NAME=shumway-db
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
