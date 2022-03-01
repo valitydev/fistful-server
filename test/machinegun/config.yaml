@@ -69,20 +69,13 @@ namespaces:
         processor:
             url: http://fistful-server:8022/v1/stateproc/ff/w2w_transfer_v1
 
-    ff/sequence:
-        processor:
-            url: http://fistful-server:8022/v1/stateproc/ff/sequence
-    ff/external_id:
-        processor:
-            url: http://fistful-server:8022/v1/stateproc/ff/external_id
-
     # Bender
     bender_generator:
         processor:
-        url: http://bender:8022/v1/stateproc/bender_generator
+            url: http://bender:8022/v1/stateproc/bender_generator
     bender_sequence:
         processor:
-        url: http://bender:8022/v1/stateproc/bender_sequence
+            url: http://bender:8022/v1/stateproc/bender_sequence
 
 storage:
     type: memory
