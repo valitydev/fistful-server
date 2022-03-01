@@ -68,7 +68,7 @@ create_identity_ok(_C) ->
     Metadata = ff_entity_context_codec:marshal(#{<<"metadata">> => #{<<"some key">> => <<"some data">>}}),
     Identity = create_identity(EID, Name, PartyID, ProvID, Ctx, Metadata),
     IID = Identity#idnt_IdentityState.id,
-    {ok, Identity_} = call_api('Get', {IID, #'EventRange'{}}),
+    {ok, Identity_} = call_api('Get', {IID, #'fistful_base_EventRange'{}}),
 
     ProvID = Identity_#idnt_IdentityState.provider_id,
     IID = Identity_#idnt_IdentityState.id,
@@ -90,7 +90,7 @@ get_event_unknown_identity_ok(_C) ->
     ProvID = <<"good-one">>,
     Metadata = ff_entity_context_codec:marshal(#{<<"metadata">> => #{<<"some key">> => <<"some data">>}}),
     create_identity(EID, Name, PID, ProvID, Ctx, Metadata),
-    Range = #'EventRange'{
+    Range = #'fistful_base_EventRange'{
         limit = 1,
         'after' = undefined
     },

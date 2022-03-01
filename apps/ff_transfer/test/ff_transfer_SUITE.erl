@@ -115,7 +115,7 @@ deposit_via_admin_ok(C) ->
                 id = SrcID,
                 name = <<"HAHA NO">>,
                 identity_id = IID,
-                currency = #'CurrencyRef'{symbolic_code = <<"RUB">>},
+                currency = #'fistful_base_CurrencyRef'{symbolic_code = <<"RUB">>},
                 resource = {internal, #src_Internal{details = <<"Infinite source of cash">>}}
             }
         }
@@ -138,9 +138,9 @@ deposit_via_admin_ok(C) ->
                 id = DepID,
                 source = SrcID,
                 destination = WalID,
-                body = #'Cash'{
+                body = #'fistful_base_Cash'{
                     amount = 20000,
-                    currency = #'CurrencyRef'{symbolic_code = <<"RUB">>}
+                    currency = #'fistful_base_CurrencyRef'{symbolic_code = <<"RUB">>}
                 }
             }
         }
@@ -173,7 +173,7 @@ deposit_via_admin_fails(C) ->
                 id = SrcID,
                 name = <<"HAHA NO">>,
                 identity_id = IID,
-                currency = #'CurrencyRef'{symbolic_code = <<"RUB">>},
+                currency = #'fistful_base_CurrencyRef'{symbolic_code = <<"RUB">>},
                 resource = {internal, #src_Internal{details = <<"Infinite source of cash">>}}
             }
         }
@@ -195,9 +195,9 @@ deposit_via_admin_fails(C) ->
                 id = DepID,
                 source = SrcID,
                 destination = WalID,
-                body = #'Cash'{
+                body = #'fistful_base_Cash'{
                     amount = 10000002,
-                    currency = #'CurrencyRef'{symbolic_code = <<"RUB">>}
+                    currency = #'fistful_base_CurrencyRef'{symbolic_code = <<"RUB">>}
                 }
             }
         }
@@ -232,7 +232,7 @@ deposit_via_admin_amount_fails(C) ->
                 id = SrcID,
                 name = <<"HAHA NO">>,
                 identity_id = IID,
-                currency = #'CurrencyRef'{symbolic_code = <<"RUB">>},
+                currency = #'fistful_base_CurrencyRef'{symbolic_code = <<"RUB">>},
                 resource = {internal, #src_Internal{details = <<"Infinite source of cash">>}}
             }
         }
@@ -253,9 +253,9 @@ deposit_via_admin_amount_fails(C) ->
                 id = DepID,
                 source = SrcID,
                 destination = WalID,
-                body = #'Cash'{
+                body = #'fistful_base_Cash'{
                     amount = -1,
-                    currency = #'CurrencyRef'{symbolic_code = <<"RUB">>}
+                    currency = #'fistful_base_CurrencyRef'{symbolic_code = <<"RUB">>}
                 }
             }
         }
@@ -277,7 +277,7 @@ deposit_via_admin_currency_fails(C) ->
                 id = SrcID,
                 name = <<"HAHA NO">>,
                 identity_id = IID,
-                currency = #'CurrencyRef'{symbolic_code = <<"RUB">>},
+                currency = #'fistful_base_CurrencyRef'{symbolic_code = <<"RUB">>},
                 resource = {internal, #src_Internal{details = <<"Infinite source of cash">>}}
             }
         }
@@ -299,9 +299,9 @@ deposit_via_admin_currency_fails(C) ->
                 id = DepID,
                 source = SrcID,
                 destination = WalID,
-                body = #'Cash'{
+                body = #'fistful_base_Cash'{
                     amount = 1000,
-                    currency = #'CurrencyRef'{symbolic_code = BadCurrency}
+                    currency = #'fistful_base_CurrencyRef'{symbolic_code = BadCurrency}
                 }
             }
         }
@@ -569,7 +569,7 @@ process_withdrawal(WalID, DestID, Params) ->
 
 get_withdrawal_events(WdrID) ->
     Service = {{ff_proto_withdrawal_thrift, 'Management'}, <<"/v1/withdrawal">>},
-    {ok, Events} = call('GetEvents', Service, {WdrID, #'EventRange'{'after' = 0, limit = 1000}}),
+    {ok, Events} = call('GetEvents', Service, {WdrID, #'fistful_base_EventRange'{'after' = 0, limit = 1000}}),
     Events.
 
 call(Function, Service, Args) ->

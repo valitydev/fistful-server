@@ -597,7 +597,7 @@ force_status_change_test(C) ->
                     {status_changed, #wthd_StatusChange{
                         status =
                             {failed, #wthd_status_Failed{
-                                failure = #'Failure'{
+                                failure = #'fistful_base_Failure'{
                                     code = <<"Withdrawal failed by manual intervention">>
                                 }
                             }}
@@ -977,7 +977,7 @@ repair_withdrawal_session(WithdrawalID) ->
         {set_session_result, #wthd_session_SetResultRepair{
             result =
                 {success, #wthd_session_SessionResultSuccess{
-                    trx_info = #'TransactionInfo'{
+                    trx_info = #'fistful_base_TransactionInfo'{
                         id = SessionID,
                         extra = #{}
                     }

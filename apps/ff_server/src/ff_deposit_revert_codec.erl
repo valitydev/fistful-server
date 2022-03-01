@@ -138,9 +138,9 @@ maybe_marshal(Type, Value) ->
 
 revert_symmetry_test() ->
     Encoded = #deposit_revert_Revert{
-        body = #'Cash'{
+        body = #'fistful_base_Cash'{
             amount = 10101,
-            currency = #'CurrencyRef'{symbolic_code = <<"Banana Republic">>}
+            currency = #'fistful_base_CurrencyRef'{symbolic_code = <<"Banana Republic">>}
         },
         source_id = genlib:unique(),
         wallet_id = genlib:unique(),
@@ -157,9 +157,9 @@ revert_symmetry_test() ->
 -spec revert_params_symmetry_test() -> _.
 revert_params_symmetry_test() ->
     Encoded = #deposit_revert_RevertParams{
-        body = #'Cash'{
+        body = #'fistful_base_Cash'{
             amount = 10101,
-            currency = #'CurrencyRef'{symbolic_code = <<"Banana Republic">>}
+            currency = #'fistful_base_CurrencyRef'{symbolic_code = <<"Banana Republic">>}
         },
         external_id = undefined,
         reason = <<"why not">>,

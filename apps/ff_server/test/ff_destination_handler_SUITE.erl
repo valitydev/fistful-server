@@ -75,8 +75,8 @@ end_per_testcase(_Name, _C) ->
 -spec create_bank_card_destination_ok(config()) -> test_return().
 create_bank_card_destination_ok(C) ->
     Resource =
-        {bank_card, #'ResourceBankCard'{
-            bank_card = #'BankCard'{
+        {bank_card, #'fistful_base_ResourceBankCard'{
+            bank_card = #'fistful_base_BankCard'{
                 token = <<"TOKEN shmOKEN">>
             }
         }},
@@ -85,11 +85,11 @@ create_bank_card_destination_ok(C) ->
 -spec create_crypto_wallet_destination_ok(config()) -> test_return().
 create_crypto_wallet_destination_ok(C) ->
     Resource =
-        {crypto_wallet, #'ResourceCryptoWallet'{
-            crypto_wallet = #'CryptoWallet'{
+        {crypto_wallet, #'fistful_base_ResourceCryptoWallet'{
+            crypto_wallet = #'fistful_base_CryptoWallet'{
                 id = <<"f195298af836f41d072cb390ee62bee8">>,
                 currency = bitcoin_cash,
-                data = {bitcoin_cash, #'CryptoDataBitcoinCash'{}}
+                data = {bitcoin_cash, #'fistful_base_CryptoDataBitcoinCash'{}}
             }
         }},
     create_destination_ok(Resource, C).
@@ -97,11 +97,11 @@ create_crypto_wallet_destination_ok(C) ->
 -spec create_ripple_wallet_destination_ok(config()) -> test_return().
 create_ripple_wallet_destination_ok(C) ->
     Resource =
-        {crypto_wallet, #'ResourceCryptoWallet'{
-            crypto_wallet = #'CryptoWallet'{
+        {crypto_wallet, #'fistful_base_ResourceCryptoWallet'{
+            crypto_wallet = #'fistful_base_CryptoWallet'{
                 id = <<"ab843336bf7738dc697522fbb90508de">>,
                 currency = ripple,
-                data = {ripple, #'CryptoDataRipple'{tag = undefined}}
+                data = {ripple, #'fistful_base_CryptoDataRipple'{tag = undefined}}
             }
         }},
     create_destination_ok(Resource, C).
@@ -109,11 +109,11 @@ create_ripple_wallet_destination_ok(C) ->
 -spec create_digital_wallet_destination_ok(config()) -> test_return().
 create_digital_wallet_destination_ok(C) ->
     Resource =
-        {digital_wallet, #'ResourceDigitalWallet'{
-            digital_wallet = #'DigitalWallet'{
+        {digital_wallet, #'fistful_base_ResourceDigitalWallet'{
+            digital_wallet = #'fistful_base_DigitalWallet'{
                 id = <<"f195298af836f41d072cb390ee62bee8">>,
                 token = <<"a30e277c07400c9940628828949efd48">>,
-                payment_service = #'PaymentServiceRef'{id = <<"webmoney">>}
+                payment_service = #'fistful_base_PaymentServiceRef'{id = <<"webmoney">>}
             }
         }},
     create_destination_ok(Resource, C).
@@ -150,7 +150,7 @@ create_destination_ok(Resource, C) ->
 
     Account = Dst#dst_DestinationState.account,
     IdentityID = Account#account_Account.identity,
-    #'CurrencyRef'{symbolic_code = Currency} = Account#account_Account.currency,
+    #'fistful_base_CurrencyRef'{symbolic_code = Currency} = Account#account_Account.currency,
 
     {unauthorized, #dst_Unauthorized{}} = Dst#dst_DestinationState.status,
 
@@ -158,13 +158,13 @@ create_destination_ok(Resource, C) ->
         {authorized, #dst_Authorized{}},
         fun() ->
             {ok, #dst_DestinationState{status = Status}} =
-                call_service('Get', {ID, #'EventRange'{}}),
+                call_service('Get', {ID, #'fistful_base_EventRange'{}}),
             Status
         end,
         genlib_retry:linear(15, 1000)
     ),
 
-    {ok, #dst_DestinationState{}} = call_service('Get', {ID, #'EventRange'{}}).
+    {ok, #dst_DestinationState{}} = call_service('Get', {ID, #'fistful_base_EventRange'{}}).
 
 call_service(Fun, Args) ->
     Service = {ff_proto_destination_thrift, 'Management'},

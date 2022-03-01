@@ -155,10 +155,10 @@ create_currency_validation_error_test(C) ->
     },
     Result = call_deposit('Create', {Params, #{}}),
     ExpectedError = #fistful_ForbiddenOperationCurrency{
-        currency = #'CurrencyRef'{symbolic_code = <<"EUR">>},
+        currency = #'fistful_base_CurrencyRef'{symbolic_code = <<"EUR">>},
         allowed_currencies = [
-            #'CurrencyRef'{symbolic_code = <<"RUB">>},
-            #'CurrencyRef'{symbolic_code = <<"USD">>}
+            #'fistful_base_CurrencyRef'{symbolic_code = <<"RUB">>},
+            #'fistful_base_CurrencyRef'{symbolic_code = <<"USD">>}
         ]
     },
     ?assertEqual({exception, ExpectedError}, Result).
@@ -238,7 +238,7 @@ create_ok_test(C) ->
 -spec unknown_test(config()) -> test_return().
 unknown_test(_C) ->
     DepositID = <<"unknown_deposit">>,
-    Result = call_deposit('Get', {DepositID, #'EventRange'{}}),
+    Result = call_deposit('Get', {DepositID, #'fistful_base_EventRange'{}}),
     ExpectedError = #fistful_DepositNotFound{},
     ?assertEqual({exception, ExpectedError}, Result).
 
@@ -274,7 +274,7 @@ create_adjustment_ok_test(C) ->
         id = AdjustmentID,
         change =
             {change_status, #dep_adj_ChangeStatusRequest{
-                new_status = {failed, #dep_status_Failed{failure = #'Failure'{code = <<"Ooops">>}}}
+                new_status = {failed, #dep_status_Failed{failure = #'fistful_base_Failure'{code = <<"Ooops">>}}}
             }},
         external_id = ExternalID
     },
@@ -382,8 +382,8 @@ create_revert_inconsistent_revert_currency_error_test(C) ->
     },
     Result = call_deposit('CreateRevert', {DepositID, Params}),
     ExpectedError = #deposit_InconsistentRevertCurrency{
-        deposit_currency = #'CurrencyRef'{symbolic_code = <<"RUB">>},
-        revert_currency = #'CurrencyRef'{symbolic_code = <<"USD">>}
+        deposit_currency = #'fistful_base_CurrencyRef'{symbolic_code = <<"RUB">>},
+        revert_currency = #'fistful_base_CurrencyRef'{symbolic_code = <<"USD">>}
     },
     ?assertEqual({exception, ExpectedError}, Result).
 
@@ -447,7 +447,7 @@ create_revert_adjustment_ok_test(C) ->
         id = AdjustmentID,
         change =
             {change_status, #dep_rev_adj_ChangeStatusRequest{
-                new_status = {failed, #dep_rev_status_Failed{failure = #'Failure'{code = <<"Ooops">>}}}
+                new_status = {failed, #dep_rev_status_Failed{failure = #'fistful_base_Failure'{code = <<"Ooops">>}}}
             }},
         external_id = ExternalID
     },
@@ -521,7 +521,7 @@ deposit_state_content_test(C) ->
         id = generate_id(),
         change =
             {change_status, #dep_adj_ChangeStatusRequest{
-                new_status = {failed, #dep_status_Failed{failure = #'Failure'{code = <<"Ooops">>}}}
+                new_status = {failed, #dep_status_Failed{failure = #'fistful_base_Failure'{code = <<"Ooops">>}}}
             }}
     },
     {ok, _} = call_deposit('CreateAdjustment', {DepositID, AdjustmentParams}),
@@ -529,12 +529,12 @@ deposit_state_content_test(C) ->
         id = generate_id(),
         change =
             {change_status, #dep_rev_adj_ChangeStatusRequest{
-                new_status = {failed, #dep_rev_status_Failed{failure = #'Failure'{code = <<"Ooops">>}}}
+                new_status = {failed, #dep_rev_status_Failed{failure = #'fistful_base_Failure'{code = <<"Ooops">>}}}
             }}
     },
     {ok, _} = call_deposit('CreateRevertAdjustment', {DepositID, RevertID, RevertAdjustmentParams}),
 
-    {ok, DepositState} = call_deposit('Get', {DepositID, #'EventRange'{}}),
+    {ok, DepositState} = call_deposit('Get', {DepositID, #'fistful_base_EventRange'{}}),
     ?assertMatch([_], DepositState#deposit_DepositState.reverts),
     ?assertMatch([_], DepositState#deposit_DepositState.adjustments),
     ?assertNotEqual(
@@ -558,7 +558,7 @@ call_deposit(Fun, Args) ->
     ff_woody_client:call(Client, Request).
 
 prepare_standard_environment(Body, C) ->
-    #'Cash'{currency = #'CurrencyRef'{symbolic_code = Currency}} = Body,
+    #'fistful_base_Cash'{currency = #'fistful_base_CurrencyRef'{symbolic_code = Currency}} = Body,
     Party = create_party(C),
     IdentityID = create_identity(Party, C),
     WalletID = create_wallet(IdentityID, <<"My wallet">>, <<"RUB">>, C),
@@ -760,7 +760,7 @@ create_source(IID, _C) ->
     ID.
 
 make_cash({Amount, Currency}) ->
-    #'Cash'{
+    #'fistful_base_Cash'{
         amount = Amount,
-        currency = #'CurrencyRef'{symbolic_code = Currency}
+        currency = #'fistful_base_CurrencyRef'{symbolic_code = Currency}
     }.

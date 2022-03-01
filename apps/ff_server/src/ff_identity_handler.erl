@@ -29,7 +29,7 @@ handle_function_('Create', {IdentityParams, Context}, Opts) ->
     Params = #{id := IdentityID} = ff_identity_codec:unmarshal_identity_params(IdentityParams),
     case ff_identity_machine:create(Params, ff_identity_codec:unmarshal(ctx, Context)) of
         ok ->
-            handle_function_('Get', {IdentityID, #'EventRange'{}}, Opts);
+            handle_function_('Get', {IdentityID, #'fistful_base_EventRange'{}}, Opts);
         {error, {provider, notfound}} ->
             woody_error:raise(business, #fistful_ProviderNotFound{});
         {error, {party, notfound}} ->
@@ -37,7 +37,7 @@ handle_function_('Create', {IdentityParams, Context}, Opts) ->
         {error, {inaccessible, _}} ->
             woody_error:raise(business, #fistful_PartyInaccessible{});
         {error, exists} ->
-            handle_function_('Get', {IdentityID, #'EventRange'{}}, Opts);
+            handle_function_('Get', {IdentityID, #'fistful_base_EventRange'{}}, Opts);
         {error, Error} ->
             woody_error:raise(system, {internal, result_unexpected, woody_error:format_details(Error)})
     end;
