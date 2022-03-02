@@ -333,7 +333,7 @@ payment_service(Ref, Name) ->
         }
     }}.
 
--spec crypto_currency(?dtp('CryptoCurrencyRef'), binary()) -> object().
+-spec crypto_currency(?DTP('CryptoCurrencyRef'), binary()) -> object().
 crypto_currency(Ref, Name) ->
     {crypto_currency, #domain_CryptoCurrencyObject{
         ref = Ref,

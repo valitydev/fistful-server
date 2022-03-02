@@ -487,7 +487,7 @@ create_with_generic_ok_test(C) ->
     },
     ok = ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new()),
     ?assertEqual(succeeded, await_final_withdrawal_status(WithdrawalID)),
-    ?assertEqual(?final_balance(0, <<"RUB">>), get_wallet_balance(WalletID)),
+    ?assertEqual(?FINAL_BALANCE(0, <<"RUB">>), get_wallet_balance(WalletID)),
     Withdrawal = get_withdrawal(WithdrawalID),
     ?assertEqual(WalletID, ff_withdrawal:wallet_id(Withdrawal)),
     ?assertEqual(DestinationID, ff_withdrawal:destination_id(Withdrawal)),
