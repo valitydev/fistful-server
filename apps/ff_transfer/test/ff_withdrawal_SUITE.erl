@@ -964,7 +964,9 @@ create_generic_destination(Provider, IID, _C) ->
                 data => #{type => <<"json">>, data => <<"{}">>}
             }
         }},
-    Params = #{id => ID, identity => IID, name => <<"GenericDestination">>, currency => <<"RUB">>, resource => Resource},
+    Params = #{
+        id => ID, identity => IID, name => <<"GenericDestination">>, currency => <<"RUB">>, resource => Resource
+    },
     ok = ff_destination_machine:create(Params, ff_entity_context:new()),
     authorized = ct_helper:await(
         authorized,

@@ -660,12 +660,14 @@ default_termset(Options) ->
                                     )}
                         }
                     ]},
-                methods = {value, ?ordset([
-                    ?PAYMENT_METHOD_BANK_CARD(<<"VISA">>),
-                    ?PAYMENT_METHOD_GENERIC(<<"IND">>),
-                    ?PAYMENT_METHOD_DIGITAL_WALLET(<<"webmoney">>),
-                    ?PAYMENT_METHOD_CRYPTO_CURRENCY(<<"Litecoin">>)
-                ])},
+                methods =
+                    {value,
+                        ?ordset([
+                            ?PAYMENT_METHOD_BANK_CARD(<<"VISA">>),
+                            ?PAYMENT_METHOD_GENERIC(<<"IND">>),
+                            ?PAYMENT_METHOD_DIGITAL_WALLET(<<"webmoney">>),
+                            ?PAYMENT_METHOD_CRYPTO_CURRENCY(<<"Litecoin">>)
+                        ])},
                 cash_flow =
                     {decisions, [
                         % this is impossible cash flow decision to check
