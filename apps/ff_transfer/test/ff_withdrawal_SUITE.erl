@@ -35,6 +35,7 @@
 -export([create_destination_notfound_test/1]).
 -export([create_wallet_notfound_test/1]).
 -export([create_ok_test/1]).
+-export([create_with_generic_ok_test/1]).
 -export([quota_ok_test/1]).
 -export([crypto_quota_ok_test/1]).
 -export([preserve_revisions_test/1]).
@@ -93,6 +94,7 @@ groups() ->
             create_destination_notfound_test,
             create_wallet_notfound_test,
             create_ok_test,
+            create_with_generic_ok_test,
             quota_ok_test,
             crypto_quota_ok_test,
             preserve_revisions_test,
@@ -450,6 +452,31 @@ create_ok_test(C) ->
         wallet_id := WalletID,
         destination_id := DestinationID
     } = prepare_standard_environment(Cash, C),
+    WithdrawalID = generate_id(),
+    WithdrawalParams = #{
+        id => WithdrawalID,
+        destination_id => DestinationID,
+        wallet_id => WalletID,
+        body => Cash,
+        external_id => WithdrawalID
+    },
+    ok = ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new()),
+    ?assertEqual(succeeded, await_final_withdrawal_status(WithdrawalID)),
+    ?assertEqual(?final_balance(0, <<"RUB">>), get_wallet_balance(WalletID)),
+    Withdrawal = get_withdrawal(WithdrawalID),
+    ?assertEqual(WalletID, ff_withdrawal:wallet_id(Withdrawal)),
+    ?assertEqual(DestinationID, ff_withdrawal:destination_id(Withdrawal)),
+    ?assertEqual(Cash, ff_withdrawal:body(Withdrawal)),
+    ?assertEqual(WithdrawalID, ff_withdrawal:external_id(Withdrawal)).
+
+-spec create_with_generic_ok_test(config()) -> test_return().
+create_with_generic_ok_test(C) ->
+    Cash = {100, <<"RUB">>},
+    #{
+        wallet_id := WalletID,
+        identity_id := IdentityID
+    } = prepare_standard_environment(Cash, C),
+    DestinationID = create_generic_destination(<<"IND">>, IdentityID, C),
     WithdrawalID = generate_id(),
     WithdrawalParams = #{
         id => WithdrawalID,
@@ -917,6 +944,27 @@ create_crypto_destination(IID, _C) ->
             }
         }},
     Params = #{id => ID, identity => IID, name => <<"CryptoDestination">>, currency => <<"RUB">>, resource => Resource},
+    ok = ff_destination_machine:create(Params, ff_entity_context:new()),
+    authorized = ct_helper:await(
+        authorized,
+        fun() ->
+            {ok, Machine} = ff_destination_machine:get(ID),
+            Destination = ff_destination_machine:destination(Machine),
+            ff_destination:status(Destination)
+        end
+    ),
+    ID.
+
+create_generic_destination(Provider, IID, _C) ->
+    ID = generate_id(),
+    Resource =
+        {generic, #{
+            generic => #{
+                provider => #{id => Provider},
+                data => #{type => <<"json">>, data => <<"{}">>}
+            }
+        }},
+    Params = #{id => ID, identity => IID, name => <<"GenericDestination">>, currency => <<"RUB">>, resource => Resource},
     ok = ff_destination_machine:create(Params, ff_entity_context:new()),
     authorized = ct_helper:await(
         authorized,

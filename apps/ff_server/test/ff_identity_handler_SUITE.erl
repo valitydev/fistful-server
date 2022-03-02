@@ -11,9 +11,11 @@
 
 -export([create_identity_ok/1]).
 -export([get_event_unknown_identity_ok/1]).
+-export([get_withdrawal_methods_ok/1]).
 
 -spec create_identity_ok(config()) -> test_return().
 -spec get_event_unknown_identity_ok(config()) -> test_return().
+-spec get_withdrawal_methods_ok(config()) -> test_return().
 
 %%
 
@@ -26,7 +28,8 @@
 all() ->
     [
         create_identity_ok,
-        get_event_unknown_identity_ok
+        get_event_unknown_identity_ok,
+        get_withdrawal_methods_ok
     ].
 
 -spec init_per_suite(config()) -> config().
@@ -95,6 +98,21 @@ get_event_unknown_identity_ok(_C) ->
         'after' = undefined
     },
     {exception, {fistful_IdentityNotFound}} = call_api('GetEvents', {<<"bad id">>, Range}).
+
+get_withdrawal_methods_ok(_C) ->
+    Ctx = #{<<"NS">> => #{}},
+    EID = genlib:unique(),
+    PID = create_party(),
+    Name = <<"Identity Name">>,
+    ProvID = <<"good-one">>,
+    Metadata = ff_entity_context_codec:marshal(#{<<"metadata">> => #{<<"some key">> => <<"some data">>}}),
+    #idnt_IdentityState{id = ID} = create_identity(EID, Name, PID, ProvID, Ctx, Metadata),
+    {ok, [
+        {digital_wallet, _},
+        {crypto_currency, _},
+        {bank_card, _},
+        {generic, _}
+    ]} = call_api('GetWithdrawalMethods', {ID}).
 
 %%----------
 %% INTERNAL

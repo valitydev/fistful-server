@@ -598,7 +598,10 @@ domain_config(Options, C) ->
         ct_domain:payment_system(?pmtsys(<<"VISA">>), <<"VISA">>),
         ct_domain:payment_system(?pmtsys(<<"NSPK MIR">>), <<"NSPK MIR">>),
 
-        ct_domain:payment_service(?pmtsrv(<<"webmoney">>), <<"Webmoney">>)
+        ct_domain:payment_service(?pmtsrv(<<"webmoney">>), <<"Webmoney">>),
+        ct_domain:payment_service(?pmtsrv(<<"qiwi">>), <<"Qiwi">>),
+        ct_domain:payment_service(?pmtsrv(<<"IND">>), <<"INDbank">>),
+        ct_domain:crypto_currency(?crptcur(<<"Litecoin">>), <<"Litecoin">>)
     ],
     maps:get(domain_config, Options, Default).
 
@@ -660,6 +663,12 @@ default_termset(Options) ->
                                     )}
                         }
                     ]},
+                methods = {value, ?ordset([
+                    ?PAYMENT_METHOD_BANK_CARD(<<"VISA">>),
+                    ?PAYMENT_METHOD_GENERIC(<<"IND">>),
+                    ?PAYMENT_METHOD_DIGITAL_WALLET(<<"webmoney">>),
+                    ?PAYMENT_METHOD_CRYPTO_CURRENCY(<<"Litecoin">>)
+                ])},
                 cash_flow =
                     {decisions, [
                         % this is impossible cash flow decision to check

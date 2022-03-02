@@ -15,6 +15,8 @@
 -export([create_crypto_wallet_destination_ok/1]).
 -export([create_ripple_wallet_destination_ok/1]).
 -export([create_digital_wallet_destination_ok/1]).
+-export([create_generic_destination_ok/1]).
+-export([create_destination_forbidden_withdrawal_method_fail/1]).
 
 -type config() :: ct_helper:config().
 -type test_case_name() :: ct_helper:test_case_name().
@@ -32,7 +34,9 @@ groups() ->
             create_bank_card_destination_ok,
             create_crypto_wallet_destination_ok,
             create_ripple_wallet_destination_ok,
-            create_digital_wallet_destination_ok
+            create_digital_wallet_destination_ok,
+            create_generic_destination_ok,
+            create_destination_forbidden_withdrawal_method_fail
         ]}
     ].
 
@@ -114,6 +118,28 @@ create_digital_wallet_destination_ok(C) ->
                 id = <<"f195298af836f41d072cb390ee62bee8">>,
                 token = <<"a30e277c07400c9940628828949efd48">>,
                 payment_service = #'fistful_base_PaymentServiceRef'{id = <<"webmoney">>}
+            }
+        }},
+    create_destination_ok(Resource, C).
+
+-spec create_generic_destination_ok(config()) -> test_return().
+create_generic_destination_ok(C) ->
+    Resource =
+        {generic, #'fistful_base_ResourceGeneric'{
+            generic = #'fistful_base_ResourceGenericData'{
+                data = #'fistful_base_Content'{type = <<"json">>, data = <<"{}">>},
+                provider = #'fistful_base_PaymentServiceRef'{id = <<"IND">>}
+            }
+        }},
+    create_destination_ok(Resource, C).
+
+-spec create_destination_forbidden_withdrawal_method_fail(config()) -> test_return().
+create_destination_forbidden_withdrawal_method_fail(C) ->
+    Resource =
+        {generic, #'fistful_base_ResourceGeneric'{
+            generic = #'fistful_base_ResourceGenericData'{
+                data = #'fistful_base_Content'{type = <<"json">>, data = <<"{}">>},
+                provider = #'fistful_base_PaymentServiceRef'{id = <<"qiwi">>}
             }
         }},
     create_destination_ok(Resource, C).

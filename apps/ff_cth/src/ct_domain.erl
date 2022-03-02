@@ -9,6 +9,7 @@
 -export([payment_method/1]).
 -export([payment_system/2]).
 -export([payment_service/2]).
+-export([crypto_currency/2]).
 -export([contract_template/2]).
 -export([inspector/3]).
 -export([inspector/4]).
@@ -328,6 +329,15 @@ payment_service(Ref, Name) ->
     {payment_service, #domain_PaymentServiceObject{
         ref = Ref,
         data = #domain_PaymentService{
+            name = Name
+        }
+    }}.
+
+-spec crypto_currency(?dtp('CryptoCurrencyRef'), binary()) -> object().
+crypto_currency(Ref, Name) ->
+    {crypto_currency, #domain_CryptoCurrencyObject{
+        ref = Ref,
+        data = #domain_CryptoCurrency{
             name = Name
         }
     }}.
