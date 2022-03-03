@@ -25,6 +25,7 @@
 -export([create_currency_validation_error_test/1]).
 -export([create_destination_resource_notfound_test/1]).
 -export([create_destination_notfound_test/1]).
+-export([create_destination_generic_ok_test/1]).
 -export([create_wallet_notfound_test/1]).
 -export([unknown_test/1]).
 -export([get_context_test/1]).
@@ -57,6 +58,7 @@ groups() ->
             create_inconsistent_currency_validation_error_test,
             create_destination_resource_notfound_test,
             create_destination_notfound_test,
+            create_destination_generic_ok_test,
             create_wallet_notfound_test,
             unknown_test,
             get_context_test,
@@ -311,6 +313,55 @@ create_destination_notfound_test(C) ->
     Result = call_withdrawal('Create', {Params, #{}}),
     ExpectedError = #fistful_DestinationNotFound{},
     ?assertEqual({exception, ExpectedError}, Result).
+
+-spec create_destination_generic_ok_test(config()) -> test_return().
+create_destination_generic_ok_test(C) ->
+    Cash = make_cash({1000, <<"RUB">>}),
+    #{
+        wallet_id := WalletID,
+        identity_id := IdentityID
+    } = prepare_standard_environment(Cash, C),
+    DestinationID = create_generic_destination(<<"IND">>, IdentityID, C),
+    WithdrawalID = generate_id(),
+    ExternalID = generate_id(),
+    Ctx = ff_entity_context_codec:marshal(#{<<"NS">> => #{}}),
+    Metadata = ff_entity_context_codec:marshal(#{<<"metadata">> => #{<<"some key">> => <<"some data">>}}),
+    Params = #wthd_WithdrawalParams{
+        id = WithdrawalID,
+        wallet_id = WalletID,
+        destination_id = DestinationID,
+        body = Cash,
+        metadata = Metadata,
+        external_id = ExternalID
+    },
+    {ok, WithdrawalState} = call_withdrawal('Create', {Params, Ctx}),
+
+    Expected = get_withdrawal(WithdrawalID),
+    ?assertEqual(WithdrawalID, WithdrawalState#wthd_WithdrawalState.id),
+    ?assertEqual(ExternalID, WithdrawalState#wthd_WithdrawalState.external_id),
+    ?assertEqual(WalletID, WithdrawalState#wthd_WithdrawalState.wallet_id),
+    ?assertEqual(DestinationID, WithdrawalState#wthd_WithdrawalState.destination_id),
+    ?assertEqual(Cash, WithdrawalState#wthd_WithdrawalState.body),
+    ?assertEqual(Metadata, WithdrawalState#wthd_WithdrawalState.metadata),
+    ?assertEqual(
+        ff_withdrawal:domain_revision(Expected),
+        WithdrawalState#wthd_WithdrawalState.domain_revision
+    ),
+    ?assertEqual(
+        ff_withdrawal:party_revision(Expected),
+        WithdrawalState#wthd_WithdrawalState.party_revision
+    ),
+    ?assertEqual(
+        ff_withdrawal:created_at(Expected),
+        ff_codec:unmarshal(timestamp_ms, WithdrawalState#wthd_WithdrawalState.created_at)
+    ),
+
+    succeeded = await_final_withdrawal_status(WithdrawalID),
+    {ok, FinalWithdrawalState} = call_withdrawal('Get', {WithdrawalID, #'fistful_base_EventRange'{}}),
+    ?assertMatch(
+        {succeeded, _},
+        FinalWithdrawalState#wthd_WithdrawalState.status
+    ).
 
 -spec create_wallet_notfound_test(config()) -> test_return().
 create_wallet_notfound_test(C) ->
@@ -617,6 +668,29 @@ create_destination(IID, Currency, Token, C) ->
         end,
     Resource = {bank_card, #{bank_card => NewStoreResource}},
     Params = #{id => ID, identity => IID, name => <<"XDesination">>, currency => Currency, resource => Resource},
+    ok = ff_destination_machine:create(Params, ff_entity_context:new()),
+    authorized = ct_helper:await(
+        authorized,
+        fun() ->
+            {ok, Machine} = ff_destination_machine:get(ID),
+            Destination = ff_destination_machine:destination(Machine),
+            ff_destination:status(Destination)
+        end
+    ),
+    ID.
+
+create_generic_destination(Provider, IID, _C) ->
+    ID = generate_id(),
+    Resource =
+        {generic, #{
+            generic => #{
+                provider => #{id => Provider},
+                data => #{type => <<"json">>, data => <<"{}">>}
+            }
+        }},
+    Params = #{
+        id => ID, identity => IID, name => <<"GenericDestination">>, currency => <<"RUB">>, resource => Resource
+    },
     ok = ff_destination_machine:create(Params, ff_entity_context:new()),
     authorized = ct_helper:await(
         authorized,

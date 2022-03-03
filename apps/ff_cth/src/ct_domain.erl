@@ -302,15 +302,21 @@ category(Ref, Name, Type) ->
 
 -spec payment_method(?DTP('PaymentMethodRef')) -> object().
 payment_method(?pmt(_Type, Name) = Ref) when is_atom(Name) ->
-    payment_method(Name, Ref);
-payment_method(?pmt(_Type, #domain_BankCardPaymentMethod{} = PM) = Ref) ->
-    payment_method(PM#domain_BankCardPaymentMethod.payment_system, Ref).
+    payment_method(erlang:atom_to_binary(Name, unicode), Ref);
+payment_method(?pmt(?PAYMENT_METHOD_BANK_CARD(ID)) = Ref) when is_binary(ID) ->
+    payment_method(ID, Ref);
+payment_method(?pmt(?PAYMENT_METHOD_DIGITAL_WALLET(ID)) = Ref) when is_binary(ID) ->
+    payment_method(ID, Ref);
+payment_method(?pmt(?PAYMENT_METHOD_CRYPTO_CURRENCY(ID)) = Ref) when is_binary(ID) ->
+    payment_method(ID, Ref);
+payment_method(?pmt(?PAYMENT_METHOD_GENERIC(ID)) = Ref) when is_binary(ID) ->
+    payment_method(ID, Ref).
 
 payment_method(Name, Ref) ->
     {payment_method, #domain_PaymentMethodObject{
         ref = Ref,
         data = #domain_PaymentMethodDefinition{
-            name = erlang:atom_to_binary(Name, unicode),
+            name = Name,
             description = <<>>
         }
     }}.

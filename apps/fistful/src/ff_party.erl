@@ -787,7 +787,10 @@ validate_withdrawal_terms_method(Method, MethodRefs) ->
                 #domain_PaymentMethodRef{id = {bank_card, #domain_BankCardPaymentMethod{payment_system = Ref}}};
             {digital_wallet, {Type, Data}} ->
                 Ref = ff_dmsl_codec:marshal(Type, Data),
-                #domain_PaymentMethodRef{id = {digital_wallet, Ref}}
+                #domain_PaymentMethodRef{id = {digital_wallet, Ref}};
+            {generic, {Type, Data}} ->
+                Ref = ff_dmsl_codec:marshal(Type, Data),
+                #domain_PaymentMethodRef{id = {generic, #domain_GenericPaymentMethod{payment_service = Ref}}}
         end,
     case ordsets:is_element(MethodRef, MethodRefs) of
         true ->

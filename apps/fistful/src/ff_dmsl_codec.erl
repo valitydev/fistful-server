@@ -260,6 +260,12 @@ marshal(disposable_payment_resource, {Resource, ClientInfo}) ->
     };
 marshal(payment_tool, {bank_card, #{bank_card := BankCard}}) ->
     {bank_card, marshal(bank_card, BankCard)};
+marshal(payment_tool, {generic, #{generic := GenericResource = #{provider := PaymentService}}}) ->
+    Data = maps:get(data, GenericResource, undefined),
+    {generic, #domain_GenericPaymentTool{
+        data = maybe_marshal(content, Data),
+        payment_service = marshal(payment_service, PaymentService)
+    }};
 marshal(bin_data, #{payment_system := PaymentSystem} = BinData) ->
     BankName = maps:get(bank_name, BinData, undefined),
     #domain_BinData{
@@ -311,6 +317,11 @@ marshal(client_info, ClientInfo) ->
 marshal(attempt_limit, Limit) ->
     #domain_AttemptLimit{
         attempts = Limit
+    };
+marshal(content, #{type := Type, data := Data}) ->
+    #'Content'{
+        type = marshal(string, Type),
+        data = Data
     };
 marshal(risk_score, low) ->
     low;

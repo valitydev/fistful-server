@@ -1167,6 +1167,8 @@ construct_payment_tool({bank_card, #{bank_card := ResourceBankCard}}) ->
     }};
 construct_payment_tool({crypto_wallet, #{crypto_wallet := #{currency := {Currency, _}}}}) ->
     {crypto_currency_deprecated, Currency};
+construct_payment_tool(Resource = {generic, _}) ->
+    ff_dmsl_codec:marshal(payment_tool, Resource);
 construct_payment_tool(
     {digital_wallet, #{
         digital_wallet := Wallet = #{

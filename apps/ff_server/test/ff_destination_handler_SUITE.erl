@@ -142,7 +142,24 @@ create_destination_forbidden_withdrawal_method_fail(C) ->
                 provider = #'fistful_base_PaymentServiceRef'{id = <<"qiwi">>}
             }
         }},
-    create_destination_ok(Resource, C).
+    Party = create_party(C),
+    Currency = <<"RUB">>,
+    DstName = <<"loSHara card">>,
+    ID = genlib:unique(),
+    ExternalId = genlib:unique(),
+    IdentityID = create_identity(Party, C),
+    Ctx = ff_entity_context_codec:marshal(#{<<"NS">> => #{}}),
+    Metadata = ff_entity_context_codec:marshal(#{<<"metadata">> => #{<<"some key">> => <<"some data">>}}),
+    Params = #dst_DestinationParams{
+        id = ID,
+        identity = IdentityID,
+        name = DstName,
+        currency = Currency,
+        resource = Resource,
+        external_id = ExternalId,
+        metadata = Metadata
+    },
+    {exception, #fistful_ForbiddenWithdrawalMethod{}} = call_service('Create', {Params, Ctx}).
 
 %%----------------------------------------------------------------------
 %%  Internal functions

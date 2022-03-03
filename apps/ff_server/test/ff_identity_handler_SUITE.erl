@@ -108,9 +108,9 @@ get_withdrawal_methods_ok(_C) ->
     Metadata = ff_entity_context_codec:marshal(#{<<"metadata">> => #{<<"some key">> => <<"some data">>}}),
     #idnt_IdentityState{id = ID} = create_identity(EID, Name, PID, ProvID, Ctx, Metadata),
     {ok, [
-        {digital_wallet, _},
-        {crypto_currency, _},
         {bank_card, _},
+        {crypto_currency, _},
+        {digital_wallet, _},
         {generic, _}
     ]} = call_api('GetWithdrawalMethods', {ID}).
 

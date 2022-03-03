@@ -244,11 +244,11 @@ resource_descriptor(_) ->
 
 -spec resource_method(resource()) ->
     resource_method() | undefiend.
-resource_method({bank_card, #{payment_system := PaymentSystem}}) ->
+resource_method({bank_card, #{bank_card := #{payment_system := PaymentSystem}}}) ->
     {bank_card, {payment_system, PaymentSystem}};
-resource_method({digital_wallet, #{payment_service := PaymentService}}) ->
+resource_method({digital_wallet, #{digital_wallet := #{payment_service := PaymentService}}}) ->
     {digital_wallet, {payment_service, PaymentService}};
-resource_method({generic, #{provider := PaymentService}}) ->
+resource_method({generic, #{generic := #{provider := PaymentService}}}) ->
     {generic, {payment_service, PaymentService}};
 resource_method(_) ->
     undefiend.
