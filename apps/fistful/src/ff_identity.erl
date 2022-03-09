@@ -199,14 +199,14 @@ create(Params = #{id := ID, name := Name, party := Party, provider := ProviderID
 get_withdrawal_methods(Identity) ->
     PartyID = ff_identity:party(Identity),
     ContractID = ff_identity:contract(Identity),
-    CreatedAt = ff_time:now(),
+    CurrentTime = ff_time:now(),
     {ok, PartyRevision} = ff_party:get_revision(PartyID),
     DomainRevision = ff_domain_config:head(),
     {ok, Terms} = ff_party:get_contract_terms(
         PartyID,
         ContractID,
         #{},
-        CreatedAt,
+        CurrentTime,
         PartyRevision,
         DomainRevision
     ),

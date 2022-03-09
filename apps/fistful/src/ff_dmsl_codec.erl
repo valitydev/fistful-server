@@ -245,6 +245,18 @@ marshal(currency, #{
         numeric_code = Numcode,
         exponent = Exponent
     };
+marshal(payment_method_ref, #{id := PaymentMethod}) ->
+    #domain_PaymentMethodRef{
+        id = marshal(payment_method, PaymentMethod)
+    };
+marshal(payment_method, {generic, #{payment_service := PaymentService}}) ->
+    {generic, #domain_GenericPaymentMethod{payment_service = marshal(payment_service, PaymentService)}};
+marshal(payment_method, {digital_wallet, PaymentServiceRef}) ->
+    {digital_wallet, marshal(payment_service, PaymentServiceRef)};
+marshal(payment_method, {crypto_currency, CryptoCurrencyRef}) ->
+    {crypto_currency, marshal(crypto_currency, CryptoCurrencyRef)};
+marshal(payment_method, {bank_card, #{payment_system := PaymentSystem}}) ->
+    {bank_card, #domain_BankCardPaymentMethod{payment_system = marshal(payment_system, PaymentSystem)}};
 marshal(payment_resource_payer, Payer = #{resource := Resource}) ->
     ClientInfo = maps:get(client_info, Payer, undefined),
     ContactInfo = maps:get(contact_info, Payer, undefined),
@@ -298,6 +310,10 @@ marshal(payment_system, #{id := ID}) ->
     };
 marshal(payment_service, #{id := ID}) ->
     #domain_PaymentServiceRef{
+        id = marshal(string, ID)
+    };
+marshal(crypto_currency, #{id := ID}) ->
+    #domain_CryptoCurrencyRef{
         id = marshal(string, ID)
     };
 marshal(contact_info, undefined) ->

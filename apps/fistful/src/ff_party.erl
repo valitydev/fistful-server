@@ -75,7 +75,7 @@
 -export([get_revision/1]).
 -export([change_contractor_level/3]).
 -export([validate_account_creation/2]).
--export([validate_withdrawal_method/2]).
+-export([validate_withdrawal_terms_method/2]).
 -export([get_withdrawal_methods/1]).
 -export([validate_withdrawal_creation/3]).
 -export([validate_deposit_creation/2]).
@@ -92,7 +92,7 @@
 
 %% Internal types
 -type cash() :: ff_cash:cash().
--type method() :: ff_resource:resource_method().
+-type method() :: ff_resource:method().
 -type wallet_terms() :: dmsl_domain_thrift:'WalletServiceTerms'().
 -type withdrawal_terms() :: dmsl_domain_thrift:'WithdrawalServiceTerms'().
 -type w2w_terms() :: dmsl_domain_thrift:'W2WServiceTerms'().
@@ -375,15 +375,6 @@ validate_account_creation(Terms, CurrencyID) ->
     do(fun() ->
         {ok, valid} = validate_wallet_currencies_term_is_reduced(WalletTerms),
         valid = unwrap(validate_wallet_terms_currency(CurrencyID, WalletTerms))
-    end).
-
--spec validate_withdrawal_method(terms(), method()) -> Result when
-    Result :: {ok, valid} | {error, Error},
-    Error :: withdrawal_method_validation_error().
-validate_withdrawal_method(Terms, Method) ->
-    do(fun() ->
-        Methods = get_withdrawal_methods(Terms),
-        valid = unwrap(validate_withdrawal_terms_method(Method, Methods))
     end).
 
 -spec get_withdrawal_methods(terms()) ->
@@ -780,18 +771,7 @@ validate_withdrawal_attempt_limit(Terms) ->
 validate_withdrawal_terms_method(undefiend, _MethodRefs) ->
     {ok, valid};
 validate_withdrawal_terms_method(Method, MethodRefs) ->
-    MethodRef =
-        case Method of
-            {bank_card, {Type, Data}} ->
-                Ref = ff_dmsl_codec:marshal(Type, Data),
-                #domain_PaymentMethodRef{id = {bank_card, #domain_BankCardPaymentMethod{payment_system = Ref}}};
-            {digital_wallet, {Type, Data}} ->
-                Ref = ff_dmsl_codec:marshal(Type, Data),
-                #domain_PaymentMethodRef{id = {digital_wallet, Ref}};
-            {generic, {Type, Data}} ->
-                Ref = ff_dmsl_codec:marshal(Type, Data),
-                #domain_PaymentMethodRef{id = {generic, #domain_GenericPaymentMethod{payment_service = Ref}}}
-        end,
+    MethodRef = ff_dmsl_codec:marshal(payment_method_ref, #{id => Method}),
     case ordsets:is_element(MethodRef, MethodRefs) of
         true ->
             {ok, valid};

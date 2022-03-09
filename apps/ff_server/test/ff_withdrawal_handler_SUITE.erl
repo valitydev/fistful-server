@@ -685,7 +685,7 @@ create_generic_destination(Provider, IID, _C) ->
         {generic, #{
             generic => #{
                 provider => #{id => Provider},
-                data => #{type => <<"json">>, data => <<"{}">>}
+                data => #{type => <<"application/json">>, data => <<"{}">>}
             }
         }},
     Params = #{

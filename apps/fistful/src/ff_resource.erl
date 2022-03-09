@@ -93,7 +93,7 @@
     id := binary()
 }.
 
--type resource_method() ::
+-type method() ::
     {bank_card, {payment_system, payment_system()}}
     | {digital_wallet, {payment_service, payment_service()}}
     | {generic, {payment_service, payment_service()}}.
@@ -154,7 +154,7 @@
 -export_type([resource_descriptor/0]).
 -export_type([resource/0]).
 -export_type([resource_params/0]).
--export_type([resource_method/0]).
+-export_type([method/0]).
 -export_type([bank_card/0]).
 -export_type([crypto_wallet/0]).
 -export_type([digital_wallet/0]).
@@ -188,7 +188,7 @@
 -export([exp_date/1]).
 -export([cardholder_name/1]).
 -export([resource_descriptor/1]).
--export([resource_method/1]).
+-export([method/1]).
 
 %% Pipeline
 
@@ -242,15 +242,15 @@ resource_descriptor({bank_card, #{bank_card := #{bin_data_id := ID}}}) ->
 resource_descriptor(_) ->
     undefined.
 
--spec resource_method(resource()) ->
-    resource_method() | undefiend.
-resource_method({bank_card, #{bank_card := #{payment_system := PaymentSystem}}}) ->
-    {bank_card, {payment_system, PaymentSystem}};
-resource_method({digital_wallet, #{digital_wallet := #{payment_service := PaymentService}}}) ->
-    {digital_wallet, {payment_service, PaymentService}};
-resource_method({generic, #{generic := #{provider := PaymentService}}}) ->
-    {generic, {payment_service, PaymentService}};
-resource_method(_) ->
+-spec method(resource()) ->
+    method() | undefiend.
+method({bank_card, #{bank_card := #{payment_system := PaymentSystem}}}) ->
+    {bank_card, #{payment_system => PaymentSystem}};
+method({digital_wallet, #{digital_wallet := #{payment_service := PaymentService}}}) ->
+    {digital_wallet, PaymentService};
+method({generic, #{generic := #{provider := PaymentService}}}) ->
+    {generic, #{payment_service => PaymentService}};
+method(_) ->
     undefiend.
 
 -spec get_bin_data(binary(), resource_descriptor() | undefined) ->

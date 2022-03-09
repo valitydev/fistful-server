@@ -127,7 +127,7 @@ create_generic_destination_ok(C) ->
     Resource =
         {generic, #'fistful_base_ResourceGeneric'{
             generic = #'fistful_base_ResourceGenericData'{
-                data = #'fistful_base_Content'{type = <<"json">>, data = <<"{}">>},
+                data = #'fistful_base_Content'{type = <<"application/json">>, data = <<"{}">>},
                 provider = #'fistful_base_PaymentServiceRef'{id = <<"IND">>}
             }
         }},
@@ -138,7 +138,7 @@ create_destination_forbidden_withdrawal_method_fail(C) ->
     Resource =
         {generic, #'fistful_base_ResourceGeneric'{
             generic = #'fistful_base_ResourceGenericData'{
-                data = #'fistful_base_Content'{type = <<"json">>, data = <<"{}">>},
+                data = #'fistful_base_Content'{type = <<"application/json">>, data = <<"{}">>},
                 provider = #'fistful_base_PaymentServiceRef'{id = <<"qiwi">>}
             }
         }},

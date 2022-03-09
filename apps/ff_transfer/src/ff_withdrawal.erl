@@ -1372,7 +1372,7 @@ get_current_session_status(Withdrawal) ->
     | {error, create_error()}.
 validate_withdrawal_creation(Terms, Body, Wallet, Destination, Resource) ->
     do(fun() ->
-        Method = ff_resource:resource_method(Resource),
+        Method = ff_resource:method(Resource),
         valid = unwrap(terms, validate_withdrawal_creation_terms(Terms, Body, Method)),
         valid = unwrap(validate_withdrawal_currency(Body, Wallet, Destination)),
         valid = unwrap(validate_destination_status(Destination)),
@@ -1389,7 +1389,7 @@ validate_withdrawal_providers(Wallet, Destination) ->
         false -> {error, {identity_providers_mismatch, {WalletProvider, DestinationProvider}}}
     end.
 
--spec validate_withdrawal_creation_terms(terms(), body(), ff_resource:resource_method()) ->
+-spec validate_withdrawal_creation_terms(terms(), body(), ff_resource:method()) ->
     {ok, valid}
     | {error, ff_party:validate_withdrawal_creation_error()}.
 validate_withdrawal_creation_terms(Terms, Body, Method) ->
