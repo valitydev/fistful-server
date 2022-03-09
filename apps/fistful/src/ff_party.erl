@@ -766,9 +766,10 @@ validate_withdrawal_attempt_limit(Terms) ->
             validate_attempt_limit(ff_dmsl_codec:unmarshal(attempt_limit, Limit))
     end.
 
--spec validate_withdrawal_terms_method(method(), ordsets:ordset(method_ref())) ->
+-spec validate_withdrawal_terms_method(method() | undefiend, ordsets:ordset(method_ref())) ->
     {ok, valid} | {error, withdrawal_method_validation_error()}.
 validate_withdrawal_terms_method(undefiend, _MethodRefs) ->
+    %# TODO: remove this when work on TD-234
     {ok, valid};
 validate_withdrawal_terms_method(Method, MethodRefs) ->
     MethodRef = ff_dmsl_codec:marshal(payment_method_ref, #{id => Method}),

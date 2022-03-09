@@ -77,12 +77,19 @@
     | ff_party:inaccessibility()
     | invalid.
 
+-type get_withdrawal_methods_params() :: #{
+    party_revision => ff_party:revision(),
+    domain_revision => ff_domain_config:revision(),
+    timestamp => ff_time:timestamp_ms()
+}.
+
 -export_type([identity/0]).
 -export_type([identity_state/0]).
 -export_type([event/0]).
 -export_type([id/0]).
 -export_type([create_error/0]).
 -export_type([params/0]).
+-export_type([get_withdrawal_methods_params/0]).
 
 -export([id/1]).
 -export([name/1]).
@@ -99,6 +106,7 @@
 
 -export([create/1]).
 -export([get_withdrawal_methods/1]).
+-export([get_withdrawal_methods/2]).
 
 -export([apply_event/2]).
 
@@ -197,16 +205,22 @@ create(Params = #{id := ID, name := Name, party := Party, provider := ProviderID
 -spec get_withdrawal_methods(identity_state()) ->
     ordsets:ordset(ff_party:method_ref()).
 get_withdrawal_methods(Identity) ->
+    get_withdrawal_methods(Identity, #{}).
+
+-spec get_withdrawal_methods(identity_state(), get_withdrawal_methods_params()) ->
+    ordsets:ordset(ff_party:method_ref()).
+get_withdrawal_methods(Identity, Params) ->
     PartyID = ff_identity:party(Identity),
     ContractID = ff_identity:contract(Identity),
-    CurrentTime = ff_time:now(),
-    {ok, PartyRevision} = ff_party:get_revision(PartyID),
-    DomainRevision = ff_domain_config:head(),
+    {ok, PartyRevisionDef} = ff_party:get_revision(PartyID),
+    PartyRevision = maps:get(party_revision, Params, PartyRevisionDef),
+    DomainRevision = maps:get(domain_revision, Params, ff_domain_config:head()),
+    Timestamp = maps:get(timestamp, Params, ff_time:now()),
     {ok, Terms} = ff_party:get_contract_terms(
         PartyID,
         ContractID,
         #{},
-        CurrentTime,
+        Timestamp,
         PartyRevision,
         DomainRevision
     ),

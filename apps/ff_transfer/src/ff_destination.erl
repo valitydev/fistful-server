@@ -181,7 +181,7 @@ create(Params) ->
         valid = ff_resource:check_resource(Resource),
         CreatedAt = ff_time:now(),
         Method = ff_resource:method(Resource),
-        Methods = ff_identity:get_withdrawal_methods(Identity),
+        Methods = ff_identity:get_withdrawal_methods(Identity, #{timestamp => CreatedAt}),
         valid = unwrap(terms, ff_party:validate_withdrawal_terms_method(Method, Methods)),
         Currency = unwrap(currency, ff_currency:get(CurrencyID)),
         Events = unwrap(ff_account:create(ID, Identity, Currency)),
