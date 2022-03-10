@@ -150,7 +150,7 @@ external_id(#{external_id := ExternalID}) ->
 external_id(_Destination) ->
     undefined.
 
--spec created_at(destination_state()) -> ff_time:timestamp_ms() | undefiend.
+-spec created_at(destination_state()) -> ff_time:timestamp_ms() | undefined.
 created_at(#{created_at := CreatedAt}) ->
     CreatedAt;
 created_at(_Destination) ->
@@ -181,8 +181,8 @@ create(Params) ->
         valid = ff_resource:check_resource(Resource),
         CreatedAt = ff_time:now(),
         Method = ff_resource:method(Resource),
-        Methods = ff_identity:get_withdrawal_methods(Identity, #{timestamp => CreatedAt}),
-        valid = unwrap(terms, ff_party:validate_withdrawal_terms_method(Method, Methods)),
+        Terms = ff_identity:get_terms(Identity, #{timestamp => CreatedAt}),
+        valid = unwrap(terms, ff_party:validate_destination_creation(Terms, Method)),
         Currency = unwrap(currency, ff_currency:get(CurrencyID)),
         Events = unwrap(ff_account:create(ID, Identity, Currency)),
         [

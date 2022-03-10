@@ -34,6 +34,9 @@
     | {contract_not_found, id()}
     | {party_not_exists_yet, id()}.
 
+-type validate_destination_creation_error() ::
+    withdrawal_method_validation_error().
+
 -type validate_withdrawal_creation_error() ::
     currency_validation_error()
     | withdrawal_method_validation_error()
@@ -54,6 +57,7 @@
 -export_type([validate_deposit_creation_error/0]).
 -export_type([validate_account_creation_error/0]).
 -export_type([get_contract_terms_error/0]).
+-export_type([validate_destination_creation_error/0]).
 -export_type([validate_withdrawal_creation_error/0]).
 -export_type([withdrawal_method_validation_error/0]).
 -export_type([validate_w2w_transfer_creation_error/0]).
@@ -75,7 +79,7 @@
 -export([get_revision/1]).
 -export([change_contractor_level/3]).
 -export([validate_account_creation/2]).
--export([validate_withdrawal_terms_method/2]).
+-export([validate_destination_creation/2]).
 -export([get_withdrawal_methods/1]).
 -export([validate_withdrawal_creation/3]).
 -export([validate_deposit_creation/2]).
@@ -386,6 +390,13 @@ get_withdrawal_methods(Terms) ->
     {ok, valid} = do_validate_terms_is_reduced([{withdrawal_methods, MethodsSelector}]),
     {value, Methods} = MethodsSelector,
     Methods.
+
+-spec validate_destination_creation(terms(), method()) -> Result when
+    Result :: {ok, valid} | {error, Error},
+    Error :: validate_destination_creation_error().
+validate_destination_creation(Terms, Method) ->
+    Methods = get_withdrawal_methods(Terms),
+    validate_withdrawal_terms_method(Method, Methods).
 
 -spec validate_withdrawal_creation(terms(), cash(), method()) -> Result when
     Result :: {ok, valid} | {error, Error},
@@ -766,9 +777,9 @@ validate_withdrawal_attempt_limit(Terms) ->
             validate_attempt_limit(ff_dmsl_codec:unmarshal(attempt_limit, Limit))
     end.
 
--spec validate_withdrawal_terms_method(method() | undefiend, ordsets:ordset(method_ref())) ->
+-spec validate_withdrawal_terms_method(method() | undefined, ordsets:ordset(method_ref())) ->
     {ok, valid} | {error, withdrawal_method_validation_error()}.
-validate_withdrawal_terms_method(undefiend, _MethodRefs) ->
+validate_withdrawal_terms_method(undefined, _MethodRefs) ->
     %# TODO: remove this when work on TD-234
     {ok, valid};
 validate_withdrawal_terms_method(Method, MethodRefs) ->

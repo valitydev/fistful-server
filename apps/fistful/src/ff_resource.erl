@@ -243,7 +243,7 @@ resource_descriptor(_) ->
     undefined.
 
 -spec method(resource()) ->
-    method() | undefiend.
+    method() | undefined.
 method({bank_card, #{bank_card := #{payment_system := PaymentSystem}}}) ->
     {bank_card, #{payment_system => PaymentSystem}};
 method({digital_wallet, #{digital_wallet := #{payment_service := PaymentService}}}) ->
@@ -251,7 +251,7 @@ method({digital_wallet, #{digital_wallet := #{payment_service := PaymentService}
 method({generic, #{generic := #{provider := PaymentService}}}) ->
     {generic, #{payment_service => PaymentService}};
 method(_) ->
-    undefiend.
+    undefined.
 
 -spec get_bin_data(binary(), resource_descriptor() | undefined) ->
     {ok, bin_data()}
