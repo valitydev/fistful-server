@@ -218,53 +218,6 @@ apply_event({account, Ev}, Source) ->
 -spec maybe_migrate(event() | legacy_event(), ff_machine:migrate_params()) -> event().
 maybe_migrate(Event = {created, #{version := ?ACTUAL_FORMAT_VERSION}}, _MigrateParams) ->
     Event;
-maybe_migrate({created, Source = #{version := 3}}, MigrateParams) ->
-    maybe_migrate(
-        {created, Source#{
-            version => 4
-        }},
-        MigrateParams
-    );
-maybe_migrate({created, Source = #{version := 2}}, MigrateParams) ->
-    Context = maps:get(ctx, MigrateParams, undefined),
-    %% TODO add metada migration for eventsink after decouple instruments
-    Metadata = ff_entity_context:try_get_legacy_metadata(Context),
-    maybe_migrate(
-        {created,
-            genlib_map:compact(Source#{
-                version => 3,
-                metadata => Metadata
-            })},
-        MigrateParams
-    );
-maybe_migrate({created, Source = #{version := 1}}, MigrateParams) ->
-    Timestamp = maps:get(timestamp, MigrateParams),
-    CreatedAt = ff_codec:unmarshal(timestamp_ms, ff_codec:marshal(timestamp, Timestamp)),
-    maybe_migrate(
-        {created, Source#{
-            version => 2,
-            created_at => CreatedAt
-        }},
-        MigrateParams
-    );
-maybe_migrate(
-    {created,
-        Source = #{
-            resource := Resource,
-            name := Name
-        }},
-    MigrateParams
-) ->
-    maybe_migrate(
-        {created,
-            genlib_map:compact(#{
-                version => 1,
-                resource => Resource,
-                name => Name,
-                external_id => maps:get(external_id, Source, undefined)
-            })},
-        MigrateParams
-    );
 %% Other events
 maybe_migrate(Event, _MigrateParams) ->
     Event.

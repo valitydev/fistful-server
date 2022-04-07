@@ -73,7 +73,6 @@
     token := token(),
     bin => bin(),
     payment_system => payment_system(),
-    payment_system_deprecated => payment_system_deprecated(),
     masked_pan => masked_pan(),
     bank_name => bank_name(),
     issuer_country => issuer_country(),
@@ -98,7 +97,6 @@
     | {digital_wallet, {payment_service, payment_service()}}
     | {generic, {payment_service, payment_service()}}.
 
--type payment_system_deprecated() :: ff_bin_data:payment_system_deprecated().
 -type masked_pan() :: binary().
 -type bank_name() :: binary().
 -type issuer_country() :: ff_bin_data:issuer_country().
@@ -163,7 +161,6 @@
 -export_type([token/0]).
 -export_type([bin/0]).
 -export_type([payment_system/0]).
--export_type([payment_system_deprecated/0]).
 -export_type([masked_pan/0]).
 -export_type([bank_name/0]).
 -export_type([issuer_country/0]).
@@ -181,7 +178,6 @@
 -export([token/1]).
 -export([masked_pan/1]).
 -export([payment_system/1]).
--export([payment_system_deprecated/1]).
 -export([issuer_country/1]).
 -export([category/1]).
 -export([bank_name/1]).
@@ -211,10 +207,6 @@ masked_pan(BankCard) ->
 -spec payment_system(bank_card()) -> payment_system().
 payment_system(BankCard) ->
     maps:get(payment_system, BankCard, undefined).
-
--spec payment_system_deprecated(bank_card()) -> payment_system_deprecated().
-payment_system_deprecated(BankCard) ->
-    maps:get(payment_system_deprecated, BankCard, undefined).
 
 -spec issuer_country(bank_card()) -> issuer_country().
 issuer_country(BankCard) ->
@@ -310,7 +302,7 @@ create_bank_card(#{bank_card := #{token := Token}} = ResourceBankCardParams, Res
 
 -spec create_bank_card_basic(resource_bank_card_params(), bin_data(), payment_system() | undefined) -> {ok, resource()}.
 create_bank_card_basic(#{bank_card := BankCardParams0} = ResourceBankCardParams, BinData, PaymentSystem) ->
-    KeyList = [payment_system_deprecated, bank_name, issuer_country, card_type, category],
+    KeyList = [bank_name, issuer_country, card_type, category],
     ExtendData0 = maps:with(KeyList, BinData),
     ExtendData1 = ExtendData0#{bin_data_id => ff_bin_data:id(BinData)},
     BankCardParams1 = genlib_map:compact(BankCardParams0#{payment_system => PaymentSystem}),

@@ -1148,7 +1148,6 @@ construct_payment_tool({bank_card, #{bank_card := ResourceBankCard}}) ->
         bin = maps:get(bin, ResourceBankCard),
         last_digits = maps:get(masked_pan, ResourceBankCard),
         payment_system = ff_dmsl_codec:marshal(payment_system, PaymentSystem),
-        payment_system_deprecated = maps:get(payment_system_deprecated, ResourceBankCard, undefined),
         issuer_country = maps:get(issuer_country, ResourceBankCard, undefined),
         bank_name = maps:get(bank_name, ResourceBankCard, undefined)
     }};
