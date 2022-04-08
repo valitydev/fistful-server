@@ -190,16 +190,16 @@ marshal(
 marshal(
     resource,
     {crypto_wallet, #{
-        crypto_wallet := #{
+        crypto_wallet := CryptoWallet = #{
             id := CryptoWalletID,
-            currency := {Currency, Data}
+            currency := Currency
         }
     }}
 ) ->
     {crypto_wallet, #domain_CryptoWallet{
         id = CryptoWalletID,
-        crypto_currency_deprecated = Currency,
-        destination_tag = maps:get(tag, Data, undefined)
+        crypto_currency = ff_dmsl_codec:marshal(crypto_currency, Currency),
+        destination_tag = maps:get(tag, CryptoWallet, undefined)
     }};
 marshal(
     resource,

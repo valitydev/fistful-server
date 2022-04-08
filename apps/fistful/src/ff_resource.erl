@@ -50,7 +50,8 @@
 
 -type crypto_wallet_params() :: #{
     id := binary(),
-    currency := crypto_currency()
+    currency := crypto_currency(),
+    tag => binary()
 }.
 
 -type resource_digital_wallet_params() :: #{
@@ -91,11 +92,15 @@
 -type payment_service() :: #{
     id := binary()
 }.
+-type crypto_currency() :: #{
+    id := binary()
+}.
 
 -type method() ::
-    {bank_card, {payment_system, payment_system()}}
-    | {digital_wallet, {payment_service, payment_service()}}
-    | {generic, {payment_service, payment_service()}}.
+    {bank_card, #{payment_system := payment_system()}}
+    | {digital_wallet, payment_service()}
+    | {crypto_currency, crypto_currency()}
+    | {generic, #{payment_service := payment_service()}}.
 
 -type masked_pan() :: binary().
 -type bank_name() :: binary().
@@ -121,17 +126,9 @@
 
 -type crypto_wallet() :: #{
     id := binary(),
-    currency := crypto_currency()
+    currency := crypto_currency(),
+    tag => binary()
 }.
-
--type crypto_currency() ::
-    {bitcoin, #{}}
-    | {bitcoin_cash, #{}}
-    | {litecoin, #{}}
-    | {ethereum, #{}}
-    | {zcash, #{}}
-    | {usdt, #{}}
-    | {ripple, #{tag => binary()}}.
 
 -type digital_wallet() :: #{
     id := binary(),
@@ -240,10 +237,10 @@ method({bank_card, #{bank_card := #{payment_system := PaymentSystem}}}) ->
     {bank_card, #{payment_system => PaymentSystem}};
 method({digital_wallet, #{digital_wallet := #{payment_service := PaymentService}}}) ->
     {digital_wallet, PaymentService};
+method({crypto_wallet, #{crypto_wallet := #{currency := CryptoCurrency}}}) ->
+    {crypto_currency, CryptoCurrency};
 method({generic, #{generic := #{provider := PaymentService}}}) ->
-    {generic, #{payment_service => PaymentService}};
-method(_) ->
-    undefined.
+    {generic, #{payment_service => PaymentService}}.
 
 -spec get_bin_data(binary(), resource_descriptor() | undefined) ->
     {ok, bin_data()}
@@ -264,10 +261,19 @@ check_resource(Revision, {digital_wallet, #{digital_wallet := #{payment_service 
     MarshalledPaymentService = ff_dmsl_codec:marshal(payment_service, PaymentService),
     {ok, _} = ff_domain_config:object(Revision, {payment_service, MarshalledPaymentService}),
     valid;
+check_resource(Revision, {crypto_wallet, #{crypto_wallet := #{currency := CryptoCurrency}}}) ->
+    MarshalledCryptoCurrency = ff_dmsl_codec:marshal(crypto_currency, CryptoCurrency),
+    {ok, _} = ff_domain_config:object(Revision, {crypto_currency, MarshalledCryptoCurrency}),
+    valid;
 check_resource(Revision, {generic, #{generic := #{provider := PaymentService}}}) ->
     MarshalledPaymentService = ff_dmsl_codec:marshal(payment_service, PaymentService),
     {ok, _} = ff_domain_config:object(Revision, {payment_service, MarshalledPaymentService}),
     valid;
+check_resource(Revision, {bank_card, #{bank_card := #{payment_system := PaymentSystem}}}) ->
+    MarshalledPaymentSystem = ff_dmsl_codec:marshal(payment_system, PaymentSystem),
+    {ok, _} = ff_domain_config:object(Revision, {payment_system, MarshalledPaymentSystem}),
+    valid;
+%% For bank cards struct with token only
 check_resource(_, _) ->
     valid.
 
@@ -315,17 +321,18 @@ create_bank_card_basic(#{bank_card := BankCardParams0} = ResourceBankCardParams,
 
 -spec create_crypto_wallet(resource_crypto_wallet_params()) -> {ok, resource()}.
 create_crypto_wallet(#{
-    crypto_wallet := #{
+    crypto_wallet := CryptoWallet = #{
         id := ID,
         currency := Currency
     }
 }) ->
     {ok,
         {crypto_wallet, #{
-            crypto_wallet => #{
+            crypto_wallet => genlib_map:compact(#{
                 id => ID,
-                currency => Currency
-            }
+                currency => Currency,
+                tag => maps:get(tag, CryptoWallet, undefined)
+            })
         }}}.
 
 -spec create_digital_wallet(resource_digital_wallet_params()) -> {ok, resource()}.

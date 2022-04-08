@@ -92,7 +92,7 @@ create_crypto_wallet_destination_ok(C) ->
         {crypto_wallet, #'fistful_base_ResourceCryptoWallet'{
             crypto_wallet = #'fistful_base_CryptoWallet'{
                 id = <<"f195298af836f41d072cb390ee62bee8">>,
-                currency = bitcoin_cash
+                currency = #'fistful_base_CryptoCurrencyRef'{id = <<"bitcoin_cash">>}
             }
         }},
     create_destination_ok(Resource, C).
@@ -103,7 +103,7 @@ create_ripple_wallet_destination_ok(C) ->
         {crypto_wallet, #'fistful_base_ResourceCryptoWallet'{
             crypto_wallet = #'fistful_base_CryptoWallet'{
                 id = <<"ab843336bf7738dc697522fbb90508de">>,
-                currency = ripple
+                currency = #'fistful_base_CryptoCurrencyRef'{id = <<"ripple">>}
             }
         }},
     create_destination_ok(Resource, C).

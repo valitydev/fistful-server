@@ -70,7 +70,7 @@ marshal(withdrawal_method, #{id := {generic, #{payment_service := PaymentService
 marshal(withdrawal_method, #{id := {digital_wallet, PaymentService}}) ->
     {digital_wallet, marshal(payment_service, PaymentService)};
 marshal(withdrawal_method, #{id := {crypto_currency, CryptoCurrencyRef}}) ->
-    {crypto_currency, marshal(crypto_currency_ref, CryptoCurrencyRef)};
+    {crypto_currency, marshal(crypto_currency, CryptoCurrencyRef)};
 marshal(withdrawal_method, #{id := {bank_card, #{payment_system := PaymentSystem}}}) ->
     {bank_card, #'fistful_BankCardWithdrawalMethod'{
         payment_system = marshal(payment_system, PaymentSystem)
@@ -208,10 +208,6 @@ marshal(payment_service, #{id := Ref}) when is_binary(Ref) ->
     };
 marshal(payment_system, #{id := Ref}) when is_binary(Ref) ->
     #'fistful_base_PaymentSystemRef'{
-        id = Ref
-    };
-marshal(crypto_currency_ref, #{id := Ref}) ->
-    #'fistful_base_CryptoCurrencyRef'{
         id = Ref
     };
 marshal(issuer_country, V) when is_atom(V) ->

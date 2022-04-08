@@ -1151,8 +1151,8 @@ construct_payment_tool({bank_card, #{bank_card := ResourceBankCard}}) ->
         issuer_country = maps:get(issuer_country, ResourceBankCard, undefined),
         bank_name = maps:get(bank_name, ResourceBankCard, undefined)
     }};
-construct_payment_tool({crypto_wallet, #{crypto_wallet := #{currency := {Currency, _}}}}) ->
-    {crypto_currency_deprecated, Currency};
+construct_payment_tool({crypto_wallet, #{crypto_wallet := #{currency := Currency}}}) ->
+    {crypto_currency, ff_dmsl_codec:marshal(crypto_currency, Currency)};
 construct_payment_tool(Resource = {generic, _}) ->
     ff_dmsl_codec:marshal(payment_tool, Resource);
 construct_payment_tool(

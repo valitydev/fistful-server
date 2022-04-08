@@ -59,9 +59,9 @@ encode_payment_method({bank_card, #domain_BankCard{payment_system_deprecated = P
     #domain_PaymentMethodRef{
         id = {bank_card_deprecated, PaymentSystem}
     };
-encode_payment_method({crypto_currency_deprecated, CryptoCurrency}) ->
+encode_payment_method({crypto_currency, CryptoCurrency}) ->
     #domain_PaymentMethodRef{
-        id = {crypto_currency_deprecated, CryptoCurrency}
+        id = {crypto_currency, CryptoCurrency}
     };
 encode_payment_method({digital_wallet, #domain_DigitalWallet{payment_service = PaymentService}}) ->
     #domain_PaymentMethodRef{

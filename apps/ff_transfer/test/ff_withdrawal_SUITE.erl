@@ -940,7 +940,7 @@ create_crypto_destination(IID, _C) ->
         {crypto_wallet, #{
             crypto_wallet => #{
                 id => <<"a30e277c07400c9940628828949efd48">>,
-                currency => {litecoin, #{}}
+                currency => #{id => <<"litecoin">>}
             }
         }},
     Params = #{id => ID, identity => IID, name => <<"CryptoDestination">>, currency => <<"RUB">>, resource => Resource},
