@@ -940,7 +940,7 @@ create_crypto_destination(IID, _C) ->
         {crypto_wallet, #{
             crypto_wallet => #{
                 id => <<"a30e277c07400c9940628828949efd48">>,
-                currency => #{id => <<"litecoin">>}
+                currency => #{id => <<"Litecoin">>}
             }
         }},
     Params = #{id => ID, identity => IID, name => <<"CryptoDestination">>, currency => <<"RUB">>, resource => Resource},
@@ -1097,7 +1097,9 @@ withdrawal_misconfig_termset_fixture() ->
                                                 {bank_card, #domain_BankCardCondition{
                                                     definition =
                                                         {payment_system, #domain_PaymentSystemCondition{
-                                                            payment_system_is_deprecated = visa
+                                                            payment_system_is = #domain_PaymentSystemRef{
+                                                                id = <<"VISA">>
+                                                            }
                                                         }}
                                                 }}}}
                                     ])},

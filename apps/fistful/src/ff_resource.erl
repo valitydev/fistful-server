@@ -240,7 +240,9 @@ method({digital_wallet, #{digital_wallet := #{payment_service := PaymentService}
 method({crypto_wallet, #{crypto_wallet := #{currency := CryptoCurrency}}}) ->
     {crypto_currency, CryptoCurrency};
 method({generic, #{generic := #{provider := PaymentService}}}) ->
-    {generic, #{payment_service => PaymentService}}.
+    {generic, #{payment_service => PaymentService}};
+method(_) ->
+    undefined.
 
 -spec get_bin_data(binary(), resource_descriptor() | undefined) ->
     {ok, bin_data()}
