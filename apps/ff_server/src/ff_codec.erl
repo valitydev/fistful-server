@@ -152,14 +152,14 @@ marshal(resource_descriptor, {bank_card, BinDataID}) ->
     }};
 marshal(bank_card, BankCard = #{token := Token}) ->
     Bin = maps:get(bin, BankCard, undefined),
-    PaymentSystem = maps:get(payment_system, BankCard, undefined),
-    MaskedPan = maps:get(masked_pan, BankCard, undefined),
-    BankName = maps:get(bank_name, BankCard, undefined),
-    IssuerCountry = maps:get(issuer_country, BankCard, undefined),
-    CardType = maps:get(card_type, BankCard, undefined),
-    ExpDate = maps:get(exp_date, BankCard, undefined),
-    CardholderName = maps:get(cardholder_name, BankCard, undefined),
-    BinDataID = maps:get(bin_data_id, BankCard, undefined),
+    PaymentSystem = ff_resource:payment_system(BankCard),
+    MaskedPan = ff_resource:masked_pan(BankCard),
+    BankName = ff_resource:bank_name(BankCard),
+    IssuerCountry = ff_resource:issuer_country(BankCard),
+    CardType = ff_resource:card_type(BankCard),
+    ExpDate = ff_resource:exp_date(BankCard),
+    CardholderName = ff_resource:cardholder_name(BankCard),
+    BinDataID = ff_resource:bin_data_id(BankCard),
     #'fistful_base_BankCard'{
         token = marshal(string, Token),
         bin = marshal(string, Bin),
@@ -604,25 +604,37 @@ bank_card_codec_test() ->
         cardholder_name => <<"name">>,
         bin_data_id => #{<<"foo">> => 1}
     },
-    Type = {struct, struct, {ff_proto_base_thrift, 'BankCard'}},
-    Binary = ff_proto_utils:serialize(Type, marshal(bank_card, BankCard)),
+    ResourceBankCard =
+        {bank_card, #{
+            bank_card => BankCard,
+            auth_data => {session, #{session_id => <<"session_id">>}}
+        }},
+    {bank_card, MarshalledResourceBankCard} = marshal(resource, ResourceBankCard),
+    Type = {struct, struct, {ff_proto_base_thrift, 'ResourceBankCard'}},
+    Binary = ff_proto_utils:serialize(Type, MarshalledResourceBankCard),
     Decoded = ff_proto_utils:deserialize(Type, Binary),
     ?assertEqual(
         Decoded,
-        #'fistful_base_BankCard'{
-            token = <<"token">>,
-            payment_system = #'fistful_base_PaymentSystemRef'{id = <<"foo">>},
-            bin = <<"12345">>,
-            masked_pan = <<"7890">>,
-            bank_name = <<"bank">>,
-            issuer_country = zmb,
-            card_type = credit_or_debit,
-            exp_date = #'fistful_base_BankCardExpDate'{month = 12, year = 3456},
-            cardholder_name = <<"name">>,
-            bin_data_id = {obj, #{{str, <<"foo">>} => {i, 1}}}
+        #fistful_base_ResourceBankCard{
+            bank_card = #'fistful_base_BankCard'{
+                token = <<"token">>,
+                payment_system = #'fistful_base_PaymentSystemRef'{id = <<"foo">>},
+                bin = <<"12345">>,
+                masked_pan = <<"7890">>,
+                bank_name = <<"bank">>,
+                issuer_country = zmb,
+                card_type = credit_or_debit,
+                exp_date = #'fistful_base_BankCardExpDate'{month = 12, year = 3456},
+                cardholder_name = <<"name">>,
+                bin_data_id = {obj, #{{str, <<"foo">>} => {i, 1}}}
+            },
+            auth_data =
+                {session_data, #'fistful_base_SessionAuthData'{
+                    id = <<"session_id">>
+                }}
         }
     ),
-    ?assertEqual(BankCard, unmarshal(bank_card, Decoded)).
+    ?assertEqual(ResourceBankCard, unmarshal(resource, {bank_card, Decoded})).
 
 -spec generic_resource_codec_test() -> _.
 generic_resource_codec_test() ->

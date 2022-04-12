@@ -416,11 +416,11 @@ create(Params) ->
         Identity = get_wallet_identity(Wallet),
         Destination = unwrap(destination, get_destination(DestinationID)),
         ResourceParams = ff_destination:resource(Destination),
-        valid = ff_resource:check_resource(DomainRevision, ResourceParams),
         Resource = unwrap(
             destination_resource,
             create_resource(ResourceParams, ResourceDescriptor, Identity, DomainRevision)
         ),
+        valid = ff_resource:check_resource(DomainRevision, Resource),
         PartyID = ff_identity:party(Identity),
         VarsetParams = genlib_map:compact(#{
             body => Body,
