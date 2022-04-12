@@ -92,5 +92,194 @@ unmarshal_event(undefined = Version, EncodedChange, Context0) ->
 -spec maybe_migrate(any(), context()) -> ff_wallet:event().
 maybe_migrate(Event = {created, #{version := 2}}, _MigrateContext) ->
     Event;
+maybe_migrate({created, Wallet = #{version := 1}}, MigrateContext) ->
+    Context =
+        case maps:get(machine_ref, MigrateContext, undefined) of
+            undefined ->
+                undefined;
+            ID ->
+                {ok, State} = ff_machine:get(ff_wallet, 'ff/wallet_v2', ID, {undefined, 0, forward}),
+                maps:get(ctx, State, undefined)
+        end,
+    maybe_migrate(
+        {created,
+            genlib_map:compact(Wallet#{
+                version => 2,
+                metadata => ff_entity_context:try_get_legacy_metadata(Context)
+            })},
+        MigrateContext
+    );
+maybe_migrate({created, Wallet}, MigrateContext) ->
+    Timestamp = maps:get(created_at, MigrateContext),
+    CreatedAt = ff_codec:unmarshal(timestamp_ms, ff_codec:marshal(timestamp, Timestamp)),
+    maybe_migrate(
+        {created, Wallet#{
+            version => 1,
+            created_at => CreatedAt
+        }},
+        MigrateContext
+    );
 maybe_migrate(Ev, _MigrateContext) ->
     Ev.
+
+%% Tests
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+-spec test() -> _.
+
+% tests helpers
+
+-spec make_legacy_context(map()) -> context().
+make_legacy_context(Map) ->
+    % drop mandatory attributes for backward compatible
+    maps:without([machine_ref, machine_ns], Map).
+
+-spec marshal(type(), value(data())) -> machinery_msgpack:t().
+marshal(Type, Value) ->
+    {Result, _Context} = marshal(Type, Value, make_legacy_context(#{})),
+    Result.
+
+-spec unmarshal(type(), machinery_msgpack:t()) -> value(data()).
+unmarshal(Type, Value) ->
+    {Result, _Context} = unmarshal(Type, Value, make_legacy_context(#{})),
+    Result.
+
+-spec created_v0_2_decoding_test() -> _.
+created_v0_2_decoding_test() ->
+    Change =
+        {created, #{
+            version => 2,
+            name => <<"name">>,
+            blocking => unblocked,
+            created_at => 123
+        }},
+    Event = {ev, {{{2020, 5, 25}, {19, 19, 10}}, 293305}, Change},
+    LegacyChange =
+        {arr, [
+            {str, <<"tup">>},
+            {str, <<"created">>},
+            {arr, [
+                {str, <<"map">>},
+                {obj, #{
+                    {str, <<"version">>} => {i, 1},
+                    {str, <<"name">>} => {bin, <<"name">>},
+                    {str, <<"blocking">>} => {str, <<"unblocked">>},
+                    {str, <<"created_at">>} => {i, 123}
+                }}
+            ]}
+        ]},
+    LegacyEvent =
+        {arr, [
+            {str, <<"tup">>},
+            {str, <<"ev">>},
+            {arr, [
+                {str, <<"tup">>},
+                {arr, [
+                    {str, <<"tup">>},
+                    {arr, [{str, <<"tup">>}, {i, 2020}, {i, 5}, {i, 25}]},
+                    {arr, [{str, <<"tup">>}, {i, 19}, {i, 19}, {i, 10}]}
+                ]},
+                {i, 293305}
+            ]},
+            LegacyChange
+        ]},
+    DecodedLegacy = unmarshal({event, undefined}, LegacyEvent),
+    ModernizedBinary = marshal({event, ?CURRENT_EVENT_FORMAT_VERSION}, DecodedLegacy),
+    Decoded = unmarshal({event, ?CURRENT_EVENT_FORMAT_VERSION}, ModernizedBinary),
+    ?assertEqual(Event, Decoded).
+
+-spec created_account_v0_2_decoding_test() -> _.
+created_account_v0_2_decoding_test() ->
+    Change =
+        {account,
+            {created, #{
+                id => <<"id">>,
+                identity => <<"identity_id">>,
+                currency => <<"RUB">>,
+                accounter_account_id => 123
+            }}},
+    Event = {ev, {{{2020, 5, 25}, {19, 19, 10}}, 293305}, Change},
+    LegacyChange =
+        {arr, [
+            {str, <<"tup">>},
+            {str, <<"account">>},
+            {arr, [
+                {str, <<"tup">>},
+                {str, <<"created">>},
+                {arr, [
+                    {str, <<"map">>},
+                    {obj, #{
+                        {str, <<"id">>} => {bin, <<"id">>},
+                        {str, <<"identity">>} => {bin, <<"identity_id">>},
+                        {str, <<"currency">>} => {bin, <<"RUB">>},
+                        {str, <<"accounter_account_id">>} => {i, 123}
+                    }}
+                ]}
+            ]}
+        ]},
+    LegacyEvent =
+        {arr, [
+            {str, <<"tup">>},
+            {str, <<"ev">>},
+            {arr, [
+                {str, <<"tup">>},
+                {arr, [
+                    {str, <<"tup">>},
+                    {arr, [{str, <<"tup">>}, {i, 2020}, {i, 5}, {i, 25}]},
+                    {arr, [{str, <<"tup">>}, {i, 19}, {i, 19}, {i, 10}]}
+                ]},
+                {i, 293305}
+            ]},
+            LegacyChange
+        ]},
+    DecodedLegacy = unmarshal({event, undefined}, LegacyEvent),
+    ModernizedBinary = marshal({event, ?CURRENT_EVENT_FORMAT_VERSION}, DecodedLegacy),
+    Decoded = unmarshal({event, ?CURRENT_EVENT_FORMAT_VERSION}, ModernizedBinary),
+    ?assertEqual(Event, Decoded).
+
+-spec created_v2_decoding_test() -> _.
+created_v2_decoding_test() ->
+    Change =
+        {created, #{
+            version => 2,
+            name => <<"name">>,
+            blocking => unblocked,
+            created_at => 123
+        }},
+    Event = {ev, {{{2020, 5, 25}, {19, 19, 10}}, 293305}, Change},
+    LegacyEvent =
+        {bin,
+            base64:decode(<<
+                "CwABAAAAGzIwMjAtMDUtMjVUMTk6MTk6MTAuMjkzMzA1WgwAAgwAAQsAAQAAAARuYW1lC"
+                "AAEAAAAAAsABgAAABgxOTcwLTAxLTAxVDAwOjAwOjAwLjEyM1oAAAA="
+            >>)},
+    DecodedLegacy = unmarshal({event, 1}, LegacyEvent),
+    ModernizedBinary = marshal({event, ?CURRENT_EVENT_FORMAT_VERSION}, DecodedLegacy),
+    Decoded = unmarshal({event, ?CURRENT_EVENT_FORMAT_VERSION}, ModernizedBinary),
+    ?assertEqual(Event, Decoded).
+
+-spec created_account_v2_decoding_test() -> _.
+created_account_v2_decoding_test() ->
+    Change =
+        {account,
+            {created, #{
+                id => <<"id">>,
+                identity => <<"identity_id">>,
+                currency => <<"RUB">>,
+                accounter_account_id => 123
+            }}},
+    Event = {ev, {{{2020, 5, 25}, {19, 19, 10}}, 293305}, Change},
+    LegacyEvent =
+        {bin,
+            base64:decode(<<
+                "CwABAAAAGzIwMjAtMDUtMjVUMTk6MTk6MTAuMjkzMzA1WgwAAgwAAgwAAQsAAwAAAAJpZAs"
+                "AAQAAAAtpZGVudGl0eV9pZAwAAgsAAQAAAANSVUIACgAEAAAAAAAAAHsAAAAA"
+            >>)},
+    DecodedLegacy = unmarshal({event, 1}, LegacyEvent),
+    ModernizedBinary = marshal({event, ?CURRENT_EVENT_FORMAT_VERSION}, DecodedLegacy),
+    Decoded = unmarshal({event, ?CURRENT_EVENT_FORMAT_VERSION}, ModernizedBinary),
+    ?assertEqual(Event, Decoded).
+
+-endif.
