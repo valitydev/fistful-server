@@ -29,7 +29,7 @@
 %%
 
 -include_lib("ff_cth/include/ct_domain.hrl").
--include_lib("shumpune_proto/include/shumpune_shumpune_thrift.hrl").
+-include_lib("damsel/include/dmsl_accounter_thrift.hrl").
 
 -define(DTP(Type), dmsl_domain_thrift:Type()).
 
@@ -473,20 +473,17 @@ globals(EASRef, PIRefs) ->
         }
     }}.
 
--spec account(binary(), ct_helper:config()) -> shumpune_shumpune_thrift:'AccountID'().
+-spec account(binary(), ct_helper:config()) -> dmsl_accounter_thrift:'AccountID'().
 account(SymCode, C) ->
     Client = ff_woody_client:new(maps:get('accounter', ct_helper:cfg(services, C))),
     WoodyCtx = ct_helper:get_woody_ctx(C),
-    Prototype = #shumpune_AccountPrototype{
+    Prototype = #accounter_AccountPrototype{
         currency_sym_code = SymCode,
         description = <<>>,
-        creation_time = timestamp()
+        creation_time = ff_time:format_now()
     },
-    Request = {{shumpune_shumpune_thrift, 'Accounter'}, 'CreateAccount', {Prototype}},
+    Request = {{dmsl_accounter_thrift, 'Accounter'}, 'CreateAccount', {Prototype}},
     case woody_client:call(Request, Client, WoodyCtx) of
         {ok, ID} ->
             ID
     end.
-
-timestamp() ->
-    genlib_rfc3339:format(genlib_time:daytime_to_unixtime(calendar:universal_time()), second).

@@ -229,7 +229,7 @@ services(Options) ->
         ff_withdrawal_adapter_host => "http://fistful-server:8022/v1/ff_withdrawal_adapter_host",
         eventsink => "http://machinegun:8022/v1/event_sink",
         automaton => "http://machinegun:8022/v1/automaton",
-        accounter => "http://shumway:8022/shumpune",
+        accounter => "http://shumway:8022/accounter",
         partymgmt => "http://party-management:8022/v1/processing/partymgmt",
         binbase => "http://localhost:8222/binbase"
     },
