@@ -129,7 +129,7 @@ prepare(Transfer = #{status := created}) ->
     ID = id(Transfer),
     CashFlow = final_cash_flow(Transfer),
     do(fun() ->
-        _PostingPlanLog = unwrap(ff_accounting:prepare(ID, construct_trx_postings(CashFlow))),
+        _PostingPlanLog = unwrap(ff_accounting:prepare_trx(ID, construct_trx_postings(CashFlow))),
         [{status_changed, prepared}]
     end);
 prepare(#{status := prepared}) ->

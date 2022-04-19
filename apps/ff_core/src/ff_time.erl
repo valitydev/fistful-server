@@ -4,7 +4,6 @@
 -module(ff_time).
 
 -export([now/0]).
--export([format_now/0]).
 -export([to_rfc3339/1]).
 -export([from_rfc3339/1]).
 -export([add_interval/2]).
@@ -22,23 +21,11 @@
 -type time() :: {hour(), minute(), second()}.
 -type datetime_interval() :: {date(), time()}.
 
--type timestamp() :: dmsl_base_thrift:'Timestamp'().
--type rfc3339_time_unit() ::
-    microsecond
-    | millisecond
-    | nanosecond
-    | second.
-
 %% API
 
 -spec now() -> timestamp_ms().
 now() ->
     erlang:system_time(millisecond).
-
--spec format_now() -> timestamp().
-format_now() ->
-    USec = erlang:system_time(microsecond),
-    format_ts(USec, microsecond).
 
 -spec to_rfc3339(timestamp_ms()) -> binary().
 to_rfc3339(Timestamp) ->
@@ -56,13 +43,6 @@ add_interval(Timestamp, {Date, Time}) ->
     NewDate = genlib_time:daytime_to_unixtime({genlib_time:shift_date(D, Date), T}),
     DateTime = genlib_time:add_duration(NewDate, Time),
     DateTime * 1000 + Ms.
-
-%%
-
--spec format_ts(integer(), rfc3339_time_unit()) -> timestamp().
-format_ts(Ts, Unit) ->
-    Str = calendar:system_time_to_rfc3339(Ts, [{unit, Unit}, {offset, "Z"}]),
-    erlang:list_to_binary(Str).
 
 %% TESTS
 

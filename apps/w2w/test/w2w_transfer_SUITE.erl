@@ -349,7 +349,7 @@ set_wallet_balance({Amount, Currency}, ID) ->
     {CurrentAmount, _, Currency} = get_account_balance(Account),
     {ok, AnotherAccounterID} = ct_helper:create_account(Currency),
     Postings = [{AnotherAccounterID, AccounterID, {Amount - CurrentAmount, Currency}}],
-    {ok, _} = ff_accounting:prepare(TransactionID, Postings),
+    {ok, _} = ff_accounting:prepare_trx(TransactionID, Postings),
     {ok, _} = ff_accounting:commit(TransactionID, Postings),
     ok.
 

@@ -1,9 +1,6 @@
 %%%
 %%% Financial transaction between accounts
 %%%
-%%%  - Rename to `ff_posting_plan`?
-%%%
-
 -module(ff_accounting).
 
 -include_lib("damsel/include/dmsl_accounter_thrift.hrl").
@@ -25,12 +22,10 @@
 -export_type([account/0]).
 -export_type([posting/0]).
 
-%% TODO
-%%  - Module name is misleading then
 -export([balance/1]).
 -export([create_account/2]).
 
--export([prepare/2]).
+-export([prepare_trx/2]).
 -export([commit/2]).
 -export([cancel/2]).
 
@@ -54,8 +49,8 @@ create_account(CurrencyCode, Description) ->
             {error, {exception, Exception}}
     end.
 
--spec prepare(id(), [posting()]) -> {ok, posting_plan_log()}.
-prepare(ID, Postings) ->
+-spec prepare_trx(id(), [posting()]) -> {ok, posting_plan_log()}.
+prepare_trx(ID, Postings) ->
     hold(encode_plan_change(ID, Postings)).
 
 -spec commit(id(), [posting()]) -> {ok, posting_plan_log()}.
@@ -148,6 +143,5 @@ build_account_balance(
 construct_prototype(CurrencyCode, Description) ->
     #accounter_AccountPrototype{
         currency_sym_code = CurrencyCode,
-        description = Description,
-        creation_time = ff_time:format_now()
+        description = Description
     }.
