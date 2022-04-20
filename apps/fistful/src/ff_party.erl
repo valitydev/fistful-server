@@ -512,24 +512,10 @@ do_accept_claim(ID, Claim) ->
     end.
 
 get_party_client() ->
-    % TODO
-    %  - Move auth logic from hellgate to capi the same way as it works
-    %    in wapi & fistful. Then the following dirty user_identity hack
-    %    will not be necessary anymore.
-    Context0 = ff_context:load(),
-    WoodyContextWithoutMeta = maps:without([meta], ff_context:get_woody_context(Context0)),
-    Context1 = ff_context:set_woody_context(WoodyContextWithoutMeta, Context0),
-    Context2 = ff_context:set_user_identity(construct_user_identity(), Context1),
-    Client = ff_context:get_party_client(Context2),
-    ClientContext = ff_context:get_party_client_context(Context2),
+    Context = ff_context:load(),
+    Client = ff_context:get_party_client(Context),
+    ClientContext = ff_context:get_party_client_context(Context),
     {Client, ClientContext}.
-
--spec construct_user_identity() -> woody_user_identity:user_identity().
-construct_user_identity() ->
-    #{
-        id => <<"fistful">>,
-        realm => <<"service">>
-    }.
 
 construct_inaccessibilty({blocking, _}) ->
     {inaccessible, blocked};
