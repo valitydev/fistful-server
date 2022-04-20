@@ -184,9 +184,7 @@ get_revision(ID) ->
         {ok, Revision} ->
             {ok, Revision};
         {error, #payproc_PartyNotFound{}} ->
-            {error, {party_not_found, ID}};
-        {error, Unexpected} ->
-            error(Unexpected)
+            {error, {party_not_found, ID}}
     end.
 
 %%
@@ -270,9 +268,7 @@ get_contract_terms(PartyID, ContractID, Varset, Timestamp, PartyRevision, Domain
         {error, #payproc_ContractNotFound{}} ->
             {error, {contract_not_found, ContractID}};
         {error, #payproc_PartyNotExistsYet{}} ->
-            {error, {party_not_exists_yet, PartyID}};
-        {error, Unexpected} ->
-            erlang:error({unexpected, Unexpected})
+            {error, {party_not_exists_yet, PartyID}}
     end.
 
 -spec compute_payment_institution(PaymentInstitutionRef, Varset, DomainRevision) -> Result when
@@ -461,9 +457,7 @@ do_create_party(ID, Params) ->
         ok ->
             ok;
         {error, #payproc_PartyExists{}} ->
-            {error, exists};
-        {error, Unexpected} ->
-            error(Unexpected)
+            {error, exists}
     end.
 
 do_get_party(ID) ->
@@ -476,9 +470,7 @@ do_get_party(ID) ->
         {ok, Party} ->
             Party;
         {error, #payproc_PartyNotFound{} = Reason} ->
-            Reason;
-        {error, Unexpected} ->
-            error(Unexpected)
+            Reason
     end.
 
 do_get_contract(ID, ContractID) ->
@@ -489,9 +481,7 @@ do_get_contract(ID, ContractID) ->
         {error, #payproc_PartyNotFound{}} ->
             {error, {party_not_found, ID}};
         {error, #payproc_ContractNotFound{}} ->
-            {error, {contract_not_found, ContractID}};
-        {error, Unexpected} ->
-            error(Unexpected)
+            {error, {contract_not_found, ContractID}}
     end.
 
 do_create_claim(ID, Changeset) ->
@@ -504,9 +494,7 @@ do_create_claim(ID, Changeset) ->
         }} ->
             {error, invalid};
         {error, #payproc_InvalidPartyStatus{status = Status}} ->
-            {error, construct_inaccessibilty(Status)};
-        {error, Unexpected} ->
-            error(Unexpected)
+            {error, construct_inaccessibilty(Status)}
     end.
 
 do_accept_claim(ID, Claim) ->
@@ -520,9 +508,7 @@ do_accept_claim(ID, Claim) ->
         ok ->
             accepted;
         {error, #payproc_InvalidClaimStatus{status = {accepted, _}}} ->
-            accepted;
-        {error, Unexpected} ->
-            error(Unexpected)
+            accepted
     end.
 
 get_party_client() ->

@@ -78,11 +78,10 @@ get_woody_context(Context) ->
     WoodyContext.
 
 -spec set_woody_context(woody_context(), context()) -> context().
-set_woody_context(WoodyContext, #{party_client_context := PartyContext0} = Context) ->
-    PartyContext1 = party_client_context:set_woody_context(WoodyContext, PartyContext0),
+set_woody_context(WoodyContext, Context) ->
     Context#{
         woody_context => WoodyContext,
-        party_client_context => PartyContext1
+        party_client_context => party_client_context:create(#{woody_context => WoodyContext})
     }.
 
 -spec get_party_client(context()) -> party_client().
@@ -96,8 +95,7 @@ set_party_client(PartyClient, Context) ->
     Context#{party_client => PartyClient}.
 
 -spec get_party_client_context(context()) -> party_client_context().
-get_party_client_context(Context) ->
-    #{party_client_context := PartyContext} = ensure_party_user_info_set(Context),
+get_party_client_context(#{party_client_context := PartyContext}) ->
     PartyContext.
 
 -spec set_party_client_context(party_client_context(), context()) -> context().
@@ -134,11 +132,4 @@ ensure_woody_user_info_set(#{user_identity := Identity, woody_context := WoodyCo
     NewWoodyContext = woody_user_identity:put(Identity, WoodyContext),
     Context#{woody_context := NewWoodyContext};
 ensure_woody_user_info_set(Context) ->
-    Context.
-
--spec ensure_party_user_info_set(context()) -> context().
-ensure_party_user_info_set(#{user_identity := Identity, party_client_context := PartyContext} = Context) ->
-    NewPartyContext = party_client_context:set_user_info(Identity, PartyContext),
-    Context#{party_client_context := NewPartyContext};
-ensure_party_user_info_set(Context) ->
     Context.
