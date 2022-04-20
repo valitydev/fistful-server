@@ -150,7 +150,7 @@ commit(Transfer = #{status := prepared}) ->
     ID = id(Transfer),
     CashFlow = final_cash_flow(Transfer),
     do(fun() ->
-        _PostingPlanLog = unwrap(ff_accounting:commit(ID, construct_trx_postings(CashFlow))),
+        _PostingPlanLog = unwrap(ff_accounting:commit_trx(ID, construct_trx_postings(CashFlow))),
         [{status_changed, committed}]
     end);
 commit(#{status := committed}) ->
@@ -167,7 +167,7 @@ cancel(Transfer = #{status := prepared}) ->
     ID = id(Transfer),
     CashFlow = final_cash_flow(Transfer),
     do(fun() ->
-        _PostingPlanLog = unwrap(ff_accounting:cancel(ID, construct_trx_postings(CashFlow))),
+        _PostingPlanLog = unwrap(ff_accounting:cancel_trx(ID, construct_trx_postings(CashFlow))),
         [{status_changed, cancelled}]
     end);
 cancel(#{status := cancelled}) ->

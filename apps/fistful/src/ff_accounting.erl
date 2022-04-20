@@ -26,8 +26,8 @@
 -export([create_account/2]).
 
 -export([prepare_trx/2]).
--export([commit/2]).
--export([cancel/2]).
+-export([commit_trx/2]).
+-export([cancel_trx/2]).
 
 %%
 
@@ -53,12 +53,12 @@ create_account(CurrencyCode, Description) ->
 prepare_trx(ID, Postings) ->
     hold(encode_plan_change(ID, Postings)).
 
--spec commit(id(), [posting()]) -> {ok, posting_plan_log()}.
-commit(ID, Postings) ->
+-spec commit_trx(id(), [posting()]) -> {ok, posting_plan_log()}.
+commit_trx(ID, Postings) ->
     commit_plan(encode_plan(ID, Postings)).
 
--spec cancel(id(), [posting()]) -> {ok, posting_plan_log()}.
-cancel(ID, Postings) ->
+-spec cancel_trx(id(), [posting()]) -> {ok, posting_plan_log()}.
+cancel_trx(ID, Postings) ->
     rollback_plan(encode_plan(ID, Postings)).
 
 %% Woody stuff
