@@ -379,7 +379,7 @@ deposit_quote_withdrawal_ok(C) ->
             created_at => <<"2016-03-22T06:12:27Z">>,
             expires_on => <<"2016-03-22T06:12:27Z">>,
             quote_data => #{<<"test">> => <<"test">>},
-            route => ff_withdrawal_routing:make_route(3, 1),
+            route => ff_withdrawal_routing:make_route(3, 301),
             domain_revision => DomainRevision,
             party_revision => PartyRevision
         }

@@ -126,7 +126,7 @@ withdrawal_rejected_by_prohibitions_table_test(_C) ->
             ],
             #{
                 rejected_routes := [
-                    {_, ?trm(4), {'RoutingRule', <<"Candidate description">>}}
+                    {_, ?trm(4), {'RoutingRule', undefined}}
                 ]
             }
         },
