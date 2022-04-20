@@ -560,10 +560,6 @@ construct_inaccessibilty({suspension, _}) ->
     {contract_modification, #payproc_ContractModificationUnit{id = ID, modification = Mod}}
 ).
 
--define(WALLET_MOD(ID, Mod),
-    {wallet_modification, #payproc_WalletModificationUnit{id = ID, modification = Mod}}
-).
-
 construct_party_params(#{email := Email}) ->
     #payproc_PartyParams{
         contact_info = #domain_PartyContactInfo{

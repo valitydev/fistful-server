@@ -1,7 +1,6 @@
 -module(ff_routing_rule_SUITE).
 
 -include_lib("stdlib/include/assert.hrl").
--include_lib("damsel/include/dmsl_domain_thrift.hrl").
 -include_lib("ff_cth/include/ct_domain.hrl").
 
 %% Common test API
