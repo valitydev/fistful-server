@@ -41,7 +41,7 @@
     ?DTP('ProviderRef'),
     ?DTP('ProxyRef'),
     binary(),
-    ?DTP('ProvisionTermSet'),
+    ?DTP('ProvisionTermSet') | undefined,
     ct_helper:config()
 ) -> object().
 withdrawal_provider(?prv(ID) = Ref, ProxyRef, IdentityID, TermSet, C) ->
@@ -64,7 +64,11 @@ withdrawal_provider(?prv(ID) = Ref, ProxyRef, IdentityID, TermSet, C) ->
 withdrawal_terminal(Ref, ProviderRef) ->
     withdrawal_terminal(Ref, ProviderRef, undefined).
 
--spec withdrawal_terminal(?DTP('TerminalRef'), ?DTP('ProviderRef'), ?DTP('ProvisionTermSet')) -> object().
+-spec withdrawal_terminal(
+    ?DTP('TerminalRef'),
+    ?DTP('ProviderRef'),
+    ?DTP('ProvisionTermSet') | undefined
+) -> object().
 withdrawal_terminal(?trm(ID) = Ref, ?prv(ProviderID) = ProviderRef, TermSet) ->
     {terminal, #domain_TerminalObject{
         ref = Ref,
