@@ -88,7 +88,6 @@
 -export([get_contract_terms/6]).
 -export([compute_payment_institution/3]).
 -export([compute_routing_ruleset/3]).
--export([compute_provider/3]).
 -export([compute_provider_terminal_terms/4]).
 -export([get_withdrawal_cash_flow_plan/1]).
 -export([get_w2w_cash_flow_plan/1]).
@@ -115,7 +114,6 @@
 -type provider_ref() :: dmsl_domain_thrift:'ProviderRef'().
 -type terminal_ref() :: dmsl_domain_thrift:'TerminalRef'().
 -type method_ref() :: dmsl_domain_thrift:'PaymentMethodRef'().
--type provider() :: dmsl_domain_thrift:'Provider'().
 -type provision_term_set() :: dmsl_domain_thrift:'ProvisionTermSet'().
 -type bound_type() :: 'exclusive' | 'inclusive'.
 -type cash_range() :: {{bound_type(), cash()}, {bound_type(), cash()}}.
@@ -319,28 +317,6 @@ compute_routing_ruleset(RoutingRulesetRef, Varset, DomainRevision) ->
             {ok, RoutingRuleset};
         {error, #payproc_RuleSetNotFound{}} ->
             {error, ruleset_not_found}
-    end.
-
--spec compute_provider(ProviderRef, Varset, DomainRevision) -> Result when
-    ProviderRef :: provider_ref(),
-    Varset :: ff_varset:varset(),
-    DomainRevision :: domain_revision(),
-    Result :: {ok, provider()} | {error, provider_not_found}.
-compute_provider(ProviderRef, Varset, DomainRevision) ->
-    DomainVarset = ff_varset:encode(Varset),
-    {Client, Context} = get_party_client(),
-    Result = party_client_thrift:compute_provider(
-        ProviderRef,
-        DomainRevision,
-        DomainVarset,
-        Client,
-        Context
-    ),
-    case Result of
-        {ok, Provider} ->
-            {ok, Provider};
-        {error, #payproc_ProviderNotFound{}} ->
-            {error, provider_not_found}
     end.
 
 -spec compute_provider_terminal_terms(ProviderRef, TerminalRef, Varset, DomainRevision) -> Result when
