@@ -164,7 +164,8 @@ create(ID, Params) ->
 
 -spec is_accessible(id()) ->
     {ok, accessible}
-    | {error, inaccessibility()}.
+    | {error, inaccessibility()}
+    | {error, notfound}.
 is_accessible(ID) ->
     case do_get_party(ID) of
         #domain_Party{blocking = {blocked, _}} ->
