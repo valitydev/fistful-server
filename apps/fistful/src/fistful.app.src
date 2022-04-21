@@ -14,7 +14,6 @@
         uuid,
         damsel,
         dmt_client,
-        shumpune_proto,
         party_client,
         binbase_proto
     ]},

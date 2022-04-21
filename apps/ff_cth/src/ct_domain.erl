@@ -16,21 +16,21 @@
 -export([proxy/2]).
 -export([proxy/3]).
 -export([proxy/4]).
--export([system_account_set/4]).
--export([external_account_set/4]).
+-export([system_account_set/3]).
+-export([external_account_set/3]).
 -export([term_set_hierarchy/1]).
 -export([term_set_hierarchy/2]).
 -export([term_set_hierarchy/3]).
 -export([timed_term_set/1]).
 -export([globals/2]).
--export([withdrawal_provider/5]).
+-export([withdrawal_provider/4]).
 -export([withdrawal_terminal/2]).
 -export([withdrawal_terminal/3]).
 
 %%
 
 -include_lib("ff_cth/include/ct_domain.hrl").
--include_lib("shumpune_proto/include/shumpune_shumpune_thrift.hrl").
+-include_lib("damsel/include/dmsl_accounter_thrift.hrl").
 
 -define(DTP(Type), dmsl_domain_thrift:Type()).
 
@@ -41,11 +41,10 @@
     ?DTP('ProviderRef'),
     ?DTP('ProxyRef'),
     binary(),
-    ?DTP('ProvisionTermSet') | undefined,
-    ct_helper:config()
+    ?DTP('ProvisionTermSet') | undefined
 ) -> object().
-withdrawal_provider(?prv(ID) = Ref, ProxyRef, IdentityID, TermSet, C) ->
-    AccountID = account(<<"RUB">>, C),
+withdrawal_provider(?prv(ID) = Ref, ProxyRef, IdentityID, TermSet) ->
+    {ok, AccountID} = ct_helper:create_account(<<"RUB">>),
     {provider, #domain_ProviderObject{
         ref = Ref,
         data = #domain_Provider{
@@ -233,10 +232,10 @@ proxy(Ref, Name, URL, Opts) ->
         }
     }}.
 
--spec system_account_set(?DTP('SystemAccountSetRef'), binary(), ?DTP('CurrencyRef'), ct_helper:config()) -> object().
-system_account_set(Ref, Name, ?cur(SymCode), C) ->
-    AccountID1 = account(SymCode, C),
-    AccountID2 = account(SymCode, C),
+-spec system_account_set(?DTP('SystemAccountSetRef'), binary(), ?DTP('CurrencyRef')) -> object().
+system_account_set(Ref, Name, ?cur(SymCode)) ->
+    {ok, AccountID1} = ct_helper:create_account(SymCode),
+    {ok, AccountID2} = ct_helper:create_account(SymCode),
     {system_account_set, #domain_SystemAccountSetObject{
         ref = Ref,
         data = #domain_SystemAccountSet{
@@ -251,11 +250,11 @@ system_account_set(Ref, Name, ?cur(SymCode), C) ->
         }
     }}.
 
--spec external_account_set(?DTP('ExternalAccountSetRef'), binary(), ?DTP('CurrencyRef'), ct_helper:config()) ->
+-spec external_account_set(?DTP('ExternalAccountSetRef'), binary(), ?DTP('CurrencyRef')) ->
     object().
-external_account_set(Ref, Name, ?cur(SymCode), C) ->
-    AccountID1 = account(SymCode, C),
-    AccountID2 = account(SymCode, C),
+external_account_set(Ref, Name, ?cur(SymCode)) ->
+    {ok, AccountID1} = ct_helper:create_account(SymCode),
+    {ok, AccountID2} = ct_helper:create_account(SymCode),
     {external_account_set, #domain_ExternalAccountSetObject{
         ref = Ref,
         data = #domain_ExternalAccountSet{
@@ -305,21 +304,3 @@ globals(EASRef, PIRefs) ->
             payment_institutions = ?ordset(PIRefs)
         }
     }}.
-
--spec account(binary(), ct_helper:config()) -> shumpune_shumpune_thrift:'AccountID'().
-account(SymCode, C) ->
-    Client = ff_woody_client:new(maps:get('accounter', ct_helper:cfg(services, C))),
-    WoodyCtx = ct_helper:get_woody_ctx(C),
-    Prototype = #shumpune_AccountPrototype{
-        currency_sym_code = SymCode,
-        description = <<>>,
-        creation_time = timestamp()
-    },
-    Request = {{shumpune_shumpune_thrift, 'Accounter'}, 'CreateAccount', {Prototype}},
-    case woody_client:call(Request, Client, WoodyCtx) of
-        {ok, ID} ->
-            ID
-    end.
-
-timestamp() ->
-    genlib_rfc3339:format(genlib_time:daytime_to_unixtime(calendar:universal_time()), second).
