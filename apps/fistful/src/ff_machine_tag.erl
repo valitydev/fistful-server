@@ -30,6 +30,8 @@ create_binding(NS, Tag, EntityID, MachineID) ->
     WoodyContext = ff_context:get_woody_context(ff_context:load()),
     Context = #{<<"machine-id">> => MachineID},
     case bender_client:gen_constant(tag_to_external_id(NS, Tag), EntityID, WoodyContext, Context) of
+        {ok, EntityID} ->
+            ok;
         {ok, EntityID, Context} ->
             ok
     end.
