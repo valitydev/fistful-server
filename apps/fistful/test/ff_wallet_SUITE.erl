@@ -90,7 +90,7 @@ create_ok(C) ->
     Wallet = ff_wallet_machine:wallet(unwrap(ff_wallet_machine:get(ID))),
     Accessibility = unwrap(ff_wallet:is_accessible(Wallet)),
     Account = ff_wallet:account(Wallet),
-    {Amount, <<"RUB">>} = unwrap(ff_transaction:balance(Account, ff_clock:latest_clock())),
+    {Amount, <<"RUB">>} = unwrap(ff_accounting:balance(Account)),
     CurrentAmount = ff_indef:current(Amount),
     ?assertMatch(ok, CreateResult),
     ?assertMatch(accessible, Accessibility),
@@ -197,22 +197,16 @@ construct_wallet_params(IdentityID, Currency) ->
         currency => Currency
     }.
 
-construct_userinfo() ->
-    #payproc_UserInfo{id = <<"fistful">>, type = construct_usertype()}.
-
-construct_usertype() ->
-    {service_user, #payproc_ServiceUser{}}.
-
 suspend_party(Party, C) ->
     Service = {dmsl_payment_processing_thrift, 'PartyManagement'},
-    Args = {construct_userinfo(), Party},
+    Args = {Party},
     Request = {Service, 'Suspend', Args},
     _ = ff_woody_client:call(partymgmt, Request, ct_helper:get_woody_ctx(C)),
     ok.
 
 block_party(Party, C) ->
     Service = {dmsl_payment_processing_thrift, 'PartyManagement'},
-    Args = {construct_userinfo(), Party, <<"BECAUSE">>},
+    Args = {Party, <<"BECAUSE">>},
     Request = {Service, 'Block', Args},
     _ = ff_woody_client:call(partymgmt, Request, ct_helper:get_woody_ctx(C)),
     ok.

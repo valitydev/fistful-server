@@ -8,7 +8,6 @@
 -include_lib("damsel/include/dmsl_withdrawals_provider_adapter_thrift.hrl").
 
 -type id() :: binary().
--type clock() :: ff_transaction:clock().
 
 -define(ACTUAL_FORMAT_VERSION, 4).
 
@@ -86,7 +85,7 @@
     wallet_id := ff_wallet_machine:id(),
     currency_from := ff_currency:id(),
     currency_to := ff_currency:id(),
-    body := ff_transaction:body(),
+    body := ff_accounting:body(),
     destination_id => ff_destination:id(),
     external_id => id()
 }.
@@ -239,7 +238,7 @@
 
 %% Internal types
 
--type body() :: ff_transaction:body().
+-type body() :: ff_accounting:body().
 -type identity() :: ff_identity:identity_state().
 -type party_id() :: ff_party:id().
 -type wallet_id() :: ff_wallet:id().
@@ -844,9 +843,8 @@ process_limit_check(Withdrawal) ->
         domain_revision => DomainRevision,
         varset => build_party_varset(VarsetParams)
     }),
-    Clock = ff_postings_transfer:clock(p_transfer(Withdrawal)),
     Events =
-        case validate_wallet_limits(Terms, Wallet, Clock) of
+        case validate_wallet_limits(Terms, Wallet) of
             {ok, valid} ->
                 [{limit_check, {wallet_sender, ok}}];
             {error, {terms_violation, {wallet_limit, {cash_range, {Cash, Range}}}}} ->
@@ -1045,18 +1043,7 @@ compute_fees(Route, VS, DomainRevision) ->
 compute_provider_terminal_terms(#{provider_id := ProviderID, terminal_id := TerminalID}, VS, DomainRevision) ->
     ProviderRef = ff_payouts_provider:ref(ProviderID),
     TerminalRef = ff_payouts_terminal:ref(TerminalID),
-    ff_party:compute_provider_terminal_terms(ProviderRef, TerminalRef, VS, DomainRevision);
-% Backward compatibility legacy case for old withrawals without terminals
-compute_provider_terminal_terms(#{provider_id := ProviderID}, VS, DomainRevision) ->
-    ProviderRef = ff_payouts_provider:ref(ProviderID),
-    case ff_party:compute_provider(ProviderRef, VS, DomainRevision) of
-        {ok, #domain_Provider{
-            terms = Terms
-        }} ->
-            {ok, Terms};
-        {error, Error} ->
-            {error, Error}
-    end.
+    ff_party:compute_provider_terminal_terms(ProviderRef, TerminalRef, VS, DomainRevision).
 
 cash_flow_postings(CashFlowSelector) ->
     case CashFlowSelector of
@@ -1455,11 +1442,11 @@ is_limit_check_ok({wallet_sender, ok}) ->
 is_limit_check_ok({wallet_sender, {failed, _Details}}) ->
     false.
 
--spec validate_wallet_limits(terms(), wallet(), clock()) ->
+-spec validate_wallet_limits(terms(), wallet()) ->
     {ok, valid}
     | {error, {terms_violation, {wallet_limit, {cash_range, {cash(), cash_range()}}}}}.
-validate_wallet_limits(Terms, Wallet, Clock) ->
-    case ff_party:validate_wallet_limits(Terms, Wallet, Clock) of
+validate_wallet_limits(Terms, Wallet) ->
+    case ff_party:validate_wallet_limits(Terms, Wallet) of
         {ok, valid} = Result ->
             Result;
         {error, {terms_violation, {cash_range, {Cash, CashRange}}}} ->

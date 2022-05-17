@@ -5,7 +5,6 @@
 -include_lib("damsel/include/dmsl_domain_thrift.hrl").
 -include_lib("fistful_proto/include/ff_proto_withdrawal_session_thrift.hrl").
 -include_lib("fistful_proto/include/ff_proto_withdrawal_thrift.hrl").
--include_lib("shumpune_proto/include/shumpune_shumpune_thrift.hrl").
 
 %% Common test API
 
@@ -180,7 +179,7 @@ session_fail_test(C) ->
             cash_to => {2120, <<"USD">>},
             created_at => <<"2016-03-22T06:12:27Z">>,
             expires_on => <<"2016-03-22T06:12:27Z">>,
-            route => ff_withdrawal_routing:make_route(3, 1),
+            route => ff_withdrawal_routing:make_route(3, 301),
             quote_data => #{<<"test">> => <<"error">>},
             operation_timestamp => ff_time:now()
         }
@@ -705,7 +704,7 @@ session_repair_test(C) ->
             cash_to => {700700, <<"RUB">>},
             created_at => <<"2016-03-22T06:12:27Z">>,
             expires_on => <<"2016-03-22T06:12:27Z">>,
-            route => ff_withdrawal_routing:make_route(11, 1),
+            route => ff_withdrawal_routing:make_route(11, 1101),
             quote_data => #{<<"test">> => <<"fatal">>},
             operation_timestamp => ff_time:now()
         }
@@ -749,8 +748,8 @@ provider_terminal_terms_merging_test(C) ->
     end,
     {Route1, VolumeEntries1} = ProduceWithdrawal({300, <<"RUB">>}),
     {Route2, VolumeEntries2} = ProduceWithdrawal({301, <<"RUB">>}),
-    ?assertMatch(#{provider_id := 17, terminal_id := 1}, Route1),
-    ?assertMatch(#{provider_id := 17, terminal_id := 8}, Route2),
+    ?assertMatch(#{provider_id := 17, terminal_id := 1701}, Route1),
+    ?assertMatch(#{provider_id := 17, terminal_id := 1708}, Route2),
     ?assertEqual([300, 30, 30, 10], VolumeEntries1),
     ?assertEqual([301, 30, 30, 16], VolumeEntries2).
 
@@ -897,10 +896,7 @@ get_wallet_balance(ID) ->
     get_account_balance(ff_wallet:account(ff_wallet_machine:wallet(Machine))).
 
 get_account_balance(Account) ->
-    {ok, {Amounts, Currency}} = ff_transaction:balance(
-        Account,
-        ff_clock:latest_clock()
-    ),
+    {ok, {Amounts, Currency}} = ff_accounting:balance(Account),
     {ff_indef:current(Amounts), ff_indef:to_range(Amounts), Currency}.
 
 generate_id() ->
@@ -984,30 +980,11 @@ set_wallet_balance({Amount, Currency}, ID) ->
     Account = ff_wallet:account(ff_wallet_machine:wallet(Machine)),
     AccounterID = ff_account:accounter_account_id(Account),
     {CurrentAmount, _, Currency} = get_account_balance(Account),
-    {ok, AnotherAccounterID} = create_account(Currency),
+    {ok, AnotherAccounterID} = ct_helper:create_account(Currency),
     Postings = [{AnotherAccounterID, AccounterID, {Amount - CurrentAmount, Currency}}],
-    {ok, _} = ff_transaction:prepare(TransactionID, Postings),
-    {ok, _} = ff_transaction:commit(TransactionID, Postings),
+    {ok, _} = ff_accounting:prepare_trx(TransactionID, Postings),
+    {ok, _} = ff_accounting:commit_trx(TransactionID, Postings),
     ok.
-
-create_account(CurrencyCode) ->
-    Description = <<"ff_test">>,
-    case call_accounter('CreateAccount', {construct_account_prototype(CurrencyCode, Description)}) of
-        {ok, Result} ->
-            {ok, Result};
-        {exception, Exception} ->
-            {error, {exception, Exception}}
-    end.
-
-construct_account_prototype(CurrencyCode, Description) ->
-    #shumpune_AccountPrototype{
-        currency_sym_code = CurrencyCode,
-        description = Description
-    }.
-
-call_accounter(Function, Args) ->
-    Service = {shumpune_shumpune_thrift, 'Accounter'},
-    ff_woody_client:call(accounter, {Service, Function, Args}, woody_context:new()).
 
 make_dummy_party_change(PartyID) ->
     {ok, _ContractID} = ff_party:create_contract(PartyID, #{

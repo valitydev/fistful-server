@@ -11,11 +11,9 @@
         machinery,
         machinery_extra,
         woody,
-        woody_user_identity,
         uuid,
         damsel,
         dmt_client,
-        shumpune_proto,
         party_client,
         binbase_proto
     ]},

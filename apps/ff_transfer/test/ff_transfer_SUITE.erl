@@ -2,7 +2,6 @@
 
 -include_lib("fistful_proto/include/ff_proto_fistful_admin_thrift.hrl").
 -include_lib("fistful_proto/include/ff_proto_withdrawal_thrift.hrl").
--include_lib("damsel/include/dmsl_domain_thrift.hrl").
 
 -export([all/0]).
 -export([groups/0]).
@@ -380,7 +379,7 @@ deposit_quote_withdrawal_ok(C) ->
             created_at => <<"2016-03-22T06:12:27Z">>,
             expires_on => <<"2016-03-22T06:12:27Z">>,
             quote_data => #{<<"test">> => <<"test">>},
-            route => ff_withdrawal_routing:make_route(3, 1),
+            route => ff_withdrawal_routing:make_route(3, 301),
             domain_revision => DomainRevision,
             party_revision => PartyRevision
         }
@@ -444,10 +443,7 @@ get_destination_balance(ID) ->
     get_account_balance(ff_destination:account(Destination)).
 
 get_account_balance(Account) ->
-    {ok, {Amounts, Currency}} = ff_transaction:balance(
-        Account,
-        ff_clock:latest_clock()
-    ),
+    {ok, {Amounts, Currency}} = ff_accounting:balance(Account),
     {ff_indef:current(Amounts), ff_indef:to_range(Amounts), Currency}.
 
 create_source(IdentityID, Name, Currency, Resource) ->
