@@ -132,8 +132,8 @@ repair(ID, Scenario) ->
 process_callback(#{tag := Tag} = Params) ->
     MachineRef =
         case ff_machine_tag:get_binding(?NS, Tag) of
-            {ok, _EntityID, MachineID} ->
-                MachineID;
+            {ok, EntityID} ->
+                EntityID;
             {error, not_found} ->
                 %% Fallback to machinegun tagging
                 %% TODO: Remove after migration grace period
