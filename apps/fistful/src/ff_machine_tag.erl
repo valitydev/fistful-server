@@ -15,8 +15,6 @@
 get_binding(NS, Tag) ->
     WoodyContext = ff_context:get_woody_context(ff_context:load()),
     case bender_client:get_internal_id(tag_to_external_id(NS, Tag), WoodyContext) of
-        {ok, EntityID} ->
-            {ok, EntityID, EntityID};
         {ok, EntityID, #{<<"machine-id">> := MachineID}} ->
             {ok, EntityID, MachineID};
         {error, internal_id_not_found} ->
@@ -25,22 +23,18 @@ get_binding(NS, Tag) ->
 
 -spec create_binding(ns(), tag(), entity_id()) -> ok | no_return().
 create_binding(NS, Tag, EntityID) ->
-    create_binding_(NS, Tag, EntityID, undefined).
+    create_binding(NS, Tag, EntityID, EntityID).
 
 -spec create_binding(ns(), tag(), entity_id(), machine_id()) -> ok | no_return().
 create_binding(NS, Tag, EntityID, MachineID) ->
-    create_binding_(NS, Tag, EntityID, #{<<"machine-id">> => MachineID}).
-
-%%
-
-create_binding_(NS, Tag, EntityID, Context) ->
     WoodyContext = ff_context:get_woody_context(ff_context:load()),
+    Context = #{<<"machine-id">> => MachineID},
     case bender_client:gen_constant(tag_to_external_id(NS, Tag), EntityID, WoodyContext, Context) of
-        {ok, EntityID} ->
-            ok;
         {ok, EntityID, Context} ->
             ok
     end.
+
+%%
 
 tag_to_external_id(NS, Tag) ->
     BinNS = atom_to_binary(NS, utf8),
