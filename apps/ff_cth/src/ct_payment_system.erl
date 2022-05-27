@@ -485,7 +485,7 @@ domain_config(Options) ->
                     {condition,
                         {payment_tool,
                             {crypto_currency, #domain_CryptoCurrencyCondition{
-                                definition = {crypto_currency_is_deprecated, litecoin}
+                                definition = {crypto_currency_is, ?crptcur(<<"Litecoin">>)}
                             }}}},
                     ?ruleset(?PAYINST2_ROUTING_POLICIES + 1)
                 ),
