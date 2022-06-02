@@ -5,7 +5,7 @@
 -export([get_binding/2]).
 -export([create_binding/3]).
 
--type tag() :: mg_proto_base_thrift:'Tag'().
+-type tag() :: ff_withdrawal_callback:tag().
 -type ns() :: machinery:namespace().
 -type entity_id() :: dmsl_base_thrift:'ID'().
 
