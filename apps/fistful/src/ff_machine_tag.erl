@@ -5,9 +5,9 @@
 -export([get_binding/2]).
 -export([create_binding/3]).
 
--type tag() :: ff_withdrawal_callback:tag().
+-type tag() :: binary().
 -type ns() :: machinery:namespace().
--type entity_id() :: dmsl_base_thrift:'ID'().
+-type entity_id() :: binary().
 
 -spec get_binding(ns(), tag()) -> {ok, entity_id()} | {error, not_found}.
 get_binding(NS, Tag) ->
