@@ -1,7 +1,7 @@
 -module(ff_ct_unknown_failure_provider).
 
 -include_lib("damsel/include/dmsl_domain_thrift.hrl").
--include_lib("damsel/include/dmsl_withdrawals_provider_adapter_thrift.hrl").
+-include_lib("damsel/include/dmsl_wthd_provider_thrift.hrl").
 
 %% API
 -export([start/0]).
@@ -21,7 +21,7 @@
 -type cash() :: dmsl_domain_thrift:'Cash'().
 -type currency() :: dmsl_domain_thrift:'Currency'().
 -type failure() :: dmsl_domain_thrift:'Failure'().
--type domain_quote() :: dmsl_withdrawals_provider_adapter_thrift:'Quote'().
+-type domain_quote() :: dmsl_wthd_provider_thrift:'Quote'().
 
 -type withdrawal() :: #{
     id => binary(),

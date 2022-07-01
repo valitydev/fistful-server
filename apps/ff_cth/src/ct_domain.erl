@@ -30,6 +30,7 @@
 %%
 
 -include_lib("ff_cth/include/ct_domain.hrl").
+-include_lib("damsel/include/dmsl_base_thrift.hrl").
 -include_lib("damsel/include/dmsl_accounter_thrift.hrl").
 
 -define(DTP(Type), dmsl_domain_thrift:Type()).
@@ -291,7 +292,7 @@ term_set_hierarchy(Ref, ParentRef, TermSets) ->
 -spec timed_term_set(?DTP('TermSet')) -> ?DTP('TimedTermSet').
 timed_term_set(TermSet) ->
     #domain_TimedTermSet{
-        action_time = #'TimestampInterval'{},
+        action_time = #'base_TimestampInterval'{},
         terms = TermSet
     }.
 

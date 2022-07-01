@@ -18,7 +18,7 @@
 
 %%
 
--include_lib("damsel/include/dmsl_domain_config_thrift.hrl").
+-include_lib("damsel/include/dmsl_domain_conf_thrift.hrl").
 
 -spec object(object_ref()) -> {ok, object_data()} | {error, notfound}.
 object(ObjectRef) ->

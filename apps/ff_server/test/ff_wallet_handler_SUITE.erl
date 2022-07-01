@@ -2,7 +2,7 @@
 
 -include_lib("stdlib/include/assert.hrl").
 -include_lib("fistful_proto/include/ff_proto_wallet_thrift.hrl").
--include_lib("damsel/include/dmsl_payment_processing_thrift.hrl").
+-include_lib("damsel/include/dmsl_payproc_thrift.hrl").
 
 -export([all/0]).
 -export([groups/0]).
@@ -199,14 +199,14 @@ create_identity(Party, Name, ProviderID, _C) ->
     ID.
 
 suspend_party(Party, C) ->
-    Service = {dmsl_payment_processing_thrift, 'PartyManagement'},
+    Service = {dmsl_payproc_thrift, 'PartyManagement'},
     Args = {Party},
     Request = {Service, 'Suspend', Args},
     _ = ff_woody_client:call(partymgmt, Request, ct_helper:get_woody_ctx(C)),
     ok.
 
 block_party(Party, C) ->
-    Service = {dmsl_payment_processing_thrift, 'PartyManagement'},
+    Service = {dmsl_payproc_thrift, 'PartyManagement'},
     Args = {Party, <<"BECAUSE">>},
     Request = {Service, 'Block', Args},
     _ = ff_woody_client:call(partymgmt, Request, ct_helper:get_woody_ctx(C)),

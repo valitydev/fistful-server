@@ -89,30 +89,30 @@ start_processing_apps(Options) ->
                 handlers => [
                     {
                         <<"/bank">>,
-                        {{dmsl_withdrawals_provider_adapter_thrift, 'Adapter'}, {ff_ct_provider_handler, []}}
+                        {{dmsl_wthd_provider_thrift, 'Adapter'}, {ff_ct_provider_handler, []}}
                     },
                     {
                         <<"/quotebank">>,
-                        {{dmsl_withdrawals_provider_adapter_thrift, 'Adapter'}, {ff_ct_provider_handler, []}}
+                        {{dmsl_wthd_provider_thrift, 'Adapter'}, {ff_ct_provider_handler, []}}
                     },
                     {
                         <<"/downbank">>,
                         {
-                            {dmsl_withdrawals_provider_adapter_thrift, 'Adapter'},
+                            {dmsl_wthd_provider_thrift, 'Adapter'},
                             {ff_ct_provider_handler, [{handler, ff_ct_fail_provider}]}
                         }
                     },
                     {
                         <<"/downbank2">>,
                         {
-                            {dmsl_withdrawals_provider_adapter_thrift, 'Adapter'},
+                            {dmsl_wthd_provider_thrift, 'Adapter'},
                             {ff_ct_provider_handler, [{handler, ff_ct_unknown_failure_provider}]}
                         }
                     },
                     {
                         <<"/sleepybank">>,
                         {
-                            {dmsl_withdrawals_provider_adapter_thrift, 'Adapter'},
+                            {dmsl_wthd_provider_thrift, 'Adapter'},
                             {ff_ct_provider_handler, [{handler, ff_ct_sleepy_provider}]}
                         }
                     },

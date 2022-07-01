@@ -1,7 +1,7 @@
 -module(ff_ct_sleepy_provider).
 
 -include_lib("damsel/include/dmsl_domain_thrift.hrl").
--include_lib("damsel/include/dmsl_withdrawals_provider_adapter_thrift.hrl").
+-include_lib("damsel/include/dmsl_wthd_provider_thrift.hrl").
 
 %% API
 -export([start/0]).
@@ -21,7 +21,7 @@
 -type cash() :: dmsl_domain_thrift:'Cash'().
 -type currency() :: dmsl_domain_thrift:'Currency'().
 -type failure() :: dmsl_domain_thrift:'Failure'().
--type domain_quote() :: dmsl_withdrawals_provider_adapter_thrift:'Quote'().
+-type domain_quote() :: dmsl_wthd_provider_thrift:'Quote'().
 
 -type withdrawal() :: #{
     id => binary(),
@@ -109,7 +109,7 @@ get_quote(_Quote, _Options) ->
         next_state => state(),
         transaction_info => transaction_info()
     }}.
-handle_callback(_Callback, #{quote := #wthadpt_Quote{quote_data = QuoteData}}, _State, _Options) when
+handle_callback(_Callback, #{quote := #wthd_provider_Quote{quote_data = QuoteData}}, _State, _Options) when
     QuoteData =:= ?DUMMY_QUOTE_ERROR_FATAL
 ->
     erlang:error(spanish_inquisition);

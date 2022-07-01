@@ -1,7 +1,9 @@
 -ifndef(__ct_domain_hrl__).
 -define(__ct_domain_hrl__, 42).
 
--include_lib("damsel/include/dmsl_domain_config_thrift.hrl").
+-include_lib("damsel/include/dmsl_domain_conf_thrift.hrl").
+-include_lib("damsel/include/dmsl_domain_thrift.hrl").
+-include_lib("damsel/include/dmsl_base_thrift.hrl").
 
 -define(ordset(Es), ordsets:from_list(Es)).
 
@@ -39,14 +41,14 @@
 
 -define(share(P, Q, C),
     {share, #domain_CashVolumeShare{
-        parts = #'Rational'{p = P, q = Q},
+        parts = #'base_Rational'{p = P, q = Q},
         'of' = C
     }}
 ).
 
 -define(share(P, Q, C, RM),
     {share, #domain_CashVolumeShare{
-        parts = #'Rational'{p = P, q = Q},
+        parts = #'base_Rational'{p = P, q = Q},
         'of' = C,
         'rounding_method' = RM
     }}

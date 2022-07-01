@@ -1,7 +1,10 @@
 -module(ff_adapter_withdrawal_codec).
 
--include_lib("damsel/include/dmsl_withdrawals_provider_adapter_thrift.hrl").
+-include_lib("damsel/include/dmsl_wthd_domain_thrift.hrl").
+-include_lib("damsel/include/dmsl_wthd_provider_thrift.hrl").
 -include_lib("damsel/include/dmsl_domain_thrift.hrl").
+-include_lib("damsel/include/dmsl_base_thrift.hrl").
+-include_lib("damsel/include/dmsl_msgpack_thrift.hrl").
 
 -export([marshal/2]).
 -export([unmarshal/2]).
@@ -32,12 +35,12 @@ marshal(adapter_state, ASt) ->
 marshal(body, {Amount, CurrencyID}) ->
     {ok, Currency} = ff_currency:get(CurrencyID),
     DomainCurrency = marshal(currency, Currency),
-    #wthadpt_Cash{amount = Amount, currency = DomainCurrency};
+    #wthd_provider_Cash{amount = Amount, currency = DomainCurrency};
 marshal(callback, #{
     tag := Tag,
     payload := Payload
 }) ->
-    #wthadpt_Callback{
+    #wthd_provider_Callback{
         tag = Tag,
         payload = Payload
     };
@@ -50,14 +53,14 @@ marshal(
 ) ->
     NextState = genlib_map:get(next_state, Params),
     TransactionInfo = genlib_map:get(transaction_info, Params),
-    #wthadpt_CallbackResult{
+    #wthd_provider_CallbackResult{
         intent = marshal(intent, Intent),
         response = marshal(callback_response, Response),
         next_state = maybe_marshal(adapter_state, NextState),
         trx = maybe_marshal(transaction_info, TransactionInfo)
     };
 marshal(callback_response, #{payload := Payload}) ->
-    #wthadpt_CallbackResponse{payload = Payload};
+    #wthd_provider_CallbackResponse{payload = Payload};
 marshal(currency, #{
     name := Name,
     symcode := Symcode,
@@ -87,7 +90,7 @@ marshal(payment_service, #{id := Ref}) when is_binary(Ref) ->
     };
 marshal(identity, Identity) ->
     % TODO: Add real contact fields
-    #wthdm_Identity{
+    #wthd_domain_Identity{
         id = maps:get(id, Identity),
         documents = marshal(identity_documents, Identity),
         contact = [{phone_number, <<"9876543210">>}]
@@ -100,24 +103,24 @@ marshal(identity_documents, Identity) ->
             marshal(challenge_documents, Challenge)
     end;
 marshal(intent, {finish, success}) ->
-    {finish, #wthadpt_FinishIntent{
-        status = {success, #wthadpt_Success{}}
+    {finish, #wthd_provider_FinishIntent{
+        status = {success, #wthd_provider_Success{}}
     }};
 marshal(intent, {finish, {success, TrxInfo}}) ->
-    {finish, #wthadpt_FinishIntent{
+    {finish, #wthd_provider_FinishIntent{
         status =
-            {success, #wthadpt_Success{
+            {success, #wthd_provider_Success{
                 trx_info = marshal(transaction_info, TrxInfo)
             }}
     }};
 marshal(intent, {finish, {failed, Failure}}) ->
-    {finish, #wthadpt_FinishIntent{
+    {finish, #wthd_provider_FinishIntent{
         status = {failure, ff_dmsl_codec:marshal(failure, Failure)}
     }};
 marshal(intent, {sleep, #{timer := Timer, tag := Tag}}) ->
-    {sleep, #wthadpt_SleepIntent{timer = Timer, callback_tag = Tag}};
+    {sleep, #wthd_provider_SleepIntent{timer = Timer, callback_tag = Tag}};
 marshal(process_callback_result, {succeeded, CallbackResponse}) ->
-    {succeeded, #wthadpt_ProcessCallbackSucceeded{
+    {succeeded, #wthd_provider_ProcessCallbackSucceeded{
         response = marshal(callback_response, CallbackResponse)
     }};
 marshal(
@@ -128,7 +131,7 @@ marshal(
         opts := Options
     }}
 ) ->
-    {finished, #wthadpt_ProcessCallbackFinished{
+    {finished, #wthd_provider_ProcessCallbackFinished{
         withdrawal = marshal(withdrawal, Withdrawal),
         state = marshal(adapter_state, AdapterState),
         opts = Options
@@ -144,7 +147,7 @@ marshal(
     ExternalID = maps:get(external_id, Params, undefined),
     {ok, CurrencyFrom} = ff_currency:get(CurrencyIDFrom),
     {ok, CurrencyTo} = ff_currency:get(CurrencyIDTo),
-    #wthadpt_GetQuoteParams{
+    #wthd_provider_GetQuoteParams{
         idempotency_id = ExternalID,
         currency_from = marshal(currency, CurrencyFrom),
         currency_to = marshal(currency, CurrencyTo),
@@ -157,7 +160,7 @@ marshal(quote, #{
     expires_on := ExpiresOn,
     quote_data := QuoteData
 }) ->
-    #wthadpt_Quote{
+    #wthd_provider_Quote{
         cash_from = marshal(body, CashFrom),
         cash_to = marshal(body, CashTo),
         created_at = CreatedAt,
@@ -229,7 +232,7 @@ marshal(
     } = Withdrawal
 ) ->
     SesID = maps:get(session_id, Withdrawal, undefined),
-    #wthadpt_Withdrawal{
+    #wthd_provider_Withdrawal{
         id = ID,
         session_id = SesID,
         body = marshal(body, Cash),
@@ -242,7 +245,7 @@ marshal(transaction_info, TrxInfo) ->
     ff_dmsl_codec:marshal(transaction_info, TrxInfo).
 
 try_encode_proof_document({rus_domestic_passport, Token}, Acc) ->
-    [{rus_domestic_passport, #wthdm_RUSDomesticPassport{token = Token}} | Acc];
+    [{rus_domestic_passport, #wthd_domain_RUSDomesticPassport{token = Token}} | Acc];
 try_encode_proof_document(_, Acc) ->
     Acc.
 
@@ -251,18 +254,18 @@ try_encode_proof_document(_, Acc) ->
 -spec unmarshal(ff_codec:type_name(), ff_codec:encoded_value()) -> ff_codec:decoded_value().
 unmarshal(adapter_state, ASt) ->
     unmarshal_msgpack(ASt);
-unmarshal(body, #wthadpt_Cash{
+unmarshal(body, #wthd_provider_Cash{
     amount = Amount,
     currency = DomainCurrency
 }) ->
     CurrencyID = ff_currency:id(unmarshal(currency, DomainCurrency)),
     {Amount, CurrencyID};
-unmarshal(callback, #wthadpt_Callback{
+unmarshal(callback, #wthd_provider_Callback{
     tag = Tag,
     payload = Payload
 }) ->
     #{tag => Tag, payload => Payload};
-unmarshal(process_result, #wthadpt_ProcessResult{
+unmarshal(process_result, #wthd_provider_ProcessResult{
     intent = Intent,
     next_state = NextState,
     trx = TransactionInfo
@@ -272,7 +275,7 @@ unmarshal(process_result, #wthadpt_ProcessResult{
         next_state => maybe_unmarshal(adapter_state, NextState),
         transaction_info => maybe_unmarshal(transaction_info, TransactionInfo)
     });
-unmarshal(callback_result, #wthadpt_CallbackResult{
+unmarshal(callback_result, #wthd_provider_CallbackResult{
     intent = Intent,
     next_state = NextState,
     response = Response,
@@ -284,7 +287,7 @@ unmarshal(callback_result, #wthadpt_CallbackResult{
         next_state => maybe_unmarshal(adapter_state, NextState),
         transaction_info => maybe_unmarshal(transaction_info, TransactionInfo)
     });
-unmarshal(callback_response, #wthadpt_CallbackResponse{payload = Payload}) ->
+unmarshal(callback_response, #wthd_provider_CallbackResponse{payload = Payload}) ->
     #{payload => Payload};
 unmarshal(currency, #domain_Currency{
     name = Name,
@@ -313,13 +316,13 @@ unmarshal(identity, _NotImplemented) ->
 unmarshal(identity_documents, _NotImplemented) ->
     %@TODO
     erlang:error(not_implemented);
-unmarshal(intent, {finish, #wthadpt_FinishIntent{status = {success, #wthadpt_Success{trx_info = undefined}}}}) ->
+unmarshal(intent, {finish, #wthd_provider_FinishIntent{status = {success, #wthd_provider_Success{trx_info = undefined}}}}) ->
     {finish, success};
-unmarshal(intent, {finish, #wthadpt_FinishIntent{status = {success, #wthadpt_Success{trx_info = TrxInfo}}}}) ->
+unmarshal(intent, {finish, #wthd_provider_FinishIntent{status = {success, #wthd_provider_Success{trx_info = TrxInfo}}}}) ->
     {finish, {success, unmarshal(transaction_info, TrxInfo)}};
-unmarshal(intent, {finish, #wthadpt_FinishIntent{status = {failure, Failure}}}) ->
+unmarshal(intent, {finish, #wthd_provider_FinishIntent{status = {failure, Failure}}}) ->
     {finish, {failed, ff_dmsl_codec:unmarshal(failure, Failure)}};
-unmarshal(intent, {sleep, #wthadpt_SleepIntent{timer = Timer, callback_tag = Tag}}) ->
+unmarshal(intent, {sleep, #wthd_provider_SleepIntent{timer = Timer, callback_tag = Tag}}) ->
     {sleep, genlib_map:compact(#{timer => Timer, tag => Tag})};
 unmarshal(process_callback_result, _NotImplemented) ->
     %@TODO
@@ -327,7 +330,7 @@ unmarshal(process_callback_result, _NotImplemented) ->
 unmarshal(quote_params, _NotImplemented) ->
     %@TODO
     erlang:error(not_implemented);
-unmarshal(quote, #wthadpt_Quote{
+unmarshal(quote, #wthd_provider_Quote{
     cash_from = CashFrom,
     cash_to = CashTo,
     created_at = CreatedAt,

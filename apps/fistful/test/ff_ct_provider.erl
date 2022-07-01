@@ -1,7 +1,7 @@
 -module(ff_ct_provider).
 
 -include_lib("damsel/include/dmsl_domain_thrift.hrl").
--include_lib("damsel/include/dmsl_withdrawals_provider_adapter_thrift.hrl").
+-include_lib("damsel/include/dmsl_wthd_provider_thrift.hrl").
 
 %% API
 -export([start/0]).
@@ -24,7 +24,7 @@
 -type cash() :: dmsl_domain_thrift:'Cash'().
 -type currency() :: dmsl_domain_thrift:'Currency'().
 -type failure() :: dmsl_domain_thrift:'Failure'().
--type domain_quote() :: dmsl_withdrawals_provider_adapter_thrift:'Quote'().
+-type domain_quote() :: dmsl_wthd_provider_thrift:'Quote'().
 
 -type withdrawal() :: #{
     id => binary(),
@@ -86,14 +86,14 @@ start(Opts) ->
     }}
 when
     CallbackTag :: binary().
-process_withdrawal(#{quote := #wthadpt_Quote{quote_data = QuoteData}}, State, _Options) when
+process_withdrawal(#{quote := #wthd_provider_Quote{quote_data = QuoteData}}, State, _Options) when
     QuoteData =:= ?DUMMY_QUOTE_ERROR
 ->
     {ok, #{
         intent => {finish, {failure, <<"test_error">>}},
         next_state => State
     }};
-process_withdrawal(#{quote := #wthadpt_Quote{quote_data = QuoteData}}, State, _Options) when
+process_withdrawal(#{quote := #wthd_provider_Quote{quote_data = QuoteData}}, State, _Options) when
     QuoteData =:= ?DUMMY_QUOTE
 ->
     {ok, #{
@@ -113,7 +113,7 @@ get_quote(
     #{
         currency_from := CurrencyFrom,
         currency_to := CurrencyTo,
-        exchange_cash := #wthadpt_Cash{amount = Amount, currency = Currency}
+        exchange_cash := #wthd_provider_Cash{amount = Amount, currency = Currency}
     },
     _Options
 ) ->
@@ -140,7 +140,7 @@ handle_callback(_Callback, _Withdrawal, _State, _Options) ->
     erlang:error(not_implemented).
 
 calc_cash(Currency, Currency, Amount) ->
-    #wthadpt_Cash{amount = Amount, currency = Currency};
+    #wthd_provider_Cash{amount = Amount, currency = Currency};
 calc_cash(Currency, _, Amount) ->
     NewAmount = erlang:round(Amount / 2),
-    #wthadpt_Cash{amount = NewAmount, currency = Currency}.
+    #wthd_provider_Cash{amount = NewAmount, currency = Currency}.

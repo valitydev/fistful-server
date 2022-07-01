@@ -20,7 +20,7 @@ get_service(fistful_admin) ->
 get_service(fistful_provider) ->
     {ff_proto_provider_thrift, 'Management'};
 get_service(ff_withdrawal_adapter_host) ->
-    {dmsl_withdrawals_provider_adapter_thrift, 'AdapterHost'};
+    {dmsl_wthd_provider_thrift, 'AdapterHost'};
 get_service(deposit_event_sink) ->
     {ff_proto_deposit_thrift, 'EventSink'};
 get_service(source_event_sink) ->
