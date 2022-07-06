@@ -1,6 +1,5 @@
 -module(ff_ct_sleepy_provider).
 
--include_lib("damsel/include/dmsl_domain_thrift.hrl").
 -include_lib("damsel/include/dmsl_withdrawals_provider_adapter_thrift.hrl").
 
 %% API
@@ -20,7 +19,6 @@
 -type identity() :: dmsl_withdrawals_domain_thrift:'Identity'().
 -type cash() :: dmsl_domain_thrift:'Cash'().
 -type currency() :: dmsl_domain_thrift:'Currency'().
--type failure() :: dmsl_domain_thrift:'Failure'().
 -type domain_quote() :: dmsl_withdrawals_provider_adapter_thrift:'Quote'().
 
 -type withdrawal() :: #{
@@ -52,8 +50,6 @@
 -type state() :: any().
 
 -type transaction_info() :: ff_adapter:transaction_info().
--type status() :: {success, transaction_info()} | {failure, failure()}.
--type timer() :: {deadline, binary()} | {timeout, integer()}.
 
 %%
 
@@ -79,17 +75,15 @@ start(Opts) ->
 
 -spec process_withdrawal(withdrawal(), state(), map()) ->
     {ok, #{
-        intent := {finish, status()} | {sleep, timer()} | {sleep, timer(), CallbackTag},
+        intent := ff_adapter_withdrawal:intent(),
         next_state => state(),
         transaction_info => transaction_info()
-    }}
-when
-    CallbackTag :: binary().
+    }}.
 process_withdrawal(#{id := WithdrawalID}, _State, _Options) ->
     CallbackTag = <<"cb_", WithdrawalID/binary>>,
     NextStateStr = <<"callback_processing">>,
     {ok, #{
-        intent => {sleep, {timeout, 5}, CallbackTag},
+        intent => {sleep, #{timer => {timeout, 5}, tag => CallbackTag}},
         next_state => {str, NextStateStr},
         transaction_info => #{id => <<"SleepyID">>, extra => #{}}
     }}.
@@ -104,7 +98,7 @@ get_quote(_Quote, _Options) ->
 
 -spec handle_callback(callback(), withdrawal(), state(), map()) ->
     {ok, #{
-        intent := {finish, status()} | {sleep, timer()} | {sleep, timer(), binary()},
+        intent := ff_adapter_withdrawal:intent(),
         response := any(),
         next_state => state(),
         transaction_info => transaction_info()

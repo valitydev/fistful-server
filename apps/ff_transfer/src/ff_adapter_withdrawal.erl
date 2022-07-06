@@ -111,6 +111,7 @@
 -type callback_response() :: ff_withdrawal_callback:response().
 
 -export_type([withdrawal/0]).
+-export_type([intent/0]).
 -export_type([failure/0]).
 -export_type([transaction_info/0]).
 -export_type([finish_status/0]).
