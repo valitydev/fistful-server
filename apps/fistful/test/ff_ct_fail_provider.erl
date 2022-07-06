@@ -76,8 +76,12 @@ start(Opts) ->
         transaction_info => transaction_info()
     }}.
 process_withdrawal(_Withdrawal, State, _Options) ->
+    Failure = #{
+        code => <<"authorization_error">>,
+        sub => #{code => <<"insufficient_funds">>}
+    },
     {ok, #{
-        intent => {finish, {failed, #{code => <<"authorization_error">>}}},
+        intent => {finish, {failed, Failure}},
         next_state => State
     }}.
 
