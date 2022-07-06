@@ -2,7 +2,10 @@
 
 -include_lib("damsel/include/dmsl_domain_thrift.hrl").
 
--export([prepare_routes/3]).
+-export([prepare_routes/2]).
+-export([filter_limit_overflow_routes/3]).
+-export([rollback_routes_limits/3]).
+-export([commit_routes_limits/3]).
 -export([make_route/2]).
 -export([get_provider/1]).
 -export([get_terminal/1]).
@@ -18,16 +21,23 @@
     provider_id_legacy => provider_id()
 }.
 
+-type routing_context() :: #{
+    domain_revision := domain_revision(),
+    identity := identity(),
+    withdrawal := withdrawal(),
+    route => route()
+}.
+
 -export_type([route/0]).
+-export_type([routing_context/0]).
 
 -type identity() :: ff_identity:identity_state().
+-type withdrawal() :: ff_withdrawal:withdrawal_state().
 -type domain_revision() :: ff_domain_config:revision().
 -type party_varset() :: ff_varset:varset().
 
--type provider_ref() :: ff_payouts_provider:provider_ref().
 -type provider_id() :: ff_payouts_provider:id().
 
--type terminal_ref() :: ff_payouts_terminal:terminal_ref().
 -type terminal_id() :: ff_payouts_terminal:id().
 
 -type routing_rule_route() :: ff_routing_rule:route().
@@ -36,11 +46,12 @@
 -type withdrawal_provision_terms() :: dmsl_domain_thrift:'WithdrawalProvisionTerms'().
 -type currency_selector() :: dmsl_domain_thrift:'CurrencySelector'().
 -type cash_limit_selector() :: dmsl_domain_thrift:'CashLimitSelector'().
+-type turnover_limit_selector() :: dmsl_domain_thrift:'TurnoverLimitSelector'().
 
 %%
 
--spec prepare_routes(party_varset(), identity(), domain_revision()) -> {ok, [route()]} | {error, route_not_found}.
-prepare_routes(PartyVarset, Identity, DomainRevision) ->
+-spec prepare_routes(party_varset(), routing_context()) -> {ok, [route()]} | {error, route_not_found}.
+prepare_routes(PartyVarset, Context = #{identity := Identity, domain_revision := DomainRevision}) ->
     {ok, PaymentInstitutionID} = ff_party:get_identity_payment_institution_id(Identity),
     {ok, PaymentInstitution} = ff_payment_institution:get(PaymentInstitutionID, PartyVarset, DomainRevision),
     {Routes, RejectContext0} = ff_routing_rule:gather_routes(
@@ -49,14 +60,7 @@ prepare_routes(PartyVarset, Identity, DomainRevision) ->
         PartyVarset,
         DomainRevision
     ),
-    {ValidatedRoutes, RejectContext1} = filter_valid_routes(Routes, RejectContext0, PartyVarset, DomainRevision),
-    case ValidatedRoutes of
-        [_ | _] ->
-            {ok, ValidatedRoutes};
-        [] ->
-            ff_routing_rule:log_reject_context(RejectContext1),
-            {error, route_not_found}
-    end.
+    handle_process_routes(filter_valid_routes(Routes, RejectContext0, PartyVarset, Context)).
 
 -spec make_route(provider_id(), terminal_id() | undefined) -> route().
 make_route(ProviderID, TerminalID) ->
@@ -118,24 +122,84 @@ merge_withdrawal_terms(ProviderTerms, TerminalTerms) ->
 
 %%
 
--spec filter_valid_routes([routing_rule_route()], reject_context(), party_varset(), domain_revision()) ->
+-spec filter_valid_routes([routing_rule_route()], reject_context(), party_varset(), routing_context()) ->
     {[route()], reject_context()}.
-filter_valid_routes(Routes, RejectContext, PartyVarset, DomainRevision) ->
-    filter_valid_routes_(Routes, PartyVarset, {#{}, RejectContext}, DomainRevision).
+filter_valid_routes(Routes, RejectContext, PartyVarset, RoutingContext) ->
+    process_routes(
+        Routes,
+        PartyVarset,
+        {#{}, RejectContext},
+        RoutingContext,
+        fun(Terms, PS, Context) ->
+            do_validate_terms(Terms, PS, Context)
+        end
+    ).
 
-filter_valid_routes_([], _, {Acc, RejectContext}, _DomainRevision) when map_size(Acc) == 0 ->
+-spec filter_limit_overflow_routes([routing_rule_route()], party_varset(), routing_context()) ->
+    {[route()], reject_context()}.
+filter_limit_overflow_routes(Routes, PartyVarset, RoutingContext) ->
+    RejectContext = ff_routing_rule:new_reject_context(PartyVarset),
+    handle_process_routes(process_routes(
+        Routes,
+        PartyVarset,
+        {#{}, RejectContext},
+        RoutingContext,
+        fun(Terms, PS, Context) ->
+            do_validate_limits(Terms, PS, Context)
+        end
+    )).
+
+-spec rollback_routes_limits([routing_rule_route()], party_varset(), routing_context()) ->
+    {[route()], reject_context()}.
+rollback_routes_limits(Routes, PartyVarset, RoutingContext) ->
+    RejectContext = ff_routing_rule:new_reject_context(PartyVarset),
+    handle_process_routes(process_routes(
+        Routes,
+        PartyVarset,
+        {#{}, RejectContext},
+        RoutingContext,
+        fun(Terms, PS, Context) ->
+            do_rollback_limits(Terms, PS, Context)
+        end
+    )).
+
+-spec commit_routes_limits([routing_rule_route()], party_varset(), routing_context()) ->
+    {[route()], reject_context()}.
+commit_routes_limits(Routes, PartyVarset, RoutingContext) ->
+    RejectContext = ff_routing_rule:new_reject_context(PartyVarset),
+    handle_process_routes(process_routes(
+        Routes,
+        PartyVarset,
+        {#{}, RejectContext},
+        RoutingContext,
+        fun(Terms, PS, Context) ->
+            do_commit_limits(Terms, PS, Context)
+        end
+    )).
+
+handle_process_routes({ValidatedRoutes = [_ | _], _RejectContext1}) ->
+    {ok, ValidatedRoutes};
+handle_process_routes({[], RejectContext1}) ->
+    ff_routing_rule:log_reject_context(RejectContext1),
+    {error, route_not_found}.
+
+process_routes([], _, {Acc, RejectContext}, _RoutingContext, _Func) when map_size(Acc) == 0 ->
     {[], RejectContext};
-filter_valid_routes_([], _, {Acc, RejectContext}, _DomainRevision) ->
+process_routes([], _, {Acc, RejectContext}, _RoutingContext, _Func) ->
     {convert_to_route(Acc), RejectContext};
-filter_valid_routes_([Route | Rest], PartyVarset, {Acc0, RejectContext0}, DomainRevision) ->
+process_routes([Route | Rest], PartyVarset, {Acc0, RejectContext0}, RoutingContext0, Func) ->
     Terminal = maps:get(terminal, Route),
     TerminalRef = maps:get(terminal_ref, Route),
     TerminalID = TerminalRef#domain_TerminalRef.id,
     ProviderRef = Terminal#domain_Terminal.provider_ref,
     ProviderID = ProviderRef#domain_ProviderRef.id,
     Priority = maps:get(priority, Route, undefined),
+    #{domain_revision := DomainRevision} = RoutingContext0,
+    RoutingContext1 = RoutingContext0#{route => Route},
+
+    {ok, WithdrawalProvisionTerms} = get_route_terms(ProviderRef, TerminalRef, PartyVarset, DomainRevision),
     {Acc, RejectContext} =
-        case validate_terms(ProviderRef, TerminalRef, PartyVarset, DomainRevision) of
+        case Func(WithdrawalProvisionTerms, PartyVarset, RoutingContext1) of
             {ok, valid} ->
                 Terms = maps:get(Priority, Acc0, []),
                 Acc1 = maps:put(Priority, [{ProviderID, TerminalID} | Terms], Acc0),
@@ -146,28 +210,56 @@ filter_valid_routes_([Route | Rest], PartyVarset, {Acc0, RejectContext0}, Domain
                 RejectContext1 = maps:put(rejected_routes, RejectedRoutes1, RejectContext0),
                 {Acc0, RejectContext1}
         end,
-    filter_valid_routes_(Rest, PartyVarset, {Acc, RejectContext}, DomainRevision).
+    process_routes(Rest, PartyVarset, {Acc, RejectContext}, RoutingContext0, Func).
 
--spec validate_terms(provider_ref(), terminal_ref(), party_varset(), domain_revision()) ->
-    {ok, valid}
-    | {error, Error :: term()}.
-validate_terms(ProviderRef, TerminalRef, PartyVarset, DomainRevision) ->
+get_route_terms(ProviderRef, TerminalRef, PartyVarset, DomainRevision) ->
     case ff_party:compute_provider_terminal_terms(ProviderRef, TerminalRef, PartyVarset, DomainRevision) of
         {ok, #domain_ProvisionTermSet{
             wallet = #domain_WalletProvisionTerms{
                 withdrawals = WithdrawalProvisionTerms
             }
         }} ->
-            do_validate_terms(WithdrawalProvisionTerms, PartyVarset);
+            {ok, WithdrawalProvisionTerms};
         {error, Error} ->
             %% TODO: test for provision_termset_undefined error after routing migration
             {error, Error}
     end.
 
--spec do_validate_terms(withdrawal_provision_terms(), party_varset()) ->
+-spec do_rollback_limits(withdrawal_provision_terms(), party_varset(), routing_context()) ->
     {ok, valid}
     | {error, Error :: term()}.
-do_validate_terms(CombinedTerms, PartyVarset) ->
+do_rollback_limits(CombinedTerms, _PartyVarset, #{withdrawal := Withdrawal, route := Route}) ->
+    #domain_WithdrawalProvisionTerms{
+        turnover_limit = TurnoverLimits
+    } = CombinedTerms,
+    ok = ff_limiter:hold_withdrawal_limits(TurnoverLimits, Route, Withdrawal),
+    {ok, valid}.
+
+-spec do_commit_limits(withdrawal_provision_terms(), party_varset(), routing_context()) ->
+    {ok, valid}
+    | {error, Error :: term()}.
+do_commit_limits(CombinedTerms, _PartyVarset, #{withdrawal := Withdrawal, route := Route}) ->
+    #domain_WithdrawalProvisionTerms{
+        turnover_limit = TurnoverLimits
+    } = CombinedTerms,
+    ok = ff_limiter:commit_withdrawal_limits(TurnoverLimits, Route, Withdrawal),
+    {ok, valid}.
+
+-spec do_validate_limits(withdrawal_provision_terms(), party_varset(), routing_context()) ->
+    {ok, valid}
+    | {error, Error :: term()}.
+do_validate_limits(CombinedTerms, PartyVarset, RoutingContext) ->
+    do(fun() ->
+        #domain_WithdrawalProvisionTerms{
+            turnover_limit = TurnoverLimit
+        } = CombinedTerms,
+        valid = unwrap(validate_turnover_limit(TurnoverLimit, PartyVarset, RoutingContext))
+    end).
+
+-spec do_validate_terms(withdrawal_provision_terms(), party_varset(), routing_context()) ->
+    {ok, valid}
+    | {error, Error :: term()}.
+do_validate_terms(CombinedTerms, PartyVarset, _RoutingContext) ->
     do(fun() ->
         #domain_WithdrawalProvisionTerms{
             currencies = CurrenciesSelector,
@@ -223,6 +315,20 @@ validate_cash_limit({value, CashRange}, #{cost := Cash}) ->
     end;
 validate_cash_limit(_NotReducedSelector, _VS) ->
     {error, {misconfiguration, {not_reduced_termset, cash_range}}}.
+
+-spec validate_turnover_limit(turnover_limit_selector(), party_varset(), routing_context()) ->
+    {ok, valid}
+    | {error, Error :: term()}.
+validate_turnover_limit(TurnoverLimits, _VS, #{withdrawal := Withdrawal, route := Route}) ->
+    ok = ff_limiter:hold_withdrawal_limits(TurnoverLimits, Route, Withdrawal),
+    case ff_limiter:check_limits(TurnoverLimits, Withdrawal) of
+        {ok, _} ->
+            {ok, valid};
+        {error, Error} ->
+            {error, {terms_violation, Error}}
+    end;
+validate_turnover_limit(NotReducedSelector, _VS, _RoutingContext) ->
+    {error, {misconfiguration, {'Could not reduce selector to a value', NotReducedSelector}}}.
 
 convert_to_route(ProviderTerminalMap) ->
     lists:foldl(

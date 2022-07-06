@@ -2,6 +2,7 @@
 
 -include_lib("damsel/include/dmsl_domain_thrift.hrl").
 
+-export([new_reject_context/1]).
 -export([gather_routes/4]).
 -export([log_reject_context/1]).
 
@@ -24,7 +25,8 @@
     terminal := terminal(),
     priority => priority(),
     weight => weight(),
-    provider => provider()
+    provider => provider(),
+    provider_ref => provider_ref()
 }.
 
 -export_type([route/0]).
@@ -46,12 +48,16 @@
 
 %%
 
--spec gather_routes(payment_institution(), routing_rule_tag(), varset(), revision()) -> {[route()], reject_context()}.
-gather_routes(PaymentInstitution, RoutingRuleTag, VS, Revision) ->
-    RejectContext = #{
+-spec new_reject_context(varset()) -> reject_context().
+new_reject_context(VS) ->
+    #{
         varset => VS,
         rejected_routes => []
-    },
+    }.
+
+-spec gather_routes(payment_institution(), routing_rule_tag(), varset(), revision()) -> {[route()], reject_context()}.
+gather_routes(PaymentInstitution, RoutingRuleTag, VS, Revision) ->
+    RejectContext = new_reject_context(VS),
     case do_gather_routes(PaymentInstitution, RoutingRuleTag, VS, Revision) of
         {ok, {AcceptedRoutes, RejectedRoutes}} ->
             {AcceptedRoutes, RejectContext#{rejected_routes => RejectedRoutes}};
@@ -152,7 +158,8 @@ make_route(Candidate, Revision) ->
         terminal => Terminal,
         priority => Priority,
         weight => Weight,
-        provider => Provider
+        provider => Provider,
+        provider_ref => ProviderRef
     }).
 
 -spec log_reject_context(reject_context()) -> ok.
