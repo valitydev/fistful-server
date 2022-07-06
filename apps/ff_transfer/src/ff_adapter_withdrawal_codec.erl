@@ -114,10 +114,10 @@ marshal(intent, {finish, {failed, Failure}}) ->
     {finish, #wthadpt_FinishIntent{
         status = {failure, ff_dmsl_codec:marshal(failure, Failure)}
     }};
-marshal(intent, {sleep, #{timer := Timer, tag := Tag}}) ->
+marshal(intent, {sleep, V = #{timer := Timer}}) ->
     {sleep, #wthadpt_SleepIntent{
         timer = ff_codec:marshal(timer, Timer),
-        callback_tag = Tag
+        callback_tag = maps:get(tag, V, undefined)
     }};
 marshal(process_callback_result, {succeeded, CallbackResponse}) ->
     {succeeded, #wthadpt_ProcessCallbackSucceeded{

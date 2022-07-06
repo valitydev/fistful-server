@@ -79,12 +79,18 @@ start(Opts) ->
         next_state => state(),
         transaction_info => transaction_info()
     }}.
-process_withdrawal(#{id := WithdrawalID}, _State, _Options) ->
-    CallbackTag = <<"cb_", WithdrawalID/binary>>,
-    NextStateStr = <<"callback_processing">>,
+process_withdrawal(#{id := _}, nil, _Options) ->
     {ok, #{
-        intent => {sleep, #{timer => {timeout, 5}, tag => CallbackTag}},
-        next_state => {str, NextStateStr},
+        intent => {sleep, #{timer => {timeout, 1}}},
+        next_state => <<"sleeping">>,
+        transaction_info => #{id => <<"SleepyID">>, extra => #{}}
+    }};
+process_withdrawal(#{id := WithdrawalID}, <<"sleeping">>, _Options) ->
+    CallbackTag = <<"cb_", WithdrawalID/binary>>,
+    Deadline = calendar:system_time_to_universal_time(erlang:system_time(millisecond) + 5000, millisecond),
+    {ok, #{
+        intent => {sleep, #{timer => {deadline, {Deadline, 0}}, tag => CallbackTag}},
+        next_state => <<"callback_processing">>,
         transaction_info => #{id => <<"SleepyID">>, extra => #{}}
     }}.
 
@@ -107,11 +113,11 @@ handle_callback(_Callback, #{quote := #wthadpt_Quote{quote_data = QuoteData}}, _
     QuoteData =:= ?DUMMY_QUOTE_ERROR_FATAL
 ->
     erlang:error(spanish_inquisition);
-handle_callback(#{payload := Payload}, _Withdrawal, _State, _Options) ->
+handle_callback(#{payload := Payload}, _Withdrawal, <<"callback_processing">>, _Options) ->
     TransactionInfo = #{id => <<"SleepyID">>, extra => #{}},
     {ok, #{
         intent => {finish, {success, TransactionInfo}},
-        next_state => {str, <<"callback_finished">>},
+        next_state => <<"callback_finished">>,
         response => #{payload => Payload},
         transaction_info => TransactionInfo
     }}.

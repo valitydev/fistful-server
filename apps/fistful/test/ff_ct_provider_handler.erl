@@ -88,7 +88,7 @@ decode_options(Options) ->
     Options.
 
 decode_state(State) ->
-    State.
+    ff_adapter_withdrawal_codec:unmarshal(adapter_state, State).
 
 decode_callback(#wthadpt_Callback{tag = Tag, payload = Payload}) ->
     #{tag => Tag, payload => Payload}.
@@ -96,7 +96,7 @@ decode_callback(#wthadpt_Callback{tag = Tag, payload = Payload}) ->
 %%
 
 encode_state(State) ->
-    State.
+    ff_adapter_withdrawal_codec:marshal(adapter_state, State).
 
 encode_intent(Intent) ->
     ff_adapter_withdrawal_codec:marshal(intent, Intent).
