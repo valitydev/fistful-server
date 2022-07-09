@@ -76,8 +76,9 @@ commit_withdrawal_limits(TurnoverLimits, Route, Withdrawal) ->
     commit(LimitChanges, get_latest_clock(), Context).
 
 -spec rollback_withdrawal_limits([turnover_limit()], route(), withdrawal()) -> ok.
-rollback_withdrawal_limits(TurnoverLimits, Route, Withdrawal = #{body := {_, Currency}}) ->
-    commit_withdrawal_limits(TurnoverLimits, Route, Withdrawal#{body => {0, Currency}}).
+rollback_withdrawal_limits(TurnoverLimits, Route, Withdrawal) ->
+    {_, Currency} = ff_withdrawal:body(Withdrawal),
+    commit_withdrawal_limits(TurnoverLimits, Route, ff_withdrawal:set_body({0, Currency}, Withdrawal)).
 
 -spec hold([ff_limiter_client:limit_change()], ff_limiter_client:clock(), ff_limiter_client:context()) -> ok.
 hold(LimitChanges, Clock, Context) ->
@@ -102,7 +103,7 @@ gen_limit_context(Withdrawal) ->
     #limiter_LimitContext{
         withdrawal_processing = #context_withdrawal_Context{
             op = {withdrawal, #context_withdrawal_OperationWithdrawal{}},
-            withdrawal = MarshaledWithdrawal
+            withdrawal = #context_withdrawal_Withdrawal{withdrawal = MarshaledWithdrawal}
         }
     }.
 
@@ -161,12 +162,14 @@ marshal_withdrawal(Withdrawal) ->
 
     {ok, SenderSt} = ff_identity_machine:get(ff_account:identity(WalletAccount)),
     {ok, ReceiverSt} = ff_identity_machine:get(ff_account:identity(DestinationAccount)),
+    SenderIdentity = ff_identity_machine:identity(SenderSt),
+    ReceiverIdentity = ff_identity_machine:identity(ReceiverSt),
 
     Resource = ff_withdrawal:destination_resource(Withdrawal),
     MarshaledResource = ff_adapter_withdrawal_codec:marshal(resource, Resource),
     #wthd_domain_Withdrawal{
         body = ff_dmsl_codec:marshal(cash, ff_withdrawal:body(Withdrawal)),
         destination = MarshaledResource,
-        sender = ff_adapter_withdrawal_codec:marshal(identity, #{id => ff_identity:id(SenderSt)}),
-        receiver = ff_adapter_withdrawal_codec:marshal(identity, #{id => ff_identity:id(ReceiverSt)})
+        sender = ff_adapter_withdrawal_codec:marshal(identity, #{id => ff_identity:id(SenderIdentity)}),
+        receiver = ff_adapter_withdrawal_codec:marshal(identity, #{id => ff_identity:id(ReceiverIdentity)})
     }.

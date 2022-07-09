@@ -3,6 +3,7 @@
 -include_lib("damsel/include/dmsl_domain_thrift.hrl").
 
 -export([prepare_routes/2]).
+-export([prepare_routes/3]).
 -export([filter_limit_overflow_routes/3]).
 -export([rollback_routes_limits/3]).
 -export([commit_routes_limits/3]).
@@ -24,7 +25,7 @@
 -type routing_context() :: #{
     domain_revision := domain_revision(),
     identity := identity(),
-    withdrawal := withdrawal(),
+    withdrawal => withdrawal(),
     route => route()
 }.
 
@@ -49,6 +50,10 @@
 -type turnover_limit_selector() :: dmsl_domain_thrift:'TurnoverLimitSelector'().
 
 %%
+
+-spec prepare_routes(party_varset(), identity(), domain_revision()) -> {ok, [route()]} | {error, route_not_found}.
+prepare_routes(PartyVarset, Identity, DomainRevision) ->
+    prepare_routes(PartyVarset, #{identity => Identity, domain_revision => DomainRevision}).
 
 -spec prepare_routes(party_varset(), routing_context()) -> {ok, [route()]} | {error, route_not_found}.
 prepare_routes(PartyVarset, Context = #{identity := Identity, domain_revision := DomainRevision}) ->
@@ -135,7 +140,7 @@ filter_valid_routes(Routes, RejectContext, PartyVarset, RoutingContext) ->
         end
     ).
 
--spec filter_limit_overflow_routes([routing_rule_route()], party_varset(), routing_context()) ->
+-spec filter_limit_overflow_routes([route()], party_varset(), routing_context()) ->
     {[route()], reject_context()}.
 filter_limit_overflow_routes(Routes, PartyVarset, RoutingContext) ->
     RejectContext = ff_routing_rule:new_reject_context(PartyVarset),
@@ -149,7 +154,7 @@ filter_limit_overflow_routes(Routes, PartyVarset, RoutingContext) ->
         end
     )).
 
--spec rollback_routes_limits([routing_rule_route()], party_varset(), routing_context()) ->
+-spec rollback_routes_limits([route()], party_varset(), routing_context()) ->
     {[route()], reject_context()}.
 rollback_routes_limits(Routes, PartyVarset, RoutingContext) ->
     RejectContext = ff_routing_rule:new_reject_context(PartyVarset),
@@ -163,7 +168,7 @@ rollback_routes_limits(Routes, PartyVarset, RoutingContext) ->
         end
     )).
 
--spec commit_routes_limits([routing_rule_route()], party_varset(), routing_context()) ->
+-spec commit_routes_limits([route()], party_varset(), routing_context()) ->
     {[route()], reject_context()}.
 commit_routes_limits(Routes, PartyVarset, RoutingContext) ->
     RejectContext = ff_routing_rule:new_reject_context(PartyVarset),

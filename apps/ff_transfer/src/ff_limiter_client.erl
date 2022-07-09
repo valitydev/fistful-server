@@ -65,4 +65,4 @@ commit(LimitChange, Clock, Context) ->
 call(Func, Args) ->
     Service = {limproto_limiter_thrift, 'Limiter'},
     Request = {Service, Func, Args},
-    ff_woody_client:call(limiter, Request, Args).
+    ff_woody_client:call(limiter, Request).

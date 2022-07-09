@@ -19,8 +19,8 @@
 %% Internal types
 %%
 
--type destination() :: dmsl_withdrawals_domain_thrift:'Destination'().
--type identity() :: dmsl_withdrawals_domain_thrift:'Identity'().
+-type destination() :: dmsl_wthd_domain_thrift:'Destination'().
+-type identity() :: dmsl_wthd_domain_thrift:'Identity'().
 -type cash() :: dmsl_domain_thrift:'Cash'().
 -type currency() :: dmsl_domain_thrift:'Currency'().
 -type failure() :: dmsl_domain_thrift:'Failure'().

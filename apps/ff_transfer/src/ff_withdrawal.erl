@@ -212,10 +212,12 @@
 -export([domain_revision/1]).
 -export([destination_resource/1]).
 -export([metadata/1]).
+-export([params/1]).
 
 %% API
 
 -export([create/1]).
+-export([set_body/2]).
 -export([gen/1]).
 -export([get_quote/1]).
 -export([is_finished/1]).
@@ -301,8 +303,8 @@
     | limit_check
     | {fail, fail_type()}
     | adjustment
+    | rollback_routing
     % Legacy activity
-    | stop
     | finish.
 
 -type fail_type() ::
@@ -381,7 +383,15 @@ created_at(T) ->
 metadata(T) ->
     maps:get(metadata, T, undefined).
 
+-spec params(withdrawal_state()) -> transfer_params().
+params(#{params := V}) ->
+    V.
+
 %% API
+
+-spec set_body(body(), withdrawal_state()) -> withdrawal_state().
+set_body(V, State) ->
+    State#{body => V}.
 
 -spec gen(gen_args()) -> withdrawal().
 gen(Args) ->
@@ -601,10 +611,6 @@ do_start_adjustment(Params, Withdrawal) ->
 update_attempts(Attempts, T) ->
     maps:put(attempts, Attempts, T).
 
--spec params(withdrawal_state()) -> transfer_params().
-params(#{params := V}) ->
-    V.
-
 -spec p_transfer(withdrawal_state()) -> p_transfer() | undefined.
 p_transfer(Withdrawal) ->
     ff_withdrawal_route_attempt_utils:get_current_p_transfer(attempts(Withdrawal)).
@@ -749,9 +755,7 @@ do_process_transfer(finish, Withdrawal) ->
 do_process_transfer(adjustment, Withdrawal) ->
     process_adjustment(Withdrawal);
 do_process_transfer(rollback_routing, Withdrawal) ->
-    process_rollback_routing(Withdrawal);
-do_process_transfer(stop, _Withdrawal) ->
-    {undefined, []}.
+    process_rollback_routing(Withdrawal).
 
 -spec process_routing(withdrawal_state()) -> process_result().
 process_routing(Withdrawal) ->
@@ -1282,6 +1286,7 @@ get_quote_(Params) ->
         } = Params,
         Resource = maps:get(resource, Params, undefined),
 
+        %% TODO: make something with turnover limits here
         [Route | _] = unwrap(route, ff_withdrawal_routing:prepare_routes(Varset, Identity, DomainRevision)),
         {Adapter, AdapterOpts} = ff_withdrawal_session:get_adapter_with_opts(Route),
         GetQuoteParams = #{
