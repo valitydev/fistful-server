@@ -8,7 +8,7 @@
 -type turnover_selector() :: dmsl_domain_thrift:'TurnoverLimitSelector'().
 -type turnover_limit() :: dmsl_domain_thrift:'TurnoverLimit'().
 -type withdrawal() :: ff_withdrawal:withdrawal_state().
--type route() :: ff_routing_rule:route().
+-type route() :: ff_withdrawal_routing:route().
 
 -export([get_turnover_limits/1]).
 -export([check_limits/2]).
@@ -76,9 +76,13 @@ commit_withdrawal_limits(TurnoverLimits, Route, Withdrawal) ->
     commit(LimitChanges, get_latest_clock(), Context).
 
 -spec rollback_withdrawal_limits([turnover_limit()], route(), withdrawal()) -> ok.
-rollback_withdrawal_limits(TurnoverLimits, Route, Withdrawal) ->
-    {_, Currency} = ff_withdrawal:body(Withdrawal),
-    commit_withdrawal_limits(TurnoverLimits, Route, ff_withdrawal:set_body({0, Currency}, Withdrawal)).
+rollback_withdrawal_limits(TurnoverLimits, Route, Withdrawal0) ->
+    {_, Currency} = ff_withdrawal:body(Withdrawal0),
+    Withdrawal1 = ff_withdrawal:set_body({0, Currency}, Withdrawal0),
+    IDs = [T#domain_TurnoverLimit.id || T <- TurnoverLimits],
+    LimitChanges = gen_limit_payment_changes(IDs, Route, Withdrawal1),
+    Context = gen_limit_context(Withdrawal1),
+    rollback(LimitChanges, get_latest_clock(), Context).
 
 -spec hold([ff_limiter_client:limit_change()], ff_limiter_client:clock(), ff_limiter_client:context()) -> ok.
 hold(LimitChanges, Clock, Context) ->
@@ -94,6 +98,15 @@ commit(LimitChanges, Clock, Context) ->
     lists:foreach(
         fun(LimitChange) ->
             ff_limiter_client:commit(LimitChange, Clock, Context)
+        end,
+        LimitChanges
+    ).
+
+-spec rollback([ff_limiter_client:limit_change()], ff_limiter_client:clock(), ff_limiter_client:context()) -> ok.
+rollback(LimitChanges, Clock, Context) ->
+    lists:foreach(
+        fun(LimitChange) ->
+            ff_limiter_client:rollback(LimitChange, Clock, Context)
         end,
         LimitChanges
     ).
@@ -116,20 +129,14 @@ gen_limit_payment_changes(LimitIDs, Route, Withdrawal) ->
      || ID <- LimitIDs
     ].
 
-construct_limit_change_id(LimitID, #{terminal_ref := TerminalRef, provider_ref := ProviderRef}, Withdrawal) ->
+construct_limit_change_id(LimitID, #{terminal_id := TerminalID, provider_id := ProviderID}, Withdrawal) ->
     ComplexID = construct_complex_id([
         LimitID,
-        genlib:to_binary(get_provider_id(ProviderRef)),
-        genlib:to_binary(get_terminal_id(TerminalRef)),
+        genlib:to_binary(ProviderID),
+        genlib:to_binary(TerminalID),
         ff_withdrawal:id(Withdrawal)
     ]),
     genlib_string:join($., [<<"limiter">>, ComplexID]).
-
-get_provider_id(#domain_ProviderRef{id = ID}) ->
-    ID.
-
-get_terminal_id(#domain_TerminalRef{id = ID}) ->
-    ID.
 
 get_latest_clock() ->
     {latest, #limiter_LatestClock{}}.

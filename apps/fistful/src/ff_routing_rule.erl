@@ -11,7 +11,6 @@
 -type provider_ref() :: dmsl_domain_thrift:'ProviderRef'().
 -type provider() :: dmsl_domain_thrift:'Provider'().
 -type terminal_ref() :: dmsl_domain_thrift:'TerminalRef'().
--type terminal() :: dmsl_domain_thrift:'Terminal'().
 -type priority() :: integer().
 -type weight() :: integer().
 -type varset() :: ff_varset:varset().
@@ -21,17 +20,14 @@
 -type candidate_description() :: binary() | undefined.
 
 -type route() :: #{
+    provider_ref := provider_ref(),
     terminal_ref := terminal_ref(),
-    terminal := terminal(),
-    priority => priority(),
-    weight => weight(),
-    provider => provider(),
-    provider_ref => provider_ref()
+    priority := priority(),
+    weight => weight()
 }.
 
 -export_type([route/0]).
 -export_type([provider/0]).
--export_type([terminal/0]).
 -export_type([reject_context/0]).
 -export_type([rejected_route/0]).
 
@@ -123,13 +119,11 @@ filter_prohibited_candidates(Candidates, ProhibitedCandidates, Revision) ->
     lists:foldr(
         fun(C, {Accepted, Rejected}) ->
             Route = make_route(C, Revision),
-            #{terminal_ref := TerminalRef} = Route,
+            #{provider_ref := ProviderRef, terminal_ref := TerminalRef} = Route,
             case maps:find(TerminalRef, ProhibitionTable) of
                 error ->
                     {[Route | Accepted], Rejected};
                 {ok, Description} ->
-                    #{terminal := Terminal} = Route,
-                    ProviderRef = Terminal#domain_Terminal.provider_ref,
                     {Accepted, [{ProviderRef, TerminalRef, {'RoutingRule', Description}} | Rejected]}
             end
         end,
@@ -152,14 +146,11 @@ make_route(Candidate, Revision) ->
     Priority = Candidate#domain_RoutingCandidate.priority,
     Weight = Candidate#domain_RoutingCandidate.weight,
     ProviderRef = Terminal#domain_Terminal.provider_ref,
-    {ok, Provider} = ff_domain_config:object(Revision, {provider, ProviderRef}),
     genlib_map:compact(#{
+        provider_ref => ProviderRef,
         terminal_ref => TerminalRef,
-        terminal => Terminal,
         priority => Priority,
-        weight => Weight,
-        provider => Provider,
-        provider_ref => ProviderRef
+        weight => Weight
     }).
 
 -spec log_reject_context(reject_context()) -> ok.

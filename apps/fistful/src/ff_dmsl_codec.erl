@@ -138,7 +138,10 @@ unmarshal(currency, #domain_Currency{
     };
 unmarshal(user_interaction, {redirect, {get_request, #'user_interaction_BrowserGetRequest'{uri = URI}}}) ->
     {redirect, #{content => {get, URI}}};
-unmarshal(user_interaction, {redirect, {post_request, #'user_interaction_BrowserPostRequest'{uri = URI, form = Form}}}) ->
+unmarshal(
+    user_interaction,
+    {redirect, {post_request, #'user_interaction_BrowserPostRequest'{uri = URI, form = Form}}}
+) ->
     {redirect, #{content => {post, URI, Form}}};
 unmarshal(
     resource,

@@ -316,9 +316,13 @@ unmarshal(identity, _NotImplemented) ->
 unmarshal(identity_documents, _NotImplemented) ->
     %@TODO
     erlang:error(not_implemented);
-unmarshal(intent, {finish, #wthd_provider_FinishIntent{status = {success, #wthd_provider_Success{trx_info = undefined}}}}) ->
+unmarshal(
+    intent, {finish, #wthd_provider_FinishIntent{status = {success, #wthd_provider_Success{trx_info = undefined}}}}
+) ->
     {finish, success};
-unmarshal(intent, {finish, #wthd_provider_FinishIntent{status = {success, #wthd_provider_Success{trx_info = TrxInfo}}}}) ->
+unmarshal(
+    intent, {finish, #wthd_provider_FinishIntent{status = {success, #wthd_provider_Success{trx_info = TrxInfo}}}}
+) ->
     {finish, {success, unmarshal(transaction_info, TrxInfo)}};
 unmarshal(intent, {finish, #wthd_provider_FinishIntent{status = {failure, Failure}}}) ->
     {finish, {failed, ff_dmsl_codec:unmarshal(failure, Failure)}};

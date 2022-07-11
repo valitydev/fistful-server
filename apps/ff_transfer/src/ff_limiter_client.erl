@@ -6,6 +6,7 @@
 -export([get/3]).
 -export([hold/3]).
 -export([commit/3]).
+-export([rollback/3]).
 
 -type limit() :: limproto_limiter_thrift:'Limit'().
 -type limit_id() :: limproto_limiter_thrift:'LimitID'().
@@ -48,6 +49,24 @@ hold(LimitChange, Clock, Context) ->
 commit(LimitChange, Clock, Context) ->
     Args = {LimitChange, Clock, Context},
     case call('Commit', Args) of
+        {ok, ClockUpdated} ->
+            ClockUpdated;
+        {exception, #limiter_LimitNotFound{}} ->
+            error({not_found, LimitChange#limiter_LimitChange.id});
+        {exception, #limiter_LimitChangeNotFound{}} ->
+            error({not_found, {limit_change, LimitChange#limiter_LimitChange.change_id}});
+        {exception, #base_InvalidRequest{errors = Errors}} ->
+            error({invalid_request, Errors});
+        {exception, #limiter_ForbiddenOperationAmount{} = Ex} ->
+            Amount = Ex#limiter_ForbiddenOperationAmount.amount,
+            CashRange = Ex#limiter_ForbiddenOperationAmount.allowed_range,
+            error({forbidden_op_amount, {Amount, CashRange}})
+    end.
+
+-spec rollback(limit_change(), clock(), context()) -> clock() | no_return().
+rollback(LimitChange, Clock, Context) ->
+    Args = {LimitChange, Clock, Context},
+    case call('Rollback', Args) of
         {ok, ClockUpdated} ->
             ClockUpdated;
         {exception, #limiter_LimitNotFound{}} ->

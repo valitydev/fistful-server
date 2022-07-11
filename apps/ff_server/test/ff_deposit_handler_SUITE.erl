@@ -450,7 +450,8 @@ create_revert_adjustment_ok_test(C) ->
         id = AdjustmentID,
         change =
             {change_status, #deposit_revert_adj_ChangeStatusRequest{
-                new_status = {failed, #deposit_revert_status_Failed{failure = #'fistful_base_Failure'{code = <<"Ooops">>}}}
+                new_status =
+                    {failed, #deposit_revert_status_Failed{failure = #'fistful_base_Failure'{code = <<"Ooops">>}}}
             }},
         external_id = ExternalID
     },
@@ -532,7 +533,8 @@ deposit_state_content_test(C) ->
         id = generate_id(),
         change =
             {change_status, #deposit_revert_adj_ChangeStatusRequest{
-                new_status = {failed, #deposit_revert_status_Failed{failure = #'fistful_base_Failure'{code = <<"Ooops">>}}}
+                new_status =
+                    {failed, #deposit_revert_status_Failed{failure = #'fistful_base_Failure'{code = <<"Ooops">>}}}
             }}
     },
     {ok, _} = call_deposit('CreateRevertAdjustment', {DepositID, RevertID, RevertAdjustmentParams}),

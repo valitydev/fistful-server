@@ -783,13 +783,14 @@ process_rollback_routing(Withdrawal) ->
 do_process_routing(Withdrawal) ->
     do(fun() ->
         {Varset, Context} = make_routing_varset_and_context(Withdrawal),
-        Routes = unwrap(ff_withdrawal_routing:prepare_routes(Varset, Context)),
-        FilteredRoutes = unwrap(ff_withdrawal_routing:filter_limit_overflow_routes(Routes, Varset, Context)),
+        GatherResult = ff_withdrawal_routing:gather_routes(Varset, Context),
+        FilteredRoutes = unwrap(ff_withdrawal_routing:filter_limit_overflow_routes(GatherResult, Varset, Context)),
+        ConvertedRoutes = ff_withdrawal_routing:convert(FilteredRoutes),
         case quote(Withdrawal) of
             undefined ->
-                FilteredRoutes;
+                ConvertedRoutes;
             Quote ->
-                Route = hd(FilteredRoutes),
+                Route = hd(ConvertedRoutes),
                 valid = unwrap(validate_quote_route(Route, Quote)),
                 [Route]
         end
@@ -798,13 +799,16 @@ do_process_routing(Withdrawal) ->
 do_rollback_routing(Route, Withdrawal) ->
     do(fun() ->
         {Varset, Context} = make_routing_varset_and_context(Withdrawal),
-        Routes = unwrap(ff_withdrawal_routing:prepare_routes(Varset, Context)),
-        RollbackRoutes = case Route of
-            undefined ->
-                Routes;
-            Route ->
-                Routes -- [Route]
-        end,
+        GatherResult = ff_withdrawal_routing:gather_routes(Varset, Context),
+        FilteredRoutes = unwrap(ff_withdrawal_routing:filter_limit_overflow_routes(GatherResult, Varset, Context)),
+        ConvertedRoutes = ff_withdrawal_routing:convert(FilteredRoutes),
+        RollbackRoutes =
+            case Route of
+                undefined ->
+                    ConvertedRoutes;
+                Route ->
+                    ConvertedRoutes -- [Route]
+            end,
         ok = rollback_routes_limits(RollbackRoutes, Varset, Context)
     end).
 
@@ -813,13 +817,11 @@ rollback_routes_limits(Routes, Withdrawal) ->
     rollback_routes_limits(Routes, Varset, Context).
 
 rollback_routes_limits(Routes, Varset, Context) ->
-    {ok, _} = ff_withdrawal_routing:rollback_routes_limits(Routes, Varset, Context),
-    ok.
+    ff_withdrawal_routing:rollback_routes_limits(Routes, Varset, Context).
 
 commit_routes_limits(Routes, Withdrawal) ->
     {Varset, Context} = make_routing_varset_and_context(Withdrawal),
-    {ok, _} = ff_withdrawal_routing:commit_routes_limits(Routes, Varset, Context),
-    ok.
+    ff_withdrawal_routing:commit_routes_limits(Routes, Varset, Context).
 
 make_routing_varset_and_context(Withdrawal) ->
     DomainRevision = operation_domain_revision(Withdrawal),
@@ -1286,8 +1288,9 @@ get_quote_(Params) ->
         } = Params,
         Resource = maps:get(resource, Params, undefined),
 
-        %% TODO: make something with turnover limits here
-        [Route | _] = unwrap(route, ff_withdrawal_routing:prepare_routes(Varset, Identity, DomainRevision)),
+        %% TODO: don't apply turnover limits here
+        Routes = unwrap(route, ff_withdrawal_routing:prepare_routes(Varset, Identity, DomainRevision)),
+        [Route | _] = ff_withdrawal_routing:convert(Routes),
         {Adapter, AdapterOpts} = ff_withdrawal_session:get_adapter_with_opts(Route),
         GetQuoteParams = #{
             external_id => maps:get(external_id, Params, undefined),
