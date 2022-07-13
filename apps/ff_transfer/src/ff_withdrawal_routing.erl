@@ -178,7 +178,6 @@ process_routes_with(Func, Routes, PartyVarset, RoutingContext0) ->
             TerminalRef = #domain_TerminalRef{id = TerminalID},
             #{domain_revision := DomainRevision} = RoutingContext0,
             RoutingContext1 = RoutingContext0#{route => Route},
-
             {ok, WithdrawalProvisionTerms} = get_route_terms(ProviderRef, TerminalRef, PartyVarset, DomainRevision),
             Func(WithdrawalProvisionTerms, PartyVarset, RoutingContext1)
         end,
@@ -203,9 +202,6 @@ validate_routes_with(Func, {Routes, RejectContext}, PartyVarset, RoutingContext0
                     ValidRoutes1 = [Route | ValidRoutes0],
                     {ValidRoutes1, RejectContext0};
                 {error, RejectReason} ->
-                    Terminal = maps:get(terminal, Route),
-                    TerminalRef = maps:get(terminal_ref, Route),
-                    ProviderRef = Terminal#domain_Terminal.provider_ref,
                     RejectedRoutes0 = maps:get(rejected_routes, RejectContext0),
                     RejectedRoutes1 = [{ProviderRef, TerminalRef, RejectReason} | RejectedRoutes0],
                     RejectContext1 = maps:put(rejected_routes, RejectedRoutes1, RejectContext0),
@@ -240,11 +236,15 @@ do_rollback_limits(CombinedTerms, _PartyVarset, #{withdrawal := Withdrawal, rout
 
 -spec do_commit_limits(withdrawal_provision_terms(), party_varset(), routing_context()) ->
     ok.
-do_commit_limits(CombinedTerms, _PartyVarset, #{withdrawal := Withdrawal, route := Route}) ->
+do_commit_limits(CombinedTerms, PartyVarset, #{withdrawal := Withdrawal, route := Route, domain_revision := DomainRevision}) ->
     #domain_WithdrawalProvisionTerms{
         turnover_limit = TurnoverLimit
     } = CombinedTerms,
     Limits = ff_limiter:get_turnover_limits(TurnoverLimit),
+    TerminalID = maps:get(terminal_id, Route),
+    TerminalRef = #domain_TerminalRef{id = TerminalID},
+    {ok, Terminal} = ff_domain_config:object(DomainRevision, {terminal, TerminalRef}),
+    error({test, Route, CombinedTerms, PartyVarset, Terminal}),
     ff_limiter:commit_withdrawal_limits(Limits, Route, Withdrawal).
 
 -spec do_validate_limits(withdrawal_provision_terms(), party_varset(), routing_context()) ->

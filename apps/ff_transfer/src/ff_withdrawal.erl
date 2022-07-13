@@ -807,7 +807,7 @@ do_rollback_routing(Route, Withdrawal) ->
                 undefined ->
                     ConvertedRoutes;
                 Route ->
-                    ConvertedRoutes -- [Route]
+                    ConvertedRoutes -- [maps:without([provider_id_legacy], Route)]
             end,
         ok = rollback_routes_limits(RollbackRoutes, Varset, Context)
     end).

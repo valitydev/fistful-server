@@ -366,6 +366,14 @@ domain_config(Options) ->
                     ?ruleset(?PAYINST1_ROUTING_POLICIES + 13)
                 ),
                 delegate(
+                    condition(cost_in, {800800, <<"RUB">>}),
+                    ?ruleset(?PAYINST1_ROUTING_POLICIES + 16)
+                ),
+                delegate(
+                    condition(cost_in, {900900, <<"RUB">>}),
+                    ?ruleset(?PAYINST1_ROUTING_POLICIES + 17)
+                ),
+                delegate(
                     {condition,
                         {payment_tool,
                             {bank_card, #domain_BankCardCondition{
@@ -463,6 +471,20 @@ domain_config(Options) ->
                     condition(cost_in, {3000000, 10000000, <<"RUB">>}),
                     ?trm(307)
                 )
+            ]}
+        ),
+
+        routing_ruleset(
+            ?ruleset(?PAYINST1_ROUTING_POLICIES + 16),
+            {candidates, [
+                candidate({constant, true}, ?trm(1800), 4000)
+            ]}
+        ),
+
+        routing_ruleset(
+            ?ruleset(?PAYINST1_ROUTING_POLICIES + 17),
+            {candidates, [
+                candidate({constant, true}, ?trm(1900), 4000)
             ]}
         ),
 
@@ -715,6 +737,37 @@ domain_config(Options) ->
                                             )
                                         ]}
                                 }
+                            ]}
+                    }
+                }
+            }
+        ),
+
+        ct_domain:withdrawal_terminal(
+            ?trm(1800),
+            ?prv(1),
+            #domain_ProvisionTermSet{
+                wallet = #domain_WalletProvisionTerms{
+                    withdrawals = #domain_WithdrawalProvisionTerms{
+                        currencies = {value, ?ordset([?cur(<<"RUB">>), ?cur(<<"BTC">>)])},
+                        turnover_limit =
+                            {value, [
+                                ?trnvrlimit(<<"ID">>, 10)
+                            ]}
+                    }
+                }
+            }
+        ),
+
+        ct_domain:withdrawal_terminal(
+            ?trm(1900),
+            ?prv(1),
+            #domain_ProvisionTermSet{
+                wallet = #domain_WalletProvisionTerms{
+                    withdrawals = #domain_WithdrawalProvisionTerms{
+                        turnover_limit =
+                            {value, [
+                                ?trnvrlimit(<<"ID">>, 0)
                             ]}
                     }
                 }

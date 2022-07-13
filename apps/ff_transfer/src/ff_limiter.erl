@@ -7,11 +7,13 @@
 
 -type turnover_selector() :: dmsl_domain_thrift:'TurnoverLimitSelector'().
 -type turnover_limit() :: dmsl_domain_thrift:'TurnoverLimit'().
+-type domain_withdrawal() :: dmsl_wthd_domain_thrift:'Withdrawal'().
 -type withdrawal() :: ff_withdrawal:withdrawal_state().
 -type route() :: ff_withdrawal_routing:route().
 
 -export([get_turnover_limits/1]).
 -export([check_limits/2]).
+-export([marshal_withdrawal/1]).
 
 -export([hold_withdrawal_limits/3]).
 -export([commit_withdrawal_limits/3]).
@@ -73,6 +75,7 @@ commit_withdrawal_limits(TurnoverLimits, Route, Withdrawal) ->
     IDs = [T#domain_TurnoverLimit.id || T <- TurnoverLimits],
     LimitChanges = gen_limit_payment_changes(IDs, Route, Withdrawal),
     Context = gen_limit_context(Withdrawal),
+    error({test, TurnoverLimits, LimitChanges, Context}),
     commit(LimitChanges, get_latest_clock(), Context).
 
 -spec rollback_withdrawal_limits([turnover_limit()], route(), withdrawal()) -> ok.
@@ -154,6 +157,7 @@ construct_complex_id(L) ->
         )
     ).
 
+-spec marshal_withdrawal(withdrawal()) -> domain_withdrawal().
 marshal_withdrawal(Withdrawal) ->
     #{
         wallet_id := WalletID,
@@ -175,6 +179,7 @@ marshal_withdrawal(Withdrawal) ->
     Resource = ff_withdrawal:destination_resource(Withdrawal),
     MarshaledResource = ff_adapter_withdrawal_codec:marshal(resource, Resource),
     #wthd_domain_Withdrawal{
+        created_at = ff_codec:marshal(timestamp_ms, ff_withdrawal:created_at(Withdrawal)),
         body = ff_dmsl_codec:marshal(cash, ff_withdrawal:body(Withdrawal)),
         destination = MarshaledResource,
         sender = ff_adapter_withdrawal_codec:marshal(identity, #{id => ff_identity:id(SenderIdentity)}),
