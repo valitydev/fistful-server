@@ -16,7 +16,7 @@
 -type limit_change() :: limproto_limiter_thrift:'LimitChange'().
 -type limit_context() :: limproto_limiter_thrift:'LimitContext'().
 -type clock() :: limproto_limiter_thrift:'Clock'().
--type limit_config_params() :: limproto_configurator_thrift:'LimitCreateParams'().
+-type limit_config_params() :: limproto_config_thrift:'LimitConfigParams'().
 
 %%% API
 

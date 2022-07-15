@@ -192,15 +192,12 @@ get_destination_resource(DestinationID) ->
     {ok, Resource} = ff_resource:create_resource(ff_destination:resource(Destination)),
     Resource.
 
-prepare_standard_environment(WithdrawalCash, C) ->
-    prepare_standard_environment(WithdrawalCash, undefined, C).
-
-prepare_standard_environment({_Amount, Currency} = WithdrawalCash, Token, C) ->
+prepare_standard_environment({_Amount, Currency} = WithdrawalCash, C) ->
     Party = create_party(C),
     IdentityID = create_person_identity(Party, C),
     WalletID = create_wallet(IdentityID, <<"My wallet">>, Currency, C),
     ok = await_wallet_balance({0, Currency}, WalletID),
-    DestinationID = create_destination(IdentityID, Token, C),
+    DestinationID = create_destination(IdentityID, Currency, C),
     ok = set_wallet_balance(WithdrawalCash, WalletID),
     #{
         identity_id => IdentityID,
@@ -281,22 +278,10 @@ get_account_balance(Account) ->
 generate_id() ->
     ff_id:generate_snowflake_id().
 
-create_destination(IID, <<"USD_CURRENCY">>, C) ->
-    create_destination(IID, <<"USD">>, undefined, C);
-create_destination(IID, Token, C) ->
-    create_destination(IID, <<"RUB">>, Token, C).
-
-create_destination(IID, Currency, Token, C) ->
+create_destination(IID, Currency, C) ->
     ID = generate_id(),
     StoreSource = ct_cardstore:bank_card(<<"4150399999000900">>, {12, 2025}, C),
-    NewStoreResource =
-        case Token of
-            undefined ->
-                StoreSource;
-            Token ->
-                StoreSource#{token => Token}
-        end,
-    Resource = {bank_card, #{bank_card => NewStoreResource}},
+    Resource = {bank_card, #{bank_card => StoreSource}},
     Params = #{id => ID, identity => IID, name => <<"XDesination">>, currency => Currency, resource => Resource},
     ok = ff_destination_machine:create(Params, ff_entity_context:new()),
     authorized = ct_helper:await(
