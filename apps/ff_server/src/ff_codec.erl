@@ -616,7 +616,7 @@ bank_card_codec_test() ->
             auth_data => {session, #{session_id => <<"session_id">>}}
         }},
     {bank_card, MarshalledResourceBankCard} = marshal(resource, ResourceBankCard),
-    Type = {struct, struct, {ff_proto_base_thrift, 'ResourceBankCard'}},
+    Type = {struct, struct, {fistful_fistful_base_thrift, 'ResourceBankCard'}},
     Binary = ff_proto_utils:serialize(Type, MarshalledResourceBankCard),
     Decoded = ff_proto_utils:deserialize(Type, Binary),
     ?assertEqual(
@@ -648,7 +648,7 @@ generic_resource_codec_test() ->
         provider => #{id => <<"foo">>},
         data => #{type => <<"type">>, data => <<"data">>}
     },
-    Type = {struct, struct, {ff_proto_base_thrift, 'ResourceGenericData'}},
+    Type = {struct, struct, {fistful_fistful_base_thrift, 'ResourceGenericData'}},
     Binary = ff_proto_utils:serialize(Type, marshal(generic_resource, GenericResource)),
     Decoded = ff_proto_utils:deserialize(Type, Binary),
     ?assertEqual(
@@ -668,7 +668,7 @@ fees_codec_test() ->
             surplus => {200, <<"RUB">>}
         }
     },
-    Type = {struct, struct, {ff_proto_base_thrift, 'Fees'}},
+    Type = {struct, struct, {fistful_fistful_base_thrift, 'Fees'}},
     Binary = ff_proto_utils:serialize(Type, marshal(fees, Expected)),
     Decoded = ff_proto_utils:deserialize(Type, Binary),
     ?assertEqual(Expected, unmarshal(fees, Decoded)).
