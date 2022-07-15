@@ -8,42 +8,33 @@
 -include_lib("limiter_proto/include/limproto_timerange_thrift.hrl").
 -include_lib("damsel/include/dmsl_domain_thrift.hrl").
 -include_lib("damsel/include/dmsl_wthd_domain_thrift.hrl").
-
--include_lib("stdlib/include/assert.hrl").
+-include_lib("ff_cth/include/ct_domain.hrl").
 
 -export([init_per_suite/1]).
--export([assert_payment_limit_amount/2]).
--export([get_payment_limit_amount/2]).
+-export([get_limit_amount/2]).
+-export([get_limit/2]).
 
 -type config() :: ct_suite:ct_config().
-
--define(LIMIT_ID, <<"ID">>).
--define(LIMIT_ID2, <<"ID2">>).
--define(LIMIT_ID3, <<"ID3">>).
 
 -spec init_per_suite(config()) -> _.
 init_per_suite(_Config) ->
     {ok, #config_LimitConfig{}} = ff_dummy_limiter:create_config(
-        limiter_create_params(?LIMIT_ID),
+        limiter_create_params(?LIMIT_ID1),
         ff_dummy_limiter:new()
     ),
     {ok, #config_LimitConfig{}} = ff_dummy_limiter:create_config(
         limiter_create_params(?LIMIT_ID2),
         ff_dummy_limiter:new()
-    ),
-    {ok, #config_LimitConfig{}} = ff_dummy_limiter:create_config(
-        limiter_create_params(?LIMIT_ID3),
-        ff_dummy_limiter:new()
     ).
 
--spec assert_payment_limit_amount(_, _) -> _.
-assert_payment_limit_amount(AssertAmount, Withdrawal) ->
-    {ok, Limit} = get_payment_limit_amount(?LIMIT_ID, Withdrawal),
-    ?assertMatch(#limiter_Limit{amount = AssertAmount}, Limit).
+-spec get_limit_amount(_, _) -> _.
+get_limit_amount(LimitID, Withdrawal) ->
+    {ok, #limiter_Limit{amount = Amount}} = get_limit(LimitID, Withdrawal),
+    Amount.
 
--spec get_payment_limit_amount(_, _) -> _.
-get_payment_limit_amount(LimitId, Withdrawal) ->
-    MarshaledWithdrawal = ff_limiter:marshal_withdrawal(Withdrawal),
+-spec get_limit(_, _) -> _.
+get_limit(LimitId, Withdrawal) ->
+    MarshaledWithdrawal = maybe_marshal_withdrawal(Withdrawal),
     Context = #limiter_LimitContext{
         withdrawal_processing = #context_withdrawal_Context{
             op = {withdrawal, #context_withdrawal_OperationWithdrawal{}},
@@ -51,6 +42,11 @@ get_payment_limit_amount(LimitId, Withdrawal) ->
         }
     },
     ff_dummy_limiter:get(LimitId, Context, ff_dummy_limiter:new()).
+
+maybe_marshal_withdrawal(Withdrawal = #wthd_domain_Withdrawal{}) ->
+    Withdrawal;
+maybe_marshal_withdrawal(Withdrawal) ->
+    ff_limiter:marshal_withdrawal(Withdrawal).
 
 limiter_create_params(LimitID) ->
     #config_LimitConfigParams{

@@ -232,7 +232,8 @@ services(Options) ->
         automaton => "http://machinegun:8022/v1/automaton",
         accounter => "http://shumway:8022/accounter",
         partymgmt => "http://party-management:8022/v1/processing/partymgmt",
-        binbase => "http://localhost:8222/binbase"
+        binbase => "http://localhost:8222/binbase",
+        limiter => "http://limiter:8022/v1/limiter"
     },
     maps:get(services, Options, Default).
 
@@ -374,6 +375,10 @@ domain_config(Options) ->
                     ?ruleset(?PAYINST1_ROUTING_POLICIES + 17)
                 ),
                 delegate(
+                    condition(cost_in, {901000, <<"RUB">>}),
+                    ?ruleset(?PAYINST1_ROUTING_POLICIES + 18)
+                ),
+                delegate(
                     {condition,
                         {payment_tool,
                             {bank_card, #domain_BankCardCondition{
@@ -477,13 +482,21 @@ domain_config(Options) ->
         routing_ruleset(
             ?ruleset(?PAYINST1_ROUTING_POLICIES + 16),
             {candidates, [
-                candidate({constant, true}, ?trm(1800), 4000)
+                candidate({constant, true}, ?trm(1800))
             ]}
         ),
 
         routing_ruleset(
             ?ruleset(?PAYINST1_ROUTING_POLICIES + 17),
             {candidates, [
+                candidate({constant, true}, ?trm(1900))
+            ]}
+        ),
+
+        routing_ruleset(
+            ?ruleset(?PAYINST1_ROUTING_POLICIES + 18),
+            {candidates, [
+                candidate({constant, true}, ?trm(2000), 1000),
                 candidate({constant, true}, ?trm(1900), 4000)
             ]}
         ),
@@ -752,7 +765,7 @@ domain_config(Options) ->
                         currencies = {value, ?ordset([?cur(<<"RUB">>), ?cur(<<"BTC">>)])},
                         turnover_limit =
                             {value, [
-                                ?trnvrlimit(<<"ID">>, 10)
+                                ?trnvrlimit(<<"ID1">>, 1000)
                             ]}
                     }
                 }
@@ -767,7 +780,22 @@ domain_config(Options) ->
                     withdrawals = #domain_WithdrawalProvisionTerms{
                         turnover_limit =
                             {value, [
-                                ?trnvrlimit(<<"ID">>, 0)
+                                ?trnvrlimit(<<"ID2">>, 0)
+                            ]}
+                    }
+                }
+            }
+        ),
+
+        ct_domain:withdrawal_terminal(
+            ?trm(2000),
+            ?prv(1),
+            #domain_ProvisionTermSet{
+                wallet = #domain_WalletProvisionTerms{
+                    withdrawals = #domain_WithdrawalProvisionTerms{
+                        turnover_limit =
+                            {value, [
+                                ?trnvrlimit(<<"ID2">>, 1000)
                             ]}
                     }
                 }

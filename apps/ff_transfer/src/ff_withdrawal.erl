@@ -774,7 +774,7 @@ process_routing(Withdrawal) ->
 
 -spec process_rollback_routing(withdrawal_state()) -> process_result().
 process_rollback_routing(Withdrawal) ->
-    ok = do_rollback_routing(undefined, Withdrawal),
+    _ = do_rollback_routing(undefined, Withdrawal),
     {undefined, []}.
 
 -spec do_process_routing(withdrawal_state()) -> {ok, [route()]} | {error, Reason} when
@@ -799,9 +799,10 @@ do_process_routing(Withdrawal) ->
 do_rollback_routing(Route, Withdrawal) ->
     do(fun() ->
         {Varset, Context} = make_routing_varset_and_context(Withdrawal),
-        GatherResult = ff_withdrawal_routing:gather_routes(Varset, Context),
-        FilteredRoutes = unwrap(ff_withdrawal_routing:filter_limit_overflow_routes(GatherResult, Varset, Context)),
-        ConvertedRoutes = ff_withdrawal_routing:convert(FilteredRoutes),
+        Routes = unwrap(
+            ff_withdrawal_routing:handle_process_routes(ff_withdrawal_routing:gather_routes(Varset, Context))
+        ),
+        ConvertedRoutes = ff_withdrawal_routing:convert(Routes),
         RollbackRoutes =
             case Route of
                 undefined ->

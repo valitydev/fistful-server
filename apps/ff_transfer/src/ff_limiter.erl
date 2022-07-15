@@ -75,16 +75,13 @@ commit_withdrawal_limits(TurnoverLimits, Route, Withdrawal) ->
     IDs = [T#domain_TurnoverLimit.id || T <- TurnoverLimits],
     LimitChanges = gen_limit_payment_changes(IDs, Route, Withdrawal),
     Context = gen_limit_context(Withdrawal),
-    error({test, TurnoverLimits, LimitChanges, Context}),
     commit(LimitChanges, get_latest_clock(), Context).
 
 -spec rollback_withdrawal_limits([turnover_limit()], route(), withdrawal()) -> ok.
-rollback_withdrawal_limits(TurnoverLimits, Route, Withdrawal0) ->
-    {_, Currency} = ff_withdrawal:body(Withdrawal0),
-    Withdrawal1 = ff_withdrawal:set_body({0, Currency}, Withdrawal0),
+rollback_withdrawal_limits(TurnoverLimits, Route, Withdrawal) ->
     IDs = [T#domain_TurnoverLimit.id || T <- TurnoverLimits],
-    LimitChanges = gen_limit_payment_changes(IDs, Route, Withdrawal1),
-    Context = gen_limit_context(Withdrawal1),
+    LimitChanges = gen_limit_payment_changes(IDs, Route, Withdrawal),
+    Context = gen_limit_context(Withdrawal),
     rollback(LimitChanges, get_latest_clock(), Context).
 
 -spec hold([ff_limiter_client:limit_change()], ff_limiter_client:clock(), ff_limiter_client:context()) -> ok.

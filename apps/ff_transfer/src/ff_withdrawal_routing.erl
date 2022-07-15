@@ -13,6 +13,7 @@
 -export([get_provider/1]).
 -export([get_terminal/1]).
 -export([merge_withdrawal_terms/2]).
+-export([handle_process_routes/1]).
 
 -import(ff_pipeline, [do/1, unwrap/1]).
 
@@ -74,6 +75,60 @@ gather_routes(PartyVarset, Context = #{identity := Identity, domain_revision := 
     ),
     filter_valid_routes(Routes, RejectContext0, PartyVarset, Context).
 
+-spec filter_limit_overflow_routes({[routing_rule_route()], reject_context()}, party_varset(), routing_context()) ->
+    {ok, [routing_rule_route()]} | {error, route_not_found}.
+filter_limit_overflow_routes({Routes, RejectContext}, PartyVarset, RoutingContext) ->
+    handle_process_routes(
+        validate_routes_with(
+            fun do_validate_limits/3,
+            {Routes, RejectContext},
+            PartyVarset,
+            RoutingContext
+        )
+    ).
+
+-spec rollback_routes_limits([route()], party_varset(), routing_context()) ->
+    ok.
+rollback_routes_limits(Routes, PartyVarset, RoutingContext) ->
+    process_routes_with(
+        fun do_rollback_limits/3,
+        Routes,
+        PartyVarset,
+        RoutingContext
+    ).
+
+-spec commit_routes_limits([route()], party_varset(), routing_context()) ->
+    ok.
+commit_routes_limits(Routes, PartyVarset, RoutingContext) ->
+    process_routes_with(
+        fun do_commit_limits/3,
+        Routes,
+        PartyVarset,
+        RoutingContext
+    ).
+
+-spec convert([routing_rule_route()]) -> [route()].
+convert(RoutingRuleRoutes) ->
+    ProviderTerminalMap = lists:foldl(
+        fun(#{provider_ref := ProviderRef, terminal_ref := TerminalRef, priority := Priority}, Acc0) ->
+            TerminalID = TerminalRef#domain_TerminalRef.id,
+            ProviderID = ProviderRef#domain_ProviderRef.id,
+            Routes = maps:get(Priority, Acc0, []),
+            Acc1 = maps:put(Priority, [{ProviderID, TerminalID} | Routes], Acc0),
+            Acc1
+        end,
+        #{},
+        RoutingRuleRoutes
+    ),
+    lists:foldl(
+        fun({_, Data}, Acc) ->
+            SortedRoutes = [make_route(P, T) || {P, T} <- lists:sort(Data)],
+            SortedRoutes ++ Acc
+        end,
+        [],
+        lists:keysort(1, maps:to_list(ProviderTerminalMap))
+    ).
+
 -spec make_route(provider_id(), terminal_id() | undefined) -> route().
 make_route(ProviderID, TerminalID) ->
     genlib_map:compact(#{
@@ -117,6 +172,14 @@ merge_withdrawal_terms(
 merge_withdrawal_terms(ProviderTerms, TerminalTerms) ->
     ff_maybe:get_defined(TerminalTerms, ProviderTerms).
 
+-spec handle_process_routes({[routing_rule_route()], reject_context()}) ->
+    {ok, [routing_rule_route()]} | {error, route_not_found}.
+handle_process_routes({Routes = [_ | _], _RejectContext1}) ->
+    {ok, Routes};
+handle_process_routes({[], RejectContext1}) ->
+    ff_routing_rule:log_reject_context(RejectContext1),
+    {error, route_not_found}.
+
 %%
 
 -spec filter_valid_routes([routing_rule_route()], reject_context(), party_varset(), routing_context()) ->
@@ -128,44 +191,6 @@ filter_valid_routes(Routes, RejectContext, PartyVarset, RoutingContext) ->
         PartyVarset,
         RoutingContext
     ).
-
--spec filter_limit_overflow_routes({[routing_rule_route()], reject_context()}, party_varset(), routing_context()) ->
-    {ok, [routing_rule_route()]} | {error, route_not_found}.
-filter_limit_overflow_routes({Routes, RejectContext}, PartyVarset, RoutingContext) ->
-    handle_process_routes(
-        validate_routes_with(
-            fun do_validate_limits/3,
-            {Routes, RejectContext},
-            PartyVarset,
-            RoutingContext
-        )
-    ).
-
--spec rollback_routes_limits([route()], party_varset(), routing_context()) ->
-    ok.
-rollback_routes_limits(Routes, PartyVarset, RoutingContext) ->
-    process_routes_with(
-        fun do_rollback_limits/3,
-        Routes,
-        PartyVarset,
-        RoutingContext
-    ).
-
--spec commit_routes_limits([route()], party_varset(), routing_context()) ->
-    ok.
-commit_routes_limits(Routes, PartyVarset, RoutingContext) ->
-    process_routes_with(
-        fun do_commit_limits/3,
-        Routes,
-        PartyVarset,
-        RoutingContext
-    ).
-
-handle_process_routes({Routes = [_ | _], _RejectContext1}) ->
-    {ok, Routes};
-handle_process_routes({[], RejectContext1}) ->
-    ff_routing_rule:log_reject_context(RejectContext1),
-    {error, route_not_found}.
 
 -spec process_routes_with(function(), [route()], party_varset(), routing_context()) ->
     ok.
@@ -232,19 +257,15 @@ do_rollback_limits(CombinedTerms, _PartyVarset, #{withdrawal := Withdrawal, rout
         turnover_limit = TurnoverLimit
     } = CombinedTerms,
     Limits = ff_limiter:get_turnover_limits(TurnoverLimit),
-    ff_limiter:hold_withdrawal_limits(Limits, Route, Withdrawal).
+    ff_limiter:rollback_withdrawal_limits(Limits, Route, Withdrawal).
 
 -spec do_commit_limits(withdrawal_provision_terms(), party_varset(), routing_context()) ->
     ok.
-do_commit_limits(CombinedTerms, PartyVarset, #{withdrawal := Withdrawal, route := Route, domain_revision := DomainRevision}) ->
+do_commit_limits(CombinedTerms, _PartyVarset, #{withdrawal := Withdrawal, route := Route}) ->
     #domain_WithdrawalProvisionTerms{
         turnover_limit = TurnoverLimit
     } = CombinedTerms,
     Limits = ff_limiter:get_turnover_limits(TurnoverLimit),
-    TerminalID = maps:get(terminal_id, Route),
-    TerminalRef = #domain_TerminalRef{id = TerminalID},
-    {ok, Terminal} = ff_domain_config:object(DomainRevision, {terminal, TerminalRef}),
-    error({test, Route, CombinedTerms, PartyVarset, Terminal}),
     ff_limiter:commit_withdrawal_limits(Limits, Route, Withdrawal).
 
 -spec do_validate_limits(withdrawal_provision_terms(), party_varset(), routing_context()) ->
@@ -332,28 +353,6 @@ validate_turnover_limits(TurnoverLimits, _VS, #{withdrawal := Withdrawal, route 
     end;
 validate_turnover_limits(NotReducedSelector, _VS, _RoutingContext) ->
     {error, {misconfiguration, {'Could not reduce selector to a value', NotReducedSelector}}}.
-
--spec convert([routing_rule_route()]) -> [route()].
-convert(RoutingRuleRoutes) ->
-    ProviderTerminalMap = lists:foldl(
-        fun(#{provider_ref := ProviderRef, terminal_ref := TerminalRef, priority := Priority}, Acc0) ->
-            TerminalID = TerminalRef#domain_TerminalRef.id,
-            ProviderID = ProviderRef#domain_ProviderRef.id,
-            Routes = maps:get(Priority, Acc0, []),
-            Acc1 = maps:put(Priority, [{ProviderID, TerminalID} | Routes], Acc0),
-            Acc1
-        end,
-        #{},
-        RoutingRuleRoutes
-    ),
-    lists:foldl(
-        fun({_, Data}, Acc) ->
-            SortedRoutes = [make_route(P, T) || {P, T} <- lists:sort(Data)],
-            SortedRoutes ++ Acc
-        end,
-        [],
-        lists:keysort(1, maps:to_list(ProviderTerminalMap))
-    ).
 
 %% TESTS
 

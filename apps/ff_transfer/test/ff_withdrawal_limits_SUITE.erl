@@ -7,6 +7,8 @@
 -include_lib("fistful_proto/include/fistful_wthd_thrift.hrl").
 -include_lib("fistful_proto/include/fistful_wthd_status_thrift.hrl").
 -include_lib("fistful_proto/include/fistful_repairer_thrift.hrl").
+-include_lib("damsel/include/dmsl_wthd_domain_thrift.hrl").
+-include_lib("ff_cth/include/ct_domain.hrl").
 
 %% Common test API
 
@@ -20,9 +22,9 @@
 -export([end_per_testcase/2]).
 
 %% Tests
--export([create_ok_test/1]).
 -export([limit_success/1]).
 -export([limit_overflow/1]).
+-export([choose_provider_without_limit_overflow/1]).
 
 %% Internal types
 
@@ -55,15 +57,10 @@ all() ->
 -spec groups() -> [{group_name(), list(), [test_case_name()]}].
 groups() ->
     [
-        {default, [parallel], [
-            create_ok_test,
+        {default, [sequence], [
             limit_success,
-            limit_overflow
-            % payment_limit_other_paytool_success,
-            % payment_partial_capture_limit_success,
-            % switch_provider_after_limit_overflow,
-            % limit_not_found,
-            % refund_limit_success
+            limit_overflow,
+            choose_provider_without_limit_overflow
         ]}
     ].
 
@@ -113,30 +110,6 @@ end_per_testcase(_Name, _C) ->
 
 %% Tests
 
--spec create_ok_test(config()) -> test_return().
-create_ok_test(C) ->
-    Cash = {100, <<"RUB">>},
-    #{
-        wallet_id := WalletID,
-        destination_id := DestinationID
-    } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
-    WithdrawalParams = #{
-        id => WithdrawalID,
-        destination_id => DestinationID,
-        wallet_id => WalletID,
-        body => Cash,
-        external_id => WithdrawalID
-    },
-    ok = ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new()),
-    ?assertEqual(succeeded, await_final_withdrawal_status(WithdrawalID)),
-    ?assertEqual(?FINAL_BALANCE(0, <<"RUB">>), get_wallet_balance(WalletID)),
-    Withdrawal = get_withdrawal(WithdrawalID),
-    ?assertEqual(WalletID, ff_withdrawal:wallet_id(Withdrawal)),
-    ?assertEqual(DestinationID, ff_withdrawal:destination_id(Withdrawal)),
-    ?assertEqual(Cash, ff_withdrawal:body(Withdrawal)),
-    ?assertEqual(WithdrawalID, ff_withdrawal:external_id(Withdrawal)).
-
 -spec limit_success(config()) -> test_return().
 limit_success(C) ->
     Cash = {800800, <<"RUB">>},
@@ -152,10 +125,12 @@ limit_success(C) ->
         body => Cash,
         external_id => WithdrawalID
     },
+    PreviousAmount = get_limit_amount(Cash, DestinationID, ?LIMIT_ID1),
     ok = ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new()),
     ?assertEqual(succeeded, await_final_withdrawal_status(WithdrawalID)),
     Withdrawal = get_withdrawal(WithdrawalID),
-    ok = ff_limiter_helper:assert_payment_limit_amount(1, Withdrawal).
+    NextAmmount = PreviousAmount + 1,
+    ?assertMatch(NextAmmount, ff_limiter_helper:get_limit_amount(?LIMIT_ID1, Withdrawal)).
 
 -spec limit_overflow(config()) -> test_return().
 limit_overflow(C) ->
@@ -172,13 +147,50 @@ limit_overflow(C) ->
         body => Cash,
         external_id => WithdrawalID
     },
+    PreviousAmount = get_limit_amount(Cash, DestinationID, ?LIMIT_ID2),
     ok = ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new()),
     Result = await_final_withdrawal_status(WithdrawalID),
-    ?assertMatch({failed, #{code := <<"test_error">>}}, Result),
+    ?assertMatch({failed, #{code := <<"no_route_found">>}}, Result),
     Withdrawal = get_withdrawal(WithdrawalID),
-    ok = ff_limiter_helper:assert_payment_limit_amount(1, Withdrawal).
+    ?assertMatch(PreviousAmount, ff_limiter_helper:get_limit_amount(?LIMIT_ID2, Withdrawal)).
+
+-spec choose_provider_without_limit_overflow(config()) -> test_return().
+choose_provider_without_limit_overflow(C) ->
+    Cash = {901000, <<"RUB">>},
+    #{
+        wallet_id := WalletID,
+        destination_id := DestinationID
+    } = prepare_standard_environment(Cash, C),
+    WithdrawalID = generate_id(),
+    WithdrawalParams = #{
+        id => WithdrawalID,
+        destination_id => DestinationID,
+        wallet_id => WalletID,
+        body => Cash,
+        external_id => WithdrawalID
+    },
+    PreviousAmount = get_limit_amount(Cash, DestinationID, ?LIMIT_ID2),
+    ok = ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new()),
+    ?assertEqual(succeeded, await_final_withdrawal_status(WithdrawalID)),
+    Withdrawal = get_withdrawal(WithdrawalID),
+    NextAmmount = PreviousAmount + 1,
+    ?assertMatch(NextAmmount, ff_limiter_helper:get_limit_amount(?LIMIT_ID2, Withdrawal)).
 
 %% Utils
+
+get_limit_amount(Cash, DestinationID, LimitID) ->
+    Withdrawal = #wthd_domain_Withdrawal{
+        created_at = ff_codec:marshal(timestamp_ms, ff_time:now()),
+        body = ff_dmsl_codec:marshal(cash, Cash),
+        destination = ff_adapter_withdrawal_codec:marshal(resource, get_destination_resource(DestinationID))
+    },
+    ff_limiter_helper:get_limit_amount(LimitID, Withdrawal).
+
+get_destination_resource(DestinationID) ->
+    {ok, DestinationMachine} = ff_destination_machine:get(DestinationID),
+    Destination = ff_destination_machine:destination(DestinationMachine),
+    {ok, Resource} = ff_resource:create_resource(ff_destination:resource(Destination)),
+    Resource.
 
 prepare_standard_environment(WithdrawalCash, C) ->
     prepare_standard_environment(WithdrawalCash, undefined, C).

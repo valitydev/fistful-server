@@ -7,6 +7,9 @@
 
 -define(ordset(Es), ordsets:from_list(Es)).
 
+-define(LIMIT_ID1, <<"ID1">>).
+-define(LIMIT_ID2, <<"ID2">>).
+
 -define(glob(), #domain_GlobalsRef{}).
 -define(cur(ID), #domain_CurrencyRef{symbolic_code = ID}).
 -define(pmt(C, T), #domain_PaymentMethodRef{id = {C, T}}).
