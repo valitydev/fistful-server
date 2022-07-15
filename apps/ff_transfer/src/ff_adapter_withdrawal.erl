@@ -90,7 +90,7 @@
 }.
 
 -type finish_status() :: success | {success, transaction_info()} | {failure, failure()}.
--type timer() :: dmsl_base_thrift:'Timer'().
+-type timer() :: machinery:timer().
 -type transaction_info() :: ff_adapter:transaction_info().
 -type failure() :: ff_adapter:failure().
 
@@ -112,6 +112,7 @@
 -type callback_response() :: ff_withdrawal_callback:response().
 
 -export_type([withdrawal/0]).
+-export_type([intent/0]).
 -export_type([failure/0]).
 -export_type([transaction_info/0]).
 -export_type([finish_status/0]).

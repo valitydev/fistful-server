@@ -20,7 +20,6 @@
 -type identity() :: dmsl_wthd_domain_thrift:'Identity'().
 -type cash() :: dmsl_domain_thrift:'Cash'().
 -type currency() :: dmsl_domain_thrift:'Currency'().
--type failure() :: dmsl_domain_thrift:'Failure'().
 -type domain_quote() :: dmsl_wthd_provider_thrift:'Quote'().
 
 -type withdrawal() :: #{
@@ -54,8 +53,6 @@
 -type state() :: #state{}.
 
 -type transaction_info() :: ff_adapter:transaction_info().
--type status() :: {success, transaction_info()} | {failure, failure()}.
--type timer() :: {deadline, binary()} | {timeout, integer()}.
 
 %%
 %% API
@@ -77,15 +74,17 @@ start(Opts) ->
 
 -spec process_withdrawal(withdrawal(), state(), map()) ->
     {ok, #{
-        intent := {finish, status()} | {sleep, timer()} | {sleep, timer(), CallbackTag},
+        intent := ff_adapter_withdrawal:intent(),
         next_state => state(),
         transaction_info => transaction_info()
-    }}
-when
-    CallbackTag :: binary().
+    }}.
 process_withdrawal(_Withdrawal, State, _Options) ->
+    Failure = #{
+        code => <<"authorization_error">>,
+        sub => #{code => <<"insufficient_funds">>}
+    },
     {ok, #{
-        intent => {finish, {failure, <<"authorization_error">>}},
+        intent => {finish, {failed, Failure}},
         next_state => State
     }}.
 
@@ -99,12 +98,10 @@ get_quote(_Quote, _Options) ->
 
 -spec handle_callback(callback(), withdrawal(), state(), map()) ->
     {ok, #{
-        intent := {finish, status()} | {sleep, timer()} | {sleep, timer(), CallbackTag},
+        intent := ff_adapter_withdrawal:intent(),
         response := any(),
         next_state => state(),
         transaction_info => transaction_info()
-    }}
-when
-    CallbackTag :: binary().
+    }}.
 handle_callback(_Callback, _Withdrawal, _State, _Options) ->
     erlang:error(not_implemented).
