@@ -50,6 +50,12 @@
 -type currency_selector() :: dmsl_domain_thrift:'CurrencySelector'().
 -type cash_limit_selector() :: dmsl_domain_thrift:'CashLimitSelector'().
 -type turnover_limit() :: dmsl_domain_thrift:'TurnoverLimit'().
+-type process_route_fun() :: fun(
+    (withdrawal_provision_terms(), party_varset(), routing_context()) ->
+        ok
+        | {ok, valid}
+        | {error, Error :: term()}
+).
 
 %%
 
@@ -192,7 +198,7 @@ filter_valid_routes(Routes, RejectContext, PartyVarset, RoutingContext) ->
         RoutingContext
     ).
 
--spec process_routes_with(function(), [route()], party_varset(), routing_context()) ->
+-spec process_routes_with(process_route_fun(), [route()], party_varset(), routing_context()) ->
     ok.
 process_routes_with(Func, Routes, PartyVarset, RoutingContext0) ->
     lists:foreach(
@@ -201,28 +207,26 @@ process_routes_with(Func, Routes, PartyVarset, RoutingContext0) ->
             TerminalID = maps:get(terminal_id, Route),
             ProviderRef = #domain_ProviderRef{id = ProviderID},
             TerminalRef = #domain_TerminalRef{id = TerminalID},
-            #{domain_revision := DomainRevision} = RoutingContext0,
             RoutingContext1 = RoutingContext0#{route => Route},
-            {ok, WithdrawalProvisionTerms} = get_route_terms(ProviderRef, TerminalRef, PartyVarset, DomainRevision),
-            Func(WithdrawalProvisionTerms, PartyVarset, RoutingContext1)
+            get_route_terms_and_process(Func, ProviderRef, TerminalRef, PartyVarset, RoutingContext1)
         end,
         Routes
     ).
 
--spec validate_routes_with(function(), {[routing_rule_route()], reject_context()}, party_varset(), routing_context()) ->
+-spec validate_routes_with(
+    process_route_fun(), {[routing_rule_route()], reject_context()}, party_varset(), routing_context()
+) ->
     {[routing_rule_route()], reject_context()}.
 validate_routes_with(Func, {Routes, RejectContext}, PartyVarset, RoutingContext0) ->
     lists:foldl(
         fun(Route, {ValidRoutes0, RejectContext0}) ->
             ProviderRef = maps:get(provider_ref, Route),
             TerminalRef = maps:get(terminal_ref, Route),
-            #{domain_revision := DomainRevision} = RoutingContext0,
             RoutingContext1 = RoutingContext0#{
                 route => make_route(ProviderRef#domain_ProviderRef.id, TerminalRef#domain_TerminalRef.id)
             },
 
-            {ok, WithdrawalProvisionTerms} = get_route_terms(ProviderRef, TerminalRef, PartyVarset, DomainRevision),
-            case Func(WithdrawalProvisionTerms, PartyVarset, RoutingContext1) of
+            case get_route_terms_and_process(Func, ProviderRef, TerminalRef, PartyVarset, RoutingContext1) of
                 {ok, valid} ->
                     ValidRoutes1 = [Route | ValidRoutes0],
                     {ValidRoutes1, RejectContext0};
@@ -237,16 +241,17 @@ validate_routes_with(Func, {Routes, RejectContext}, PartyVarset, RoutingContext0
         Routes
     ).
 
-get_route_terms(ProviderRef, TerminalRef, PartyVarset, DomainRevision) ->
+get_route_terms_and_process(
+    Func, ProviderRef, TerminalRef, PartyVarset, RoutingContext = #{domain_revision := DomainRevision}
+) ->
     case ff_party:compute_provider_terminal_terms(ProviderRef, TerminalRef, PartyVarset, DomainRevision) of
         {ok, #domain_ProvisionTermSet{
             wallet = #domain_WalletProvisionTerms{
                 withdrawals = WithdrawalProvisionTerms
             }
         }} ->
-            {ok, WithdrawalProvisionTerms};
+            Func(WithdrawalProvisionTerms, PartyVarset, RoutingContext);
         {error, Error} ->
-            %% TODO: test for provision_termset_undefined error after routing migration
             {error, Error}
     end.
 

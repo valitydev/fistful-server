@@ -469,7 +469,7 @@ generate_id() ->
     genlib:to_binary(genlib_time:ticks()).
 
 call_admin(Fun, Args) ->
-    Service = {ff_proto_fistful_admin_thrift, 'FistfulAdmin'},
+    Service = {fistful_admin_thrift, 'FistfulAdmin'},
     Request = {Service, Fun, Args},
     Client = ff_woody_client:new(#{
         url => <<"http://localhost:8022/v1/admin">>,
