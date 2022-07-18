@@ -1,5 +1,8 @@
 -module(ff_ct_fail_provider).
 
+-include_lib("damsel/include/dmsl_domain_thrift.hrl").
+-include_lib("damsel/include/dmsl_wthd_provider_thrift.hrl").
+
 %% API
 -export([start/0]).
 -export([start/1]).
@@ -13,11 +16,11 @@
 %% Internal types
 %%
 
--type destination() :: dmsl_withdrawals_domain_thrift:'Destination'().
--type identity() :: dmsl_withdrawals_domain_thrift:'Identity'().
+-type destination() :: dmsl_wthd_domain_thrift:'Destination'().
+-type identity() :: dmsl_wthd_domain_thrift:'Identity'().
 -type cash() :: dmsl_domain_thrift:'Cash'().
 -type currency() :: dmsl_domain_thrift:'Currency'().
--type domain_quote() :: dmsl_withdrawals_provider_adapter_thrift:'Quote'().
+-type domain_quote() :: dmsl_wthd_provider_thrift:'Quote'().
 
 -type withdrawal() :: #{
     id => binary(),
