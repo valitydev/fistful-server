@@ -16,7 +16,7 @@
 
 -spec get_service(service_name()) -> service().
 get_service(fistful_admin) ->
-    {ff_proto_fistful_admin_thrift, 'FistfulAdmin'};
+    {fistful_admin_thrift, 'FistfulAdmin'};
 get_service(fistful_provider) ->
     {fistful_provider_thrift, 'Management'};
 get_service(ff_withdrawal_adapter_host) ->
