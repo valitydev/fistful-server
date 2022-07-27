@@ -302,7 +302,7 @@ create_destination_resource_no_bindata_fail_test(C) ->
 
 -spec create_destination_resource_no_bindata_ok_test(config()) -> test_return().
 create_destination_resource_no_bindata_ok_test(C) ->
-    %% As per test terms this specific cash amount results in unambiguous VISA payment system
+    %% As per test terms this specific cash amount results in valid cashflow without bin data
     Cash = make_cash({424242, <<"RUB">>}),
     #{
         wallet_id := WalletID,
