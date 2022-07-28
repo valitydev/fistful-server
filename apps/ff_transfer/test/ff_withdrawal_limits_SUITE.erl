@@ -3,12 +3,7 @@
 -include_lib("stdlib/include/assert.hrl").
 -include_lib("fistful_proto/include/fistful_fistful_base_thrift.hrl").
 -include_lib("ff_cth/include/ct_domain.hrl").
--include_lib("fistful_proto/include/fistful_wthd_session_thrift.hrl").
--include_lib("fistful_proto/include/fistful_wthd_thrift.hrl").
--include_lib("fistful_proto/include/fistful_wthd_status_thrift.hrl").
--include_lib("fistful_proto/include/fistful_repairer_thrift.hrl").
 -include_lib("damsel/include/dmsl_wthd_domain_thrift.hrl").
--include_lib("ff_cth/include/ct_domain.hrl").
 
 %% Common test API
 
@@ -32,19 +27,6 @@
 -type test_case_name() :: ct_helper:test_case_name().
 -type group_name() :: ct_helper:group_name().
 -type test_return() :: _ | no_return().
-
-%% Macro helpers
-
--define(FINAL_BALANCE(Cash), {
-    element(1, Cash),
-    {
-        {inclusive, element(1, Cash)},
-        {inclusive, element(1, Cash)}
-    },
-    element(2, Cash)
-}).
-
--define(FINAL_BALANCE(Amount, Currency), ?FINAL_BALANCE({Amount, Currency})).
 
 %% API
 
@@ -125,12 +107,11 @@ limit_success(C) ->
         body => Cash,
         external_id => WithdrawalID
     },
-    PreviousAmount = get_limit_amount(Cash, DestinationID, ?LIMIT_ID1),
+    PreviousAmount = get_limit_amount(Cash, DestinationID, ?LIMIT_TURNOVER_NUM_PAYTOOL_ID1, C),
     ok = ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new()),
     ?assertEqual(succeeded, await_final_withdrawal_status(WithdrawalID)),
     Withdrawal = get_withdrawal(WithdrawalID),
-    NextAmmount = PreviousAmount + 1,
-    ?assertMatch(NextAmmount, ff_limiter_helper:get_limit_amount(?LIMIT_ID1, Withdrawal)).
+    ?assertEqual(PreviousAmount + 1, ff_limiter_helper:get_limit_amount(?LIMIT_TURNOVER_NUM_PAYTOOL_ID1, Withdrawal, C)).
 
 -spec limit_overflow(config()) -> test_return().
 limit_overflow(C) ->
@@ -147,12 +128,12 @@ limit_overflow(C) ->
         body => Cash,
         external_id => WithdrawalID
     },
-    PreviousAmount = get_limit_amount(Cash, DestinationID, ?LIMIT_ID2),
+    PreviousAmount = get_limit_amount(Cash, DestinationID, ?LIMIT_TURNOVER_NUM_PAYTOOL_ID2, C),
     ok = ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new()),
     Result = await_final_withdrawal_status(WithdrawalID),
     ?assertMatch({failed, #{code := <<"no_route_found">>}}, Result),
     Withdrawal = get_withdrawal(WithdrawalID),
-    ?assertMatch(PreviousAmount, ff_limiter_helper:get_limit_amount(?LIMIT_ID2, Withdrawal)).
+    ?assertEqual(PreviousAmount, ff_limiter_helper:get_limit_amount(?LIMIT_TURNOVER_NUM_PAYTOOL_ID2, Withdrawal, C)).
 
 -spec choose_provider_without_limit_overflow(config()) -> test_return().
 choose_provider_without_limit_overflow(C) ->
@@ -169,22 +150,21 @@ choose_provider_without_limit_overflow(C) ->
         body => Cash,
         external_id => WithdrawalID
     },
-    PreviousAmount = get_limit_amount(Cash, DestinationID, ?LIMIT_ID2),
+    PreviousAmount = get_limit_amount(Cash, DestinationID, ?LIMIT_TURNOVER_NUM_PAYTOOL_ID2, C),
     ok = ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new()),
     ?assertEqual(succeeded, await_final_withdrawal_status(WithdrawalID)),
     Withdrawal = get_withdrawal(WithdrawalID),
-    NextAmmount = PreviousAmount + 1,
-    ?assertMatch(NextAmmount, ff_limiter_helper:get_limit_amount(?LIMIT_ID2, Withdrawal)).
+    ?assertEqual(PreviousAmount + 1, ff_limiter_helper:get_limit_amount(?LIMIT_TURNOVER_NUM_PAYTOOL_ID2, Withdrawal, C)).
 
 %% Utils
 
-get_limit_amount(Cash, DestinationID, LimitID) ->
+get_limit_amount(Cash, DestinationID, LimitID, C) ->
     Withdrawal = #wthd_domain_Withdrawal{
         created_at = ff_codec:marshal(timestamp_ms, ff_time:now()),
         body = ff_dmsl_codec:marshal(cash, Cash),
         destination = ff_adapter_withdrawal_codec:marshal(resource, get_destination_resource(DestinationID))
     },
-    ff_limiter_helper:get_limit_amount(LimitID, Withdrawal).
+    ff_limiter_helper:get_limit_amount(LimitID, Withdrawal, C).
 
 get_destination_resource(DestinationID) ->
     {ok, DestinationMachine} = ff_destination_machine:get(DestinationID),

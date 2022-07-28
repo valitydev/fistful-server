@@ -1,8 +1,5 @@
 -module(ff_ct_fail_provider).
 
--include_lib("damsel/include/dmsl_domain_thrift.hrl").
--include_lib("damsel/include/dmsl_wthd_provider_thrift.hrl").
-
 %% API
 -export([start/0]).
 -export([start/1]).

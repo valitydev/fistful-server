@@ -2,7 +2,6 @@
 
 -include_lib("stdlib/include/assert.hrl").
 -include_lib("fistful_proto/include/fistful_wallet_thrift.hrl").
--include_lib("damsel/include/dmsl_payproc_thrift.hrl").
 -include_lib("fistful_proto/include/fistful_fistful_thrift.hrl").
 -include_lib("fistful_proto/include/fistful_fistful_base_thrift.hrl").
 -include_lib("fistful_proto/include/fistful_account_thrift.hrl").

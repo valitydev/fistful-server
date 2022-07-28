@@ -1,7 +1,6 @@
 %%% Client for adapter for withdrawal provider
 -module(ff_adapter_withdrawal).
 
--include_lib("damsel/include/dmsl_domain_thrift.hrl").
 -include_lib("damsel/include/dmsl_wthd_provider_thrift.hrl").
 
 %% Accessors

@@ -765,7 +765,7 @@ domain_config(Options) ->
                         currencies = {value, ?ordset([?cur(<<"RUB">>), ?cur(<<"BTC">>)])},
                         turnover_limit =
                             {value, [
-                                ?trnvrlimit(<<"ID1">>, 1000)
+                                ?trnvrlimit(?LIMIT_TURNOVER_NUM_PAYTOOL_ID1, 1000)
                             ]}
                     }
                 }
@@ -780,7 +780,7 @@ domain_config(Options) ->
                     withdrawals = #domain_WithdrawalProvisionTerms{
                         turnover_limit =
                             {value, [
-                                ?trnvrlimit(<<"ID2">>, 0)
+                                ?trnvrlimit(?LIMIT_TURNOVER_NUM_PAYTOOL_ID2, 0)
                             ]}
                     }
                 }
@@ -795,7 +795,7 @@ domain_config(Options) ->
                     withdrawals = #domain_WithdrawalProvisionTerms{
                         turnover_limit =
                             {value, [
-                                ?trnvrlimit(<<"ID2">>, 1000)
+                                ?trnvrlimit(?LIMIT_TURNOVER_NUM_PAYTOOL_ID2, 1000)
                             ]}
                     }
                 }

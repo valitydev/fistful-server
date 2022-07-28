@@ -1,39 +1,39 @@
 -module(ff_limiter_helper).
 
 -include_lib("limiter_proto/include/limproto_limiter_thrift.hrl").
--include_lib("limiter_proto/include/limproto_context_payproc_thrift.hrl").
 -include_lib("limiter_proto/include/limproto_context_withdrawal_thrift.hrl").
 -include_lib("limiter_proto/include/limproto_config_thrift.hrl").
--include_lib("limiter_proto/include/limproto_configurator_thrift.hrl").
 -include_lib("limiter_proto/include/limproto_timerange_thrift.hrl").
--include_lib("damsel/include/dmsl_domain_thrift.hrl").
 -include_lib("damsel/include/dmsl_wthd_domain_thrift.hrl").
 -include_lib("ff_cth/include/ct_domain.hrl").
 
 -export([init_per_suite/1]).
--export([get_limit_amount/2]).
--export([get_limit/2]).
+-export([get_limit_amount/3]).
+-export([get_limit/3]).
 
+-type withdrawal() :: ff_withdrawal:withdrawal_state() | dmsl_wthd_domain_thrift:'Withdrawal'().
+-type limit() :: limproto_limiter_thrift:'Limit'().
 -type config() :: ct_suite:ct_config().
+-type id() :: binary().
 
 -spec init_per_suite(config()) -> _.
-init_per_suite(_Config) ->
-    {ok, #config_LimitConfig{}} = ff_dummy_limiter:create_config(
-        limiter_create_params(?LIMIT_ID1),
-        ff_dummy_limiter:new()
+init_per_suite(Config) ->
+    {ok, #config_LimitConfig{}} = ff_ct_limiter_client:create_config(
+        limiter_create_params(?LIMIT_TURNOVER_NUM_PAYTOOL_ID1),
+        ct_helper:get_woody_ctx(Config)
     ),
-    {ok, #config_LimitConfig{}} = ff_dummy_limiter:create_config(
-        limiter_create_params(?LIMIT_ID2),
-        ff_dummy_limiter:new()
+    {ok, #config_LimitConfig{}} = ff_ct_limiter_client:create_config(
+        limiter_create_params(?LIMIT_TURNOVER_NUM_PAYTOOL_ID2),
+        ct_helper:get_woody_ctx(Config)
     ).
 
--spec get_limit_amount(_, _) -> _.
-get_limit_amount(LimitID, Withdrawal) ->
-    {ok, #limiter_Limit{amount = Amount}} = get_limit(LimitID, Withdrawal),
+-spec get_limit_amount(id(), withdrawal(), config()) -> integer().
+get_limit_amount(LimitID, Withdrawal, Config) ->
+    {ok, #limiter_Limit{amount = Amount}} = get_limit(LimitID, Withdrawal, Config),
     Amount.
 
--spec get_limit(_, _) -> _.
-get_limit(LimitId, Withdrawal) ->
+-spec get_limit(id(), withdrawal(), config()) -> limit().
+get_limit(LimitId, Withdrawal, Config) ->
     MarshaledWithdrawal = maybe_marshal_withdrawal(Withdrawal),
     Context = #limiter_LimitContext{
         withdrawal_processing = #context_withdrawal_Context{
@@ -41,7 +41,7 @@ get_limit(LimitId, Withdrawal) ->
             withdrawal = #context_withdrawal_Withdrawal{withdrawal = MarshaledWithdrawal}
         }
     },
-    ff_dummy_limiter:get(LimitId, Context, ff_dummy_limiter:new()).
+    ff_ct_limiter_client:get(LimitId, Context, ct_helper:get_woody_ctx(Config)).
 
 maybe_marshal_withdrawal(Withdrawal = #wthd_domain_Withdrawal{}) ->
     Withdrawal;

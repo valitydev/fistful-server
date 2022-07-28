@@ -5,8 +5,6 @@
 -module(ff_withdrawal).
 
 -include_lib("damsel/include/dmsl_domain_thrift.hrl").
--include_lib("damsel/include/dmsl_payproc_thrift.hrl").
--include_lib("damsel/include/dmsl_wthd_provider_thrift.hrl").
 
 -type id() :: binary().
 
@@ -217,7 +215,6 @@
 %% API
 
 -export([create/1]).
--export([set_body/2]).
 -export([gen/1]).
 -export([get_quote/1]).
 -export([is_finished/1]).
@@ -388,10 +385,6 @@ params(#{params := V}) ->
     V.
 
 %% API
-
--spec set_body(body(), withdrawal_state()) -> withdrawal_state().
-set_body(V, State) ->
-    State#{body => V}.
 
 -spec gen(gen_args()) -> withdrawal().
 gen(Args) ->
@@ -765,10 +758,10 @@ process_routing(Withdrawal) ->
                 {route_changed, Route}
             ]};
         {error, route_not_found} ->
-            {_, Events} = process_transfer_fail(route_not_found, Withdrawal),
+            Events = process_transfer_fail(route_not_found, Withdrawal),
             {continue, Events};
         {error, {inconsistent_quote_route, _Data} = Reason} ->
-            {_, Events} = process_transfer_fail(Reason, Withdrawal),
+            Events = process_transfer_fail(Reason, Withdrawal),
             {continue, Events}
     end.
 
@@ -983,10 +976,10 @@ process_session_sleep(Withdrawal) ->
 process_transfer_finish(_Withdrawal) ->
     {undefined, [{status_changed, succeeded}]}.
 
--spec process_transfer_fail(fail_type(), withdrawal_state()) -> process_result().
+-spec process_transfer_fail(fail_type(), withdrawal_state()) -> [event()].
 process_transfer_fail(FailType, Withdrawal) ->
     Failure = build_failure(FailType, Withdrawal),
-    {undefined, [{status_changed, {failed, Failure}}]}.
+    [{status_changed, {failed, Failure}}].
 
 -spec handle_child_result(process_result(), withdrawal_state()) -> process_result().
 handle_child_result({undefined, Events} = Result, Withdrawal) ->
@@ -1636,13 +1629,13 @@ process_adjustment(Withdrawal) ->
 
 -spec process_route_change(withdrawal_state(), fail_type()) -> process_result().
 process_route_change(Withdrawal, Reason) ->
-    ok = do_rollback_routing(undefined, Withdrawal),
     case is_failure_transient(Reason, Withdrawal) of
         true ->
             {ok, Providers} = do_process_routing(Withdrawal),
             do_process_route_change(Providers, Withdrawal, Reason);
         false ->
-            process_transfer_fail(Reason, Withdrawal)
+            Events = process_transfer_fail(Reason, Withdrawal),
+            {undefined, Events}
     end.
 
 -spec is_failure_transient(fail_type(), withdrawal_state()) -> boolean().
@@ -1717,11 +1710,11 @@ do_process_route_change(Routes, Withdrawal, Reason) ->
             ]};
         {error, route_not_found} ->
             %% No more routes, return last error
-            {_, Events} = process_transfer_fail(Reason, Withdrawal),
+            Events = process_transfer_fail(Reason, Withdrawal),
             {continue, Events};
         {error, attempt_limit_exceeded} ->
             %% Attempt limit exceeded, return last error
-            {_, Events} = process_transfer_fail(Reason, Withdrawal),
+            Events = process_transfer_fail(Reason, Withdrawal),
             {continue, Events}
     end.
 

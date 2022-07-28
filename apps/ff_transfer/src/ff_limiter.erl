@@ -66,21 +66,21 @@ check_limits_([T | TurnoverLimits], Context, Acc) ->
 -spec hold_withdrawal_limits([turnover_limit()], route(), withdrawal()) -> ok.
 hold_withdrawal_limits(TurnoverLimits, Route, Withdrawal) ->
     IDs = [T#domain_TurnoverLimit.id || T <- TurnoverLimits],
-    LimitChanges = gen_limit_payment_changes(IDs, Route, Withdrawal),
+    LimitChanges = gen_limit_changes(IDs, Route, Withdrawal),
     Context = gen_limit_context(Withdrawal),
     hold(LimitChanges, get_latest_clock(), Context).
 
 -spec commit_withdrawal_limits([turnover_limit()], route(), withdrawal()) -> ok.
 commit_withdrawal_limits(TurnoverLimits, Route, Withdrawal) ->
     IDs = [T#domain_TurnoverLimit.id || T <- TurnoverLimits],
-    LimitChanges = gen_limit_payment_changes(IDs, Route, Withdrawal),
+    LimitChanges = gen_limit_changes(IDs, Route, Withdrawal),
     Context = gen_limit_context(Withdrawal),
     commit(LimitChanges, get_latest_clock(), Context).
 
 -spec rollback_withdrawal_limits([turnover_limit()], route(), withdrawal()) -> ok.
 rollback_withdrawal_limits(TurnoverLimits, Route, Withdrawal) ->
     IDs = [T#domain_TurnoverLimit.id || T <- TurnoverLimits],
-    LimitChanges = gen_limit_payment_changes(IDs, Route, Withdrawal),
+    LimitChanges = gen_limit_changes(IDs, Route, Withdrawal),
     Context = gen_limit_context(Withdrawal),
     rollback(LimitChanges, get_latest_clock(), Context).
 
@@ -120,7 +120,7 @@ gen_limit_context(Withdrawal) ->
         }
     }.
 
-gen_limit_payment_changes(LimitIDs, Route, Withdrawal) ->
+gen_limit_changes(LimitIDs, Route, Withdrawal) ->
     [
         #limiter_LimitChange{
             id = ID,
@@ -141,18 +141,9 @@ construct_limit_change_id(LimitID, #{terminal_id := TerminalID, provider_id := P
 get_latest_clock() ->
     {latest, #limiter_LatestClock{}}.
 
--spec construct_complex_id([binary() | {atom(), binary()}]) -> binary().
-construct_complex_id(L) ->
-    genlib_string:join(
-        $.,
-        lists:map(
-            fun
-                ({Tag, ID}) -> [atom_to_binary(Tag, utf8), <<"-">>, ID];
-                (ID) -> ID
-            end,
-            L
-        )
-    ).
+-spec construct_complex_id([binary()]) -> binary().
+construct_complex_id(IDs) ->
+    genlib_string:join($., IDs).
 
 -spec marshal_withdrawal(withdrawal()) -> domain_withdrawal().
 marshal_withdrawal(Withdrawal) ->
