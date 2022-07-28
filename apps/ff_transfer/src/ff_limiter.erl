@@ -1,5 +1,6 @@
 -module(ff_limiter).
 
+-include_lib("damsel/include/dmsl_base_thrift.hrl").
 -include_lib("damsel/include/dmsl_domain_thrift.hrl").
 -include_lib("damsel/include/dmsl_wthd_domain_thrift.hrl").
 -include_lib("limiter_proto/include/limproto_limiter_thrift.hrl").
@@ -11,6 +12,12 @@
 -type withdrawal() :: ff_withdrawal:withdrawal_state().
 -type route() :: ff_withdrawal_routing:route().
 
+-type limit() :: limproto_limiter_thrift:'Limit'().
+-type limit_id() :: limproto_limiter_thrift:'LimitID'().
+-type limit_change() :: limproto_limiter_thrift:'LimitChange'().
+-type context() :: limproto_limiter_thrift:'LimitContext'().
+-type clock() :: limproto_limiter_thrift:'Clock'().
+
 -export([get_turnover_limits/1]).
 -export([check_limits/2]).
 -export([marshal_withdrawal/1]).
@@ -21,7 +28,6 @@
 
 -spec get_turnover_limits(turnover_selector() | undefined) -> [turnover_limit()].
 get_turnover_limits(undefined) ->
-    logger:info("Operation limits haven't been set on provider terms."),
     [];
 get_turnover_limits({value, Limits}) ->
     Limits;
@@ -29,7 +35,7 @@ get_turnover_limits(Ambiguous) ->
     error({misconfiguration, {'Could not reduce selector to a value', Ambiguous}}).
 
 -spec check_limits([turnover_limit()], withdrawal()) ->
-    {ok, [ff_limiter_client:limit()]}
+    {ok, [limit()]}
     | {error, {limit_overflow, [binary()]}}.
 check_limits(TurnoverLimits, Withdrawal) ->
     Context = gen_limit_context(Withdrawal),
@@ -46,7 +52,7 @@ check_limits_([], _, Limits) ->
 check_limits_([T | TurnoverLimits], Context, Acc) ->
     #domain_TurnoverLimit{id = LimitID} = T,
     Clock = get_latest_clock(),
-    Limit = ff_limiter_client:get(LimitID, Clock, Context),
+    Limit = get(LimitID, Clock, Context),
     #limiter_Limit{
         amount = LimiterAmount
     } = Limit,
@@ -84,29 +90,29 @@ rollback_withdrawal_limits(TurnoverLimits, Route, Withdrawal) ->
     Context = gen_limit_context(Withdrawal),
     rollback(LimitChanges, get_latest_clock(), Context).
 
--spec hold([ff_limiter_client:limit_change()], ff_limiter_client:clock(), ff_limiter_client:context()) -> ok.
+-spec hold([limit_change()], clock(), context()) -> ok.
 hold(LimitChanges, Clock, Context) ->
     lists:foreach(
         fun(LimitChange) ->
-            ff_limiter_client:hold(LimitChange, Clock, Context)
+            call_hold(LimitChange, Clock, Context)
         end,
         LimitChanges
     ).
 
--spec commit([ff_limiter_client:limit_change()], ff_limiter_client:clock(), ff_limiter_client:context()) -> ok.
+-spec commit([limit_change()], clock(), context()) -> ok.
 commit(LimitChanges, Clock, Context) ->
     lists:foreach(
         fun(LimitChange) ->
-            ff_limiter_client:commit(LimitChange, Clock, Context)
+            call_commit(LimitChange, Clock, Context)
         end,
         LimitChanges
     ).
 
--spec rollback([ff_limiter_client:limit_change()], ff_limiter_client:clock(), ff_limiter_client:context()) -> ok.
+-spec rollback([limit_change()], clock(), context()) -> ok.
 rollback(LimitChanges, Clock, Context) ->
     lists:foreach(
         fun(LimitChange) ->
-            ff_limiter_client:rollback(LimitChange, Clock, Context)
+            call_rollback(LimitChange, Clock, Context)
         end,
         LimitChanges
     ).
@@ -173,3 +179,38 @@ marshal_withdrawal(Withdrawal) ->
         sender = ff_adapter_withdrawal_codec:marshal(identity, #{id => ff_identity:id(SenderIdentity)}),
         receiver = ff_adapter_withdrawal_codec:marshal(identity, #{id => ff_identity:id(ReceiverIdentity)})
     }.
+
+-spec get(limit_id(), clock(), context()) -> limit() | no_return().
+get(LimitID, Clock, Context) ->
+    Args = {LimitID, Clock, Context},
+    case call('Get', Args) of
+        {ok, Limit} ->
+            Limit;
+        {exception, #limiter_LimitNotFound{}} ->
+            error({not_found, LimitID});
+        {exception, #base_InvalidRequest{errors = Errors}} ->
+            error({invalid_request, Errors})
+    end.
+
+-spec call_hold(limit_change(), clock(), context()) -> clock().
+call_hold(LimitChange, Clock, Context) ->
+    Args = {LimitChange, Clock, Context},
+    {ok, ClockUpdated} = call('Hold', Args),
+    ClockUpdated.
+
+-spec call_commit(limit_change(), clock(), context()) -> clock().
+call_commit(LimitChange, Clock, Context) ->
+    Args = {LimitChange, Clock, Context},
+    {ok, ClockUpdated} = call('Commit', Args),
+    ClockUpdated.
+
+-spec call_rollback(limit_change(), clock(), context()) -> clock().
+call_rollback(LimitChange, Clock, Context) ->
+    Args = {LimitChange, Clock, Context},
+    {ok, ClockUpdated} = call('Rollback', Args),
+    ClockUpdated.
+
+call(Func, Args) ->
+    Service = {limproto_limiter_thrift, 'Limiter'},
+    Request = {Service, Func, Args},
+    ff_woody_client:call(limiter, Request).

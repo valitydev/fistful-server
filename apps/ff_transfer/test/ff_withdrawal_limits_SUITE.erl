@@ -20,6 +20,7 @@
 -export([limit_success/1]).
 -export([limit_overflow/1]).
 -export([choose_provider_without_limit_overflow/1]).
+-export([choosing_providers_stuff/1]).
 
 %% Internal types
 
@@ -42,7 +43,8 @@ groups() ->
         {default, [sequence], [
             limit_success,
             limit_overflow,
-            choose_provider_without_limit_overflow
+            choose_provider_without_limit_overflow,
+            choosing_providers_stuff
         ]}
     ].
 
@@ -132,6 +134,8 @@ limit_overflow(C) ->
     ok = ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new()),
     Result = await_final_withdrawal_status(WithdrawalID),
     ?assertMatch({failed, #{code := <<"no_route_found">>}}, Result),
+    %% we get final withdrawal status before we rollback limits so wait for it some amount of time
+    ok = timer:sleep(500),
     Withdrawal = get_withdrawal(WithdrawalID),
     ?assertEqual(PreviousAmount, ff_limiter_helper:get_limit_amount(?LIMIT_TURNOVER_NUM_PAYTOOL_ID2, Withdrawal, C)).
 
@@ -156,7 +160,88 @@ choose_provider_without_limit_overflow(C) ->
     Withdrawal = get_withdrawal(WithdrawalID),
     ?assertEqual(PreviousAmount + 1, ff_limiter_helper:get_limit_amount(?LIMIT_TURNOVER_NUM_PAYTOOL_ID2, Withdrawal, C)).
 
+-spec choosing_providers_stuff(config()) -> test_return().
+choosing_providers_stuff(C) ->
+    Currency = <<"RUB">>,
+    Cash1 = {902000, Currency},
+    Cash2 = {903000, Currency},
+    TotalCash = {3000000, Currency}, %% we don't want to overflow wallet cash limit
+    #{
+        wallet_id := WalletID,
+        destination_id := DestinationID
+    } = prepare_standard_environment(TotalCash, C),
+
+    %% First withdrawal goes to limit 1 and spents half of its amount
+    WithdrawalID1 = generate_id(),
+    WithdrawalParams1 = #{
+        id => WithdrawalID1,
+        destination_id => DestinationID,
+        wallet_id => WalletID,
+        body => Cash1,
+        external_id => WithdrawalID1
+    },
+    0 = get_limit_amount(Cash1, DestinationID, ?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID1, C),
+    ok = ff_withdrawal_machine:create(WithdrawalParams1, ff_entity_context:new()),
+    ?assertEqual(succeeded, await_final_withdrawal_status(WithdrawalID1)),
+    Withdrawal1 = get_withdrawal(WithdrawalID1),
+    ?assertEqual(902000, ff_limiter_helper:get_limit_amount(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID1, Withdrawal1, C)),
+
+    %% Second withdrawal goes to limit 2 as limit 1 doesn't have enough and spents all its amount
+    WithdrawalID2 = generate_id(),
+    WithdrawalParams2 = #{
+        id => WithdrawalID2,
+        destination_id => DestinationID,
+        wallet_id => WalletID,
+        body => Cash2,
+        external_id => WithdrawalID2
+    },
+    0 = get_limit_amount(Cash2, DestinationID, ?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID2, C),
+    ok = ff_withdrawal_machine:create(WithdrawalParams2, ff_entity_context:new()),
+    ?assertEqual(succeeded, await_final_withdrawal_status(WithdrawalID2)),
+    Withdrawal2 = get_withdrawal(WithdrawalID2),
+    ?assertEqual(903000, ff_limiter_helper:get_limit_amount(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID2, Withdrawal2, C)),
+
+    %% Third withdrawal goes to limit 1 and spents all its amount
+    WithdrawalID3 = generate_id(),
+    WithdrawalParams3 = #{
+        id => WithdrawalID3,
+        destination_id => DestinationID,
+        wallet_id => WalletID,
+        body => Cash1,
+        external_id => WithdrawalID3
+    },
+    902000 = get_limit_amount(Cash1, DestinationID, ?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID1, C),
+    ok = ff_withdrawal_machine:create(WithdrawalParams3, ff_entity_context:new()),
+    ?assertEqual(succeeded, await_final_withdrawal_status(WithdrawalID3)),
+    Withdrawal3 = get_withdrawal(WithdrawalID3),
+    ?assertEqual(1804000, ff_limiter_helper:get_limit_amount(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID1, Withdrawal3, C)),
+
+    %% Last withdrawal can't find route cause all limits are drained
+    WithdrawalID = generate_id(),
+    WithdrawalParams = #{
+        id => WithdrawalID,
+        destination_id => DestinationID,
+        wallet_id => WalletID,
+        body => Cash1,
+        external_id => WithdrawalID
+    },
+    ok = ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new()),
+    Result = await_final_withdrawal_status(WithdrawalID),
+    ?assertMatch({failed, #{code := <<"no_route_found">>}}, Result),
+
+    %% Rollback limits amount for rerun test purpose
+    ok = rollback_limit_amount({1804000, Currency}, DestinationID, ?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID1, C),
+    ok = rollback_limit_amount({903000, Currency}, DestinationID, ?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID2, C).
+
 %% Utils
+
+rollback_limit_amount({Amount, CurrencyRef}, DestinationID, LimitID, C) ->
+    Withdrawal = #wthd_domain_Withdrawal{
+        created_at = ff_codec:marshal(timestamp_ms, ff_time:now()),
+        body = ff_dmsl_codec:marshal(cash, {-1 * Amount, CurrencyRef}),
+        destination = ff_adapter_withdrawal_codec:marshal(resource, get_destination_resource(DestinationID))
+    },
+    ff_limiter_helper:rollback_limit(LimitID, Withdrawal, C).
 
 get_limit_amount(Cash, DestinationID, LimitID, C) ->
     Withdrawal = #wthd_domain_Withdrawal{

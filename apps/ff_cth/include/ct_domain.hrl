@@ -9,6 +9,8 @@
 
 -define(LIMIT_TURNOVER_NUM_PAYTOOL_ID1, <<"ID1">>).
 -define(LIMIT_TURNOVER_NUM_PAYTOOL_ID2, <<"ID2">>).
+-define(LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID1, <<"ID3">>).
+-define(LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID2, <<"ID4">>).
 
 -define(glob(), #domain_GlobalsRef{}).
 -define(cur(ID), #domain_CurrencyRef{symbolic_code = ID}).

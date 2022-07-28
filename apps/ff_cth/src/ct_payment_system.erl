@@ -379,6 +379,14 @@ domain_config(Options) ->
                     ?ruleset(?PAYINST1_ROUTING_POLICIES + 18)
                 ),
                 delegate(
+                    condition(cost_in, {902000, <<"RUB">>}),
+                    ?ruleset(?PAYINST1_ROUTING_POLICIES + 19)
+                ),
+                delegate(
+                    condition(cost_in, {903000, <<"RUB">>}),
+                    ?ruleset(?PAYINST1_ROUTING_POLICIES + 19)
+                ),
+                delegate(
                     {condition,
                         {payment_tool,
                             {bank_card, #domain_BankCardCondition{
@@ -498,6 +506,14 @@ domain_config(Options) ->
             {candidates, [
                 candidate({constant, true}, ?trm(2000), 1000),
                 candidate({constant, true}, ?trm(1900), 4000)
+            ]}
+        ),
+
+        routing_ruleset(
+            ?ruleset(?PAYINST1_ROUTING_POLICIES + 19),
+            {candidates, [
+                candidate({constant, true}, ?trm(2200), 1000),
+                candidate({constant, true}, ?trm(2100), 4000)
             ]}
         ),
 
@@ -796,6 +812,36 @@ domain_config(Options) ->
                         turnover_limit =
                             {value, [
                                 ?trnvrlimit(?LIMIT_TURNOVER_NUM_PAYTOOL_ID2, 1000)
+                            ]}
+                    }
+                }
+            }
+        ),
+
+        ct_domain:withdrawal_terminal(
+            ?trm(2100),
+            ?prv(1),
+            #domain_ProvisionTermSet{
+                wallet = #domain_WalletProvisionTerms{
+                    withdrawals = #domain_WithdrawalProvisionTerms{
+                        turnover_limit =
+                            {value, [
+                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID1, 1804001)
+                            ]}
+                    }
+                }
+            }
+        ),
+
+        ct_domain:withdrawal_terminal(
+            ?trm(2200),
+            ?prv(1),
+            #domain_ProvisionTermSet{
+                wallet = #domain_WalletProvisionTerms{
+                    withdrawals = #domain_WithdrawalProvisionTerms{
+                        turnover_limit =
+                            {value, [
+                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID2, 903001)
                             ]}
                     }
                 }
