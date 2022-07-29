@@ -411,8 +411,8 @@ create_destination_resource_no_bindata_fail_test(C) ->
         wallet_id => WalletID,
         body => Cash
     },
-    ?assertMatch(
-        {error, {terms, {invalid_terms, {not_reduced, _}}}},
+    ?assertError(
+        {badmatch, {error, {invalid_terms, {not_reduced, _}}}},
         ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new())
     ).
 

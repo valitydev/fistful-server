@@ -38,7 +38,6 @@
 
 -type validate_withdrawal_creation_error() ::
     currency_validation_error()
-    | invalid_withdrawal_terms_error()
     | withdrawal_method_validation_error()
     | cash_range_validation_error().
 
@@ -377,7 +376,7 @@ validate_destination_creation(Terms, Method) ->
 validate_withdrawal_creation(Terms, {_, CurrencyID} = Cash, Method) ->
     #domain_TermSet{wallets = WalletTerms} = Terms,
     do(fun() ->
-        valid = unwrap(validate_withdrawal_terms_is_reduced(WalletTerms)),
+        {ok, valid} = validate_withdrawal_terms_is_reduced(WalletTerms),
         valid = unwrap(validate_wallet_terms_currency(CurrencyID, WalletTerms)),
         #domain_WalletServiceTerms{withdrawals = WithdrawalTerms} = WalletTerms,
         valid = unwrap(validate_withdrawal_terms_currency(CurrencyID, WithdrawalTerms)),
