@@ -38,7 +38,7 @@ init_per_suite(Config) ->
 
 -spec get_limit_amount(id(), withdrawal(), config()) -> integer().
 get_limit_amount(LimitID, Withdrawal, Config) ->
-    {ok, #limiter_Limit{amount = Amount}} = get_limit(LimitID, Withdrawal, Config),
+    #limiter_Limit{amount = Amount} = get_limit(LimitID, Withdrawal, Config),
     Amount.
 
 -spec get_limit(id(), withdrawal(), config()) -> limit().
@@ -50,7 +50,8 @@ get_limit(LimitId, Withdrawal, Config) ->
             withdrawal = #context_withdrawal_Withdrawal{withdrawal = MarshaledWithdrawal}
         }
     },
-    ff_ct_limiter_client:get(LimitId, Context, ct_helper:get_woody_ctx(Config)).
+    {ok, Limit} = ff_ct_limiter_client:get(LimitId, Context, ct_helper:get_woody_ctx(Config)),
+    Limit.
 
 -spec rollback_limit(id(), withdrawal(), config()) -> ok.
 rollback_limit(LimitId, Withdrawal, Config) ->
@@ -96,7 +97,8 @@ limiter_create_amount_params(LimitID) ->
         shard_size = 12,
         time_range_type = {calendar, {month, #timerange_TimeRangeTypeCalendarMonth{}}},
         context_type = {withdrawal_processing, #config_LimitContextTypeWithdrawalProcessing{}},
-        type = {turnover, #config_LimitTypeTurnover{metric = {amount, #config_LimitTurnoverAmount{currency = <<"RUB">>}}}},
+        type =
+            {turnover, #config_LimitTypeTurnover{metric = {amount, #config_LimitTurnoverAmount{currency = <<"RUB">>}}}},
         scope = {single, {payment_tool, #config_LimitScopeEmptyDetails{}}},
         description = <<"description">>,
         op_behaviour = #config_OperationLimitBehaviour{

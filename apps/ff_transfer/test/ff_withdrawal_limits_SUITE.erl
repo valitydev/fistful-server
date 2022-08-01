@@ -113,7 +113,9 @@ limit_success(C) ->
     ok = ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new()),
     ?assertEqual(succeeded, await_final_withdrawal_status(WithdrawalID)),
     Withdrawal = get_withdrawal(WithdrawalID),
-    ?assertEqual(PreviousAmount + 1, ff_limiter_helper:get_limit_amount(?LIMIT_TURNOVER_NUM_PAYTOOL_ID1, Withdrawal, C)).
+    ?assertEqual(
+        PreviousAmount + 1, ff_limiter_helper:get_limit_amount(?LIMIT_TURNOVER_NUM_PAYTOOL_ID1, Withdrawal, C)
+    ).
 
 -spec limit_overflow(config()) -> test_return().
 limit_overflow(C) ->
@@ -158,14 +160,17 @@ choose_provider_without_limit_overflow(C) ->
     ok = ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new()),
     ?assertEqual(succeeded, await_final_withdrawal_status(WithdrawalID)),
     Withdrawal = get_withdrawal(WithdrawalID),
-    ?assertEqual(PreviousAmount + 1, ff_limiter_helper:get_limit_amount(?LIMIT_TURNOVER_NUM_PAYTOOL_ID2, Withdrawal, C)).
+    ?assertEqual(
+        PreviousAmount + 1, ff_limiter_helper:get_limit_amount(?LIMIT_TURNOVER_NUM_PAYTOOL_ID2, Withdrawal, C)
+    ).
 
 -spec choosing_providers_stuff(config()) -> test_return().
 choosing_providers_stuff(C) ->
     Currency = <<"RUB">>,
     Cash1 = {902000, Currency},
     Cash2 = {903000, Currency},
-    TotalCash = {3000000, Currency}, %% we don't want to overflow wallet cash limit
+    %% we don't want to overflow wallet cash limit
+    TotalCash = {3000000, Currency},
     #{
         wallet_id := WalletID,
         destination_id := DestinationID
