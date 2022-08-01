@@ -777,7 +777,9 @@ do_process_routing(Withdrawal) ->
     do(fun() ->
         {Varset, Context} = make_routing_varset_and_context(Withdrawal),
         GatherResult = ff_withdrawal_routing:gather_routes(Varset, Context),
-        Routes = unwrap(ff_withdrawal_routing:filter_limit_overflow_routes(GatherResult, Varset, Context)),
+        FilterResult = ff_withdrawal_routing:filter_limit_overflow_routes(GatherResult, Varset, Context),
+        ff_withdrawal_routing:log_reject_context(FilterResult),
+        Routes = unwrap(ff_withdrawal_routing:routes(FilterResult)),
         case quote(Withdrawal) of
             undefined ->
                 Routes;

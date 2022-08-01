@@ -71,7 +71,9 @@ prepare_routes(PartyVarset, Identity, DomainRevision) ->
 -spec prepare_routes(party_varset(), routing_context()) ->
     {ok, [route()]} | {error, route_not_found}.
 prepare_routes(PartyVarset, Context) ->
-    routes(gather_routes(PartyVarset, Context)).
+    State = gather_routes(PartyVarset, Context),
+    log_reject_context(State),
+    routes(State).
 
 -spec gather_routes(party_varset(), routing_context()) ->
     routing_state().
@@ -87,15 +89,13 @@ gather_routes(PartyVarset, Context = #{identity := Identity, domain_revision := 
     filter_valid_routes(#{routes => Routes, reject_context => RejectContext}, PartyVarset, Context).
 
 -spec filter_limit_overflow_routes(routing_state(), party_varset(), routing_context()) ->
-    {ok, [route()]} | {error, route_not_found}.
+    routing_state().
 filter_limit_overflow_routes(State, PartyVarset, RoutingContext) ->
-    routes(
-        validate_routes_with(
-            fun do_validate_limits/4,
-            State,
-            PartyVarset,
-            RoutingContext
-        )
+    validate_routes_with(
+        fun do_validate_limits/4,
+        State,
+        PartyVarset,
+        RoutingContext
     ).
 
 -spec rollback_routes_limits([route()], party_varset(), routing_context()) ->
