@@ -20,7 +20,7 @@
 -export([limit_success/1]).
 -export([limit_overflow/1]).
 -export([choose_provider_without_limit_overflow/1]).
--export([choosing_providers_stuff/1]).
+-export([provider_limits_exhaust_orderly/1]).
 
 %% Internal types
 
@@ -44,7 +44,7 @@ groups() ->
             limit_success,
             limit_overflow,
             choose_provider_without_limit_overflow,
-            choosing_providers_stuff
+            provider_limits_exhaust_orderly
         ]}
     ].
 
@@ -164,8 +164,8 @@ choose_provider_without_limit_overflow(C) ->
         PreviousAmount + 1, ff_limiter_helper:get_limit_amount(?LIMIT_TURNOVER_NUM_PAYTOOL_ID2, Withdrawal, C)
     ).
 
--spec choosing_providers_stuff(config()) -> test_return().
-choosing_providers_stuff(C) ->
+-spec provider_limits_exhaust_orderly(config()) -> test_return().
+provider_limits_exhaust_orderly(C) ->
     Currency = <<"RUB">>,
     Cash1 = {902000, Currency},
     Cash2 = {903000, Currency},
@@ -232,21 +232,9 @@ choosing_providers_stuff(C) ->
     },
     ok = ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new()),
     Result = await_final_withdrawal_status(WithdrawalID),
-    ?assertMatch({failed, #{code := <<"no_route_found">>}}, Result),
-
-    %% Rollback limits amount for rerun test purpose
-    ok = rollback_limit_amount({1804000, Currency}, DestinationID, ?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID1, C),
-    ok = rollback_limit_amount({903000, Currency}, DestinationID, ?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID2, C).
+    ?assertMatch({failed, #{code := <<"no_route_found">>}}, Result).
 
 %% Utils
-
-rollback_limit_amount({Amount, CurrencyRef}, DestinationID, LimitID, C) ->
-    Withdrawal = #wthd_domain_Withdrawal{
-        created_at = ff_codec:marshal(timestamp_ms, ff_time:now()),
-        body = ff_dmsl_codec:marshal(cash, {-1 * Amount, CurrencyRef}),
-        destination = ff_adapter_withdrawal_codec:marshal(resource, get_destination_resource(DestinationID))
-    },
-    ff_limiter_helper:rollback_limit(LimitID, Withdrawal, C).
 
 get_limit_amount(Cash, DestinationID, LimitID, C) ->
     Withdrawal = #wthd_domain_Withdrawal{

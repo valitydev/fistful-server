@@ -8,6 +8,7 @@
 
 -type turnover_selector() :: dmsl_domain_thrift:'TurnoverLimitSelector'().
 -type turnover_limit() :: dmsl_domain_thrift:'TurnoverLimit'().
+-type turnover_limit_upper_boundary() :: dmsl_domain_thrift:'Amount'().
 -type domain_withdrawal() :: dmsl_wthd_domain_thrift:'Withdrawal'().
 -type withdrawal() :: ff_withdrawal:withdrawal_state().
 -type route() :: ff_withdrawal_routing:route().
@@ -15,6 +16,7 @@
 -type limit() :: limproto_limiter_thrift:'Limit'().
 -type limit_id() :: limproto_limiter_thrift:'LimitID'().
 -type limit_change() :: limproto_limiter_thrift:'LimitChange'().
+-type limit_amount() :: dmsl_domain_thrift:'Amount'().
 -type context() :: limproto_limiter_thrift:'LimitContext'().
 -type clock() :: limproto_limiter_thrift:'Clock'().
 
@@ -36,32 +38,29 @@ get_turnover_limits(Ambiguous) ->
 
 -spec check_limits([turnover_limit()], withdrawal()) ->
     {ok, [limit()]}
-    | {error, {limit_overflow, [binary()]}}.
+    | {error, {overflow, [{limit_id(), limit_amount(), turnover_limit_upper_boundary()}]}}.
 check_limits(TurnoverLimits, Withdrawal) ->
     Context = gen_limit_context(Withdrawal),
-    try
-        check_limits_(TurnoverLimits, Context, [])
-    catch
-        throw:limit_overflow ->
-            IDs = [T#domain_TurnoverLimit.id || T <- TurnoverLimits],
-            {error, {limit_overflow, IDs}}
+    case lists:foldl(fun(Limit, Acc) -> check_limits_(Limit, Acc, Context) end, {[], []}, TurnoverLimits) of
+        {Limits, ErrorList} when length(ErrorList) =:= 0 ->
+            {ok, Limits};
+        {_, ErrorList} ->
+            {error, {overflow, ErrorList}}
     end.
 
-check_limits_([], _, Limits) ->
-    {ok, Limits};
-check_limits_([T | TurnoverLimits], Context, Acc) ->
+check_limits_(T, {Limits, Errors}, Context) ->
     #domain_TurnoverLimit{id = LimitID} = T,
     Clock = get_latest_clock(),
     Limit = get(LimitID, Clock, Context),
     #limiter_Limit{
-        amount = LimiterAmount
+        amount = LimitAmount
     } = Limit,
     UpperBoundary = T#domain_TurnoverLimit.upper_boundary,
-    case LimiterAmount < UpperBoundary of
+    case LimitAmount =< UpperBoundary of
         true ->
-            check_limits_(TurnoverLimits, Context, [Limit | Acc]);
+            {[Limit | Limits], Errors};
         false ->
-            throw(limit_overflow)
+            {Limits, [{LimitID, LimitAmount, UpperBoundary} | Errors]}
     end.
 
 -spec hold_withdrawal_limits([turnover_limit()], route(), withdrawal()) -> ok.
@@ -171,8 +170,14 @@ marshal_withdrawal(Withdrawal) ->
         created_at = ff_codec:marshal(timestamp_ms, ff_withdrawal:created_at(Withdrawal)),
         body = ff_dmsl_codec:marshal(cash, ff_withdrawal:body(Withdrawal)),
         destination = MarshaledResource,
-        sender = ff_adapter_withdrawal_codec:marshal(identity, #{id => ff_identity:id(SenderIdentity)}),
-        receiver = ff_adapter_withdrawal_codec:marshal(identity, #{id => ff_identity:id(ReceiverIdentity)})
+        sender = ff_adapter_withdrawal_codec:marshal(identity, #{
+            id => ff_identity:id(SenderIdentity),
+            owner_id => ff_identity:party(SenderIdentity)
+        }),
+        receiver = ff_adapter_withdrawal_codec:marshal(identity, #{
+            id => ff_identity:id(ReceiverIdentity),
+            owner_id => ff_identity:party(SenderIdentity)
+        })
     }.
 
 -spec get(limit_id(), clock(), context()) -> limit() | no_return().

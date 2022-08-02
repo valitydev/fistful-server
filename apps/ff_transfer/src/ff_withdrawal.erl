@@ -797,10 +797,10 @@ do_rollback_routing(ExcludeRoute, Withdrawal) ->
         case ExcludeRoute of
             undefined ->
                 Routes;
-            #{provider_id := ProviderID, terminal_id := TerminalID} ->
+            #{terminal_id := TerminalID} ->
                 lists:filter(
-                    fun(#{provider_id := PID, terminal_id := TID}) ->
-                        not (ProviderID =:= PID andalso TerminalID =:= TID)
+                    fun(#{terminal_id := TID}) ->
+                        TerminalID =/= TID
                     end,
                     Routes
                 )

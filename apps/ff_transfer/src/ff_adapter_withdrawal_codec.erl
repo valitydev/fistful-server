@@ -92,6 +92,7 @@ marshal(identity, Identity) ->
     % TODO: Add real contact fields
     #wthd_domain_Identity{
         id = maps:get(id, Identity),
+        owner_id = maps:get(owner_id, Identity, undefined),
         documents = marshal(identity_documents, Identity),
         contact = [{phone_number, <<"9876543210">>}]
     };

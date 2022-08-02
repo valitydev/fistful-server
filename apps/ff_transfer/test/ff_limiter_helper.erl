@@ -10,7 +10,6 @@
 -export([init_per_suite/1]).
 -export([get_limit_amount/3]).
 -export([get_limit/3]).
--export([rollback_limit/3]).
 
 -type withdrawal() :: ff_withdrawal:withdrawal_state() | dmsl_wthd_domain_thrift:'Withdrawal'().
 -type limit() :: limproto_limiter_thrift:'Limit'().
@@ -53,23 +52,6 @@ get_limit(LimitId, Withdrawal, Config) ->
     {ok, Limit} = ff_ct_limiter_client:get(LimitId, Context, ct_helper:get_woody_ctx(Config)),
     Limit.
 
--spec rollback_limit(id(), withdrawal(), config()) -> ok.
-rollback_limit(LimitId, Withdrawal, Config) ->
-    MarshaledWithdrawal = maybe_marshal_withdrawal(Withdrawal),
-    Context = #limiter_LimitContext{
-        withdrawal_processing = #context_withdrawal_Context{
-            op = {withdrawal, #context_withdrawal_OperationWithdrawal{}},
-            withdrawal = #context_withdrawal_Withdrawal{withdrawal = MarshaledWithdrawal}
-        }
-    },
-    Change = #limiter_LimitChange{
-        id = LimitId,
-        change_id = ff_id:generate_snowflake_id()
-    },
-    _ = ff_ct_limiter_client:hold(Change, Context, ct_helper:get_woody_ctx(Config)),
-    _ = ff_ct_limiter_client:commit(Change, Context, ct_helper:get_woody_ctx(Config)),
-    ok.
-
 maybe_marshal_withdrawal(Withdrawal = #wthd_domain_Withdrawal{}) ->
     Withdrawal;
 maybe_marshal_withdrawal(Withdrawal) ->
@@ -99,7 +81,7 @@ limiter_create_amount_params(LimitID) ->
         context_type = {withdrawal_processing, #config_LimitContextTypeWithdrawalProcessing{}},
         type =
             {turnover, #config_LimitTypeTurnover{metric = {amount, #config_LimitTurnoverAmount{currency = <<"RUB">>}}}},
-        scope = {single, {payment_tool, #config_LimitScopeEmptyDetails{}}},
+        scope = {single, {party, #config_LimitScopeEmptyDetails{}}},
         description = <<"description">>,
         op_behaviour = #config_OperationLimitBehaviour{
             invoice_payment_refund = {subtraction, #config_Subtraction{}}

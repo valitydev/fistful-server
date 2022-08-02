@@ -826,7 +826,7 @@ domain_config(Options) ->
                     withdrawals = #domain_WithdrawalProvisionTerms{
                         turnover_limit =
                             {value, [
-                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID1, 1804001)
+                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID1, 1804000)
                             ]}
                     }
                 }
@@ -841,7 +841,7 @@ domain_config(Options) ->
                     withdrawals = #domain_WithdrawalProvisionTerms{
                         turnover_limit =
                             {value, [
-                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID2, 903001)
+                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID2, 903000)
                             ]}
                     }
                 }
