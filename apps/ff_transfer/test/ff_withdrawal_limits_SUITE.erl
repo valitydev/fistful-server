@@ -109,7 +109,7 @@ limit_success(C) ->
         body => Cash,
         external_id => WithdrawalID
     },
-    PreviousAmount = get_limit_amount(Cash, DestinationID, ?LIMIT_TURNOVER_NUM_PAYTOOL_ID1, C),
+    PreviousAmount = get_limit_amount(Cash, WalletID, DestinationID, ?LIMIT_TURNOVER_NUM_PAYTOOL_ID1, C),
     ok = ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new()),
     ?assertEqual(succeeded, await_final_withdrawal_status(WithdrawalID)),
     Withdrawal = get_withdrawal(WithdrawalID),
@@ -132,7 +132,7 @@ limit_overflow(C) ->
         body => Cash,
         external_id => WithdrawalID
     },
-    PreviousAmount = get_limit_amount(Cash, DestinationID, ?LIMIT_TURNOVER_NUM_PAYTOOL_ID2, C),
+    PreviousAmount = get_limit_amount(Cash, WalletID, DestinationID, ?LIMIT_TURNOVER_NUM_PAYTOOL_ID2, C),
     ok = ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new()),
     Result = await_final_withdrawal_status(WithdrawalID),
     ?assertMatch({failed, #{code := <<"no_route_found">>}}, Result),
@@ -156,7 +156,7 @@ choose_provider_without_limit_overflow(C) ->
         body => Cash,
         external_id => WithdrawalID
     },
-    PreviousAmount = get_limit_amount(Cash, DestinationID, ?LIMIT_TURNOVER_NUM_PAYTOOL_ID2, C),
+    PreviousAmount = get_limit_amount(Cash, WalletID, DestinationID, ?LIMIT_TURNOVER_NUM_PAYTOOL_ID2, C),
     ok = ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new()),
     ?assertEqual(succeeded, await_final_withdrawal_status(WithdrawalID)),
     Withdrawal = get_withdrawal(WithdrawalID),
@@ -185,7 +185,7 @@ provider_limits_exhaust_orderly(C) ->
         body => Cash1,
         external_id => WithdrawalID1
     },
-    0 = get_limit_amount(Cash1, DestinationID, ?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID1, C),
+    0 = get_limit_amount(Cash1, WalletID, DestinationID, ?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID1, C),
     ok = ff_withdrawal_machine:create(WithdrawalParams1, ff_entity_context:new()),
     ?assertEqual(succeeded, await_final_withdrawal_status(WithdrawalID1)),
     Withdrawal1 = get_withdrawal(WithdrawalID1),
@@ -200,7 +200,7 @@ provider_limits_exhaust_orderly(C) ->
         body => Cash2,
         external_id => WithdrawalID2
     },
-    0 = get_limit_amount(Cash2, DestinationID, ?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID2, C),
+    0 = get_limit_amount(Cash2, WalletID, DestinationID, ?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID2, C),
     ok = ff_withdrawal_machine:create(WithdrawalParams2, ff_entity_context:new()),
     ?assertEqual(succeeded, await_final_withdrawal_status(WithdrawalID2)),
     Withdrawal2 = get_withdrawal(WithdrawalID2),
@@ -215,7 +215,7 @@ provider_limits_exhaust_orderly(C) ->
         body => Cash1,
         external_id => WithdrawalID3
     },
-    902000 = get_limit_amount(Cash1, DestinationID, ?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID1, C),
+    902000 = get_limit_amount(Cash1, WalletID, DestinationID, ?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID1, C),
     ok = ff_withdrawal_machine:create(WithdrawalParams3, ff_entity_context:new()),
     ?assertEqual(succeeded, await_final_withdrawal_status(WithdrawalID3)),
     Withdrawal3 = get_withdrawal(WithdrawalID3),
@@ -236,11 +236,21 @@ provider_limits_exhaust_orderly(C) ->
 
 %% Utils
 
-get_limit_amount(Cash, DestinationID, LimitID, C) ->
+get_limit_amount(Cash, WalletID, DestinationID, LimitID, C) ->
+    {ok, WalletMachine} = ff_wallet_machine:get(WalletID),
+    Wallet = ff_wallet_machine:wallet(WalletMachine),
+    WalletAccount = ff_wallet:account(Wallet),
+    {ok, SenderSt} = ff_identity_machine:get(ff_account:identity(WalletAccount)),
+    SenderIdentity = ff_identity_machine:identity(SenderSt),
+
     Withdrawal = #wthd_domain_Withdrawal{
         created_at = ff_codec:marshal(timestamp_ms, ff_time:now()),
         body = ff_dmsl_codec:marshal(cash, Cash),
-        destination = ff_adapter_withdrawal_codec:marshal(resource, get_destination_resource(DestinationID))
+        destination = ff_adapter_withdrawal_codec:marshal(resource, get_destination_resource(DestinationID)),
+        sender = ff_adapter_withdrawal_codec:marshal(identity, #{
+            id => ff_identity:id(SenderIdentity),
+            owner_id => ff_identity:party(SenderIdentity)
+        })
     },
     ff_limiter_helper:get_limit_amount(LimitID, Withdrawal, C).
 
