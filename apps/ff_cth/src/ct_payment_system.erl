@@ -140,6 +140,8 @@ start_optional_apps(_) ->
 setup_dominant(Options) ->
     DomainConfig = domain_config(Options),
     _ = ct_domain_config:upsert(DomainConfig),
+    DomainConfigUpdate = domain_config_add_version(Options),
+    _ = ct_domain_config:upsert(DomainConfigUpdate),
     ok.
 
 configure_processing_apps(Options) ->
@@ -261,7 +263,7 @@ dummy_payment_inst_identity_id(Options) ->
 dummy_provider_identity_id(Options) ->
     maps:get(dummy_provider_identity_id, Options).
 
-domain_config(Options) ->
+domain_config_add_version(Options) ->
     ProviderTermSet = #domain_ProvisionTermSet{
         wallet = #domain_WalletProvisionTerms{
             withdrawals = #domain_WithdrawalProvisionTerms{
@@ -288,6 +290,37 @@ domain_config(Options) ->
                                                     ?fixed(10, <<"RUB">>),
                                                     ?share(5, 100, operation_amount, round_half_towards_zero)
                                                 ])}}
+                                    )
+                                ]}
+                        }
+                    ]}
+            }
+        }
+    },
+    [ct_domain:withdrawal_provider(?prv(1), ?prx(2), provider_identity_id(Options), ProviderTermSet)].
+
+domain_config(Options) ->
+    ProviderTermSet = #domain_ProvisionTermSet{
+        wallet = #domain_WalletProvisionTerms{
+            withdrawals = #domain_WithdrawalProvisionTerms{
+                currencies = {value, ?ordset([?cur(<<"RUB">>)])},
+                payout_methods = {value, ?ordset([])},
+                cash_limit =
+                    {value,
+                        ?cashrng(
+                            {inclusive, ?cash(0, <<"RUB">>)},
+                            {exclusive, ?cash(10000000, <<"RUB">>)}
+                        )},
+                cash_flow =
+                    {decisions, [
+                        #domain_CashFlowDecision{
+                            if_ = {condition, {currency_is, ?cur(<<"RUB">>)}},
+                            then_ =
+                                {value, [
+                                    ?cfpost(
+                                        {system, settlement},
+                                        {provider, settlement},
+                                        ?fixed(20, <<"RUB">>)
                                     )
                                 ]}
                         }

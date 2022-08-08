@@ -8,7 +8,8 @@
     adjustments := #{id() => adjustment()},
     inversed_order := [id()],
     active => id(),
-    cash_flow => final_cash_flow()
+    cash_flow => final_cash_flow(),
+    domain_revision => domain_revision()
 }.
 
 -type wrapped_event() ::
@@ -35,8 +36,10 @@
 -export([new_index/0]).
 
 -export([set_cash_flow/2]).
-
 -export([cash_flow/1]).
+
+-export([set_domain_revision/2]).
+-export([domain_revision/1]).
 
 -export([adjustments/1]).
 -export([is_active/1]).
@@ -59,6 +62,7 @@
 -type final_cash_flow() :: ff_cash_flow:final_cash_flow().
 -type action() :: machinery:action() | undefined.
 -type changes() :: ff_adjustment:changes().
+-type domain_revision() :: ff_domain_config:revision().
 
 %% API
 
@@ -76,6 +80,14 @@ set_cash_flow(Body, Index) ->
 -spec cash_flow(index()) -> final_cash_flow() | undefined.
 cash_flow(Index) ->
     maps:get(cash_flow, Index, undefined).
+
+-spec set_domain_revision(domain_revision(), index()) -> index().
+set_domain_revision(DomainRevision, Index) ->
+    Index#{domain_revision => DomainRevision}.
+
+-spec domain_revision(index()) -> domain_revision() | undefined.
+domain_revision(Index) ->
+    maps:get(domain_revision, Index, undefined).
 
 -spec adjustments(index()) -> [adjustment()].
 adjustments(Index) ->

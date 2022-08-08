@@ -25,6 +25,8 @@
 -export([no_parallel_adjustments_test/1]).
 -export([no_pending_withdrawal_adjustments_test/1]).
 -export([unknown_withdrawal_test/1]).
+-export([adjustment_can_not_change_domain_revision_to_same/1]).
+-export([adjustment_can_change_domain_revision_test/1]).
 
 %% Internal types
 
@@ -57,6 +59,8 @@ groups() ->
             no_parallel_adjustments_test,
             no_pending_withdrawal_adjustments_test,
             unknown_withdrawal_test
+            % adjustment_can_not_change_domain_revision_to_same,
+            % adjustment_can_change_domain_revision_test
         ]}
     ].
 
@@ -294,6 +298,46 @@ unknown_withdrawal_test(_C) ->
     }),
     ?assertMatch({error, {unknown_withdrawal, WithdrawalID}}, Result).
 
+-spec adjustment_can_not_change_domain_revision_to_same(config()) -> test_return().
+adjustment_can_not_change_domain_revision_to_same(C) ->
+    #{
+        withdrawal_id := WithdrawalID
+    } = prepare_standard_environment({100, <<"RUB">>}, C),
+    Withdrawal = get_withdrawal(WithdrawalID),
+    DomainRevision = ff_withdrawal:domain_revision(Withdrawal),
+    Result = ff_withdrawal_machine:start_adjustment(WithdrawalID, #{
+        id => generate_id(),
+        change => {change_cash_flow, DomainRevision}
+    }),
+    ?assertMatch({error, {invalid_cash_flow_change, {already_has_domain_revision, DomainRevision}}}, Result).
+
+-spec adjustment_can_change_domain_revision_test(config()) -> test_return().
+adjustment_can_change_domain_revision_test(C) ->
+    ?FINAL_BALANCE(StartProviderAmount, <<"RUB">>) = get_provider_balance(1, ct_domain_config:head()),
+    #{
+        withdrawal_id := WithdrawalID,
+        wallet_id := WalletID,
+        destination_id := DestinationID
+    } = prepare_standard_environment({100, <<"RUB">>}, C),
+    ?assertEqual(?FINAL_BALANCE(0, <<"RUB">>), get_wallet_balance(WalletID)),
+    ?assertEqual(?FINAL_BALANCE(80, <<"RUB">>), get_destination_balance(DestinationID)),
+    Withdrawal = get_withdrawal(WithdrawalID),
+    #{provider_id := ProviderID} = ff_withdrawal:route(Withdrawal),
+    DomainRevision = ff_withdrawal:domain_revision(Withdrawal),
+    ?assertEqual(?FINAL_BALANCE(StartProviderAmount + 5, <<"RUB">>), get_provider_balance(ProviderID, DomainRevision)),
+    AdjustmentID = process_adjustment(WithdrawalID, #{
+        change => {change_cash_flow, ct_domain_config:head() - 1},
+        external_id => <<"true_unique_id">>
+    }),
+    ?assertMatch(succeeded, get_adjustment_status(WithdrawalID, AdjustmentID)),
+    ExternalID = ff_adjustment:external_id(get_adjustment(WithdrawalID, AdjustmentID)),
+    ?assertEqual(<<"true_unique_id">>, ExternalID),
+    ?assertEqual(succeeded, get_withdrawal_status(WithdrawalID)),
+    assert_adjustment_same_revisions(WithdrawalID, AdjustmentID),
+    ?assertEqual(?FINAL_BALANCE(StartProviderAmount + 20, <<"RUB">>), get_provider_balance(ProviderID, DomainRevision)),
+    ?assertEqual(?FINAL_BALANCE(0, <<"RUB">>), get_wallet_balance(WalletID)),
+    ?assertEqual(?FINAL_BALANCE(80, <<"RUB">>), get_destination_balance(DestinationID)).
+
 %% Utils
 
 prepare_standard_environment({_Amount, Currency} = WithdrawalCash, C) ->
@@ -431,6 +475,12 @@ get_destination_balance(ID) ->
     {ok, Machine} = ff_destination_machine:get(ID),
     Destination = ff_destination_machine:destination(Machine),
     get_account_balance(ff_destination:account(Destination)).
+
+get_provider_balance(ProviderID, DomainRevision) ->
+    {ok, Provider} = ff_payouts_provider:get(ProviderID, DomainRevision),
+    ProviderAccounts = ff_payouts_provider:accounts(Provider),
+    ProviderAccount = maps:get(<<"RUB">>, ProviderAccounts, undefined),
+    get_account_balance(ProviderAccount).
 
 get_account_balance(Account) ->
     {ok, {Amounts, Currency}} = ff_accounting:balance(Account),
