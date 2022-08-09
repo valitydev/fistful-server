@@ -73,7 +73,6 @@
 -export([operation_timestamp/1]).
 -export([party_revision/1]).
 -export([domain_revision/1]).
--export([cash_flow/1]).
 
 %% API
 
@@ -145,15 +144,6 @@ created_at(#{created_at := V}) ->
 -spec operation_timestamp(adjustment()) -> ff_time:timestamp_ms().
 operation_timestamp(#{operation_timestamp := V}) ->
     V.
-
--spec cash_flow(adjustment()) -> final_cash_flow() | undefined.
-cash_flow(#{changes_plan := V}) ->
-    case maps:get(new_cash_flow, V, undefined) of
-        undefined ->
-            undefined;
-        #{new_cash_flow := CashFlow} ->
-            CashFlow
-    end.
 
 %% API
 

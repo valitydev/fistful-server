@@ -172,7 +172,7 @@ handle_function_('CreateAdjustment', {ID, MarshaledParams}, _Opts) ->
                 another_adjustment_id = ff_codec:marshal(id, AnotherID)
             });
         {error, {invalid_cash_flow_change, {already_has_domain_revision, DomainRevision}}} ->
-            woody_error:raise(business, #wthd_AlreadyHasStatus{
-                withdrawal_status = ff_withdrawal_codec:marshal(domain_revision, DomainRevision)
+            woody_error:raise(business, #wthd_AlreadyHasDataRevision{
+                domain_revision = ff_withdrawal_codec:marshal(domain_revision, DomainRevision)
             })
     end.

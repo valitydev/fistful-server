@@ -199,7 +199,8 @@ adjustment_codec_test() ->
         new_cash_flow => CashFlowChange,
         new_status => #{
             new_status => succeeded
-        }
+        },
+        new_domain_revision => #{new_domain_revision => 123}
     },
 
     Adjustment = #{
