@@ -264,6 +264,12 @@ dummy_provider_identity_id(Options) ->
     maps:get(dummy_provider_identity_id, Options).
 
 domain_config_add_version(Options) ->
+    {ok, Provider} = ff_domain_config:object({provider, ?prv(1)}),
+    #domain_Provider{
+        accounts = #{
+            ?cur(<<"RUB">>) := #domain_ProviderAccount{settlement = AccountID}
+        }
+    } = Provider,
     ProviderTermSet = #domain_ProvisionTermSet{
         wallet = #domain_WalletProvisionTerms{
             withdrawals = #domain_WithdrawalProvisionTerms{
@@ -298,18 +304,7 @@ domain_config_add_version(Options) ->
         }
     },
     [
-        ct_domain:withdrawal_provider(?prv(1), ?prx(2), provider_identity_id(Options), ProviderTermSet),
-        ct_domain:withdrawal_provider(?prv(2), ?prx(2), provider_identity_id(Options), ProviderTermSet),
-        ct_domain:withdrawal_provider(?prv(3), ?prx(3), dummy_provider_identity_id(Options), ProviderTermSet),
-        ct_domain:withdrawal_provider(?prv(4), ?prx(6), provider_identity_id(Options), ProviderTermSet),
-        ct_domain:withdrawal_provider(?prv(5), ?prx(2), provider_identity_id(Options), ProviderTermSet),
-        ct_domain:withdrawal_provider(?prv(6), ?prx(6), provider_identity_id(Options), ProviderTermSet),
-        ct_domain:withdrawal_provider(?prv(7), ?prx(6), provider_identity_id(Options), ProviderTermSet),
-        ct_domain:withdrawal_provider(?prv(8), ?prx(2), provider_identity_id(Options), ProviderTermSet),
-        ct_domain:withdrawal_provider(?prv(9), ?prx(7), provider_identity_id(Options), ProviderTermSet),
-        ct_domain:withdrawal_provider(?prv(10), ?prx(6), provider_identity_id(Options), ProviderTermSet),
-        ct_domain:withdrawal_provider(?prv(11), ?prx(8), provider_identity_id(Options), ProviderTermSet),
-        ct_domain:withdrawal_provider(?prv(17), ?prx(2), provider_identity_id(Options), ProviderTermSet)
+        ct_domain:withdrawal_provider(AccountID, ?prv(1), ?prx(2), provider_identity_id(Options), ProviderTermSet)
     ].
 
 domain_config(Options) ->
@@ -333,7 +328,40 @@ domain_config(Options) ->
                                     ?cfpost(
                                         {system, settlement},
                                         {provider, settlement},
-                                        ?fixed(20, <<"RUB">>)
+                                        {product,
+                                            {min_of,
+                                                ?ordset([
+                                                    ?fixed(10, <<"RUB">>),
+                                                    ?share(5, 100, operation_amount, round_half_towards_zero)
+                                                ])}}
+                                    )
+                                ]}
+                        }
+                    ]}
+            }
+        }
+    },
+    TempProviderTermSet = #domain_ProvisionTermSet{
+        wallet = #domain_WalletProvisionTerms{
+            withdrawals = #domain_WithdrawalProvisionTerms{
+                currencies = {value, ?ordset([?cur(<<"RUB">>)])},
+                payout_methods = {value, ?ordset([])},
+                cash_limit =
+                    {value,
+                        ?cashrng(
+                            {inclusive, ?cash(0, <<"RUB">>)},
+                            {exclusive, ?cash(10000000, <<"RUB">>)}
+                        )},
+                cash_flow =
+                    {decisions, [
+                        #domain_CashFlowDecision{
+                            if_ = {condition, {currency_is, ?cur(<<"RUB">>)}},
+                            then_ =
+                                {value, [
+                                    ?cfpost(
+                                        {system, settlement},
+                                        {provider, settlement},
+                                        ?fixed(2, <<"RUB">>)
                                     )
                                 ]}
                         }
@@ -733,7 +761,7 @@ domain_config(Options) ->
         ct_domain:proxy(?prx(7), <<"Another down proxy">>, <<"http://localhost:8222/downbank2">>),
         ct_domain:proxy(?prx(8), <<"Sleep proxy">>, <<"http://localhost:8222/sleepybank">>),
 
-        ct_domain:withdrawal_provider(?prv(1), ?prx(2), provider_identity_id(Options), ProviderTermSet),
+        ct_domain:withdrawal_provider(?prv(1), ?prx(2), provider_identity_id(Options), TempProviderTermSet),
         ct_domain:withdrawal_provider(?prv(2), ?prx(2), provider_identity_id(Options), ProviderTermSet),
         ct_domain:withdrawal_provider(?prv(3), ?prx(3), dummy_provider_identity_id(Options), ProviderTermSet),
         ct_domain:withdrawal_provider(?prv(4), ?prx(6), provider_identity_id(Options), ProviderTermSet),

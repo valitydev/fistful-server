@@ -1008,11 +1008,14 @@ is_childs_active(Withdrawal) ->
 
 -spec make_final_cash_flow(withdrawal_state()) -> final_cash_flow().
 make_final_cash_flow(Withdrawal) ->
+    make_final_cash_flow(final_domain_revision(Withdrawal), Withdrawal).
+
+-spec make_final_cash_flow(domain_revision(), withdrawal_state()) -> final_cash_flow().
+make_final_cash_flow(DomainRevision, Withdrawal) ->
     Body = body(Withdrawal),
     WalletID = wallet_id(Withdrawal),
     {ok, Wallet} = get_wallet(WalletID),
     Route = route(Withdrawal),
-    DomainRevision = final_domain_revision(Withdrawal),
     {ok, Destination} = get_destination(destination_id(Withdrawal)),
     Resource = destination_resource(Withdrawal),
     Identity = get_wallet_identity(Wallet),
@@ -1575,7 +1578,8 @@ validate_change_same_status(Status, Status) ->
 validate_domain_revision_change(#{change := {change_cash_flow, DomainRevision}}, Withdrawal) ->
     do(fun() ->
         valid = unwrap(
-            invalid_cash_flow_change, validate_change_same_domain_revision(DomainRevision, domain_revision(Withdrawal))
+            invalid_cash_flow_change,
+            validate_change_same_domain_revision(DomainRevision, final_domain_revision(Withdrawal))
         )
     end);
 validate_domain_revision_change(_Params, _Withdrawal) ->
@@ -1658,7 +1662,7 @@ make_change_status_params({failed, _}, {failed, _} = NewStatus, _Withdrawal) ->
 
 make_change_cash_flow_params(NewDomainRevision, Withdrawal) ->
     CurrentCashFlow = effective_final_cash_flow(Withdrawal),
-    NewCashFlow = make_final_cash_flow(Withdrawal#{domain_revision => NewDomainRevision}),
+    NewCashFlow = make_final_cash_flow(NewDomainRevision, Withdrawal),
     #{
         new_cash_flow => #{
             old_cash_flow_inverted => ff_cash_flow:inverse(CurrentCashFlow),
@@ -1785,21 +1789,7 @@ handle_adjustment_status_change(#{new_status := Status}) ->
 save_adjustable_info({p_transfer, {status_changed, committed}}, Withdrawal) ->
     CashFlow = ff_postings_transfer:final_cash_flow(p_transfer(Withdrawal)),
     update_adjusment_index(fun ff_adjustment_utils:set_cash_flow/2, CashFlow, Withdrawal);
-save_adjustable_info({adjustment, _WrappedEvent} = Ev, Withdrawal) ->
-    {ID, Event} = ff_adjustment_utils:unwrap_event(Ev),
-    save_adjustable_info_(ID, Event, Withdrawal);
 save_adjustable_info(_Ev, Withdrawal) ->
-    Withdrawal.
-
--spec save_adjustable_info_(adjustment_id(), event(), withdrawal_state()) -> withdrawal_state().
-save_adjustable_info_(_, {created, Adjustment}, Withdrawal) ->
-    case ff_adjustment:changes_plan(Adjustment) of
-        #{new_domain_revision := #{new_domain_revision := DomainRevision}} ->
-            update_adjusment_index(fun ff_adjustment_utils:set_domain_revision/2, DomainRevision, Withdrawal);
-        _ ->
-            Withdrawal
-    end;
-save_adjustable_info_(_ID, _Ev, Withdrawal) ->
     Withdrawal.
 
 -spec update_adjusment_index(Updater, Value, withdrawal_state()) -> withdrawal_state() when

@@ -73,7 +73,8 @@
 all() ->
     [
         {group, default},
-        {group, non_parallel}
+        {group, non_parallel},
+        {group, withdrawal_repair}
     ].
 
 -spec groups() -> [{group_name(), list(), [test_case_name()]}].

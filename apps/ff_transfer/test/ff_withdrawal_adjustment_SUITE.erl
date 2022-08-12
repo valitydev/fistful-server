@@ -43,7 +43,10 @@
 
 -spec all() -> [test_case_name() | {group, group_name()}].
 all() ->
-    [{group, default}].
+    [
+        {group, default},
+        {group, non_parallel}
+    ].
 
 -spec groups() -> [{group_name(), list(), [test_case_name()]}].
 groups() ->
@@ -58,9 +61,11 @@ groups() ->
             adjustment_idempotency_test,
             no_parallel_adjustments_test,
             no_pending_withdrawal_adjustments_test,
-            unknown_withdrawal_test
-            % adjustment_can_not_change_domain_revision_to_same,
-            % adjustment_can_change_domain_revision_test
+            unknown_withdrawal_test,
+            adjustment_can_not_change_domain_revision_to_same
+        ]},
+        {non_parallel, [sequence], [
+            adjustment_can_change_domain_revision_test
         ]}
     ].
 
@@ -313,7 +318,8 @@ adjustment_can_not_change_domain_revision_to_same(C) ->
 
 -spec adjustment_can_change_domain_revision_test(config()) -> test_return().
 adjustment_can_change_domain_revision_test(C) ->
-    ?FINAL_BALANCE(StartProviderAmount, <<"RUB">>) = get_provider_balance(1, ct_domain_config:head()),
+    ProviderID = 1,
+    ?FINAL_BALANCE(StartProviderAmount, <<"RUB">>) = get_provider_balance(ProviderID, ct_domain_config:head()),
     #{
         withdrawal_id := WithdrawalID,
         wallet_id := WalletID,
@@ -334,7 +340,7 @@ adjustment_can_change_domain_revision_test(C) ->
     ?assertEqual(<<"true_unique_id">>, ExternalID),
     ?assertEqual(succeeded, get_withdrawal_status(WithdrawalID)),
     assert_adjustment_same_revisions(WithdrawalID, AdjustmentID),
-    ?assertEqual(?FINAL_BALANCE(StartProviderAmount + 20, <<"RUB">>), get_provider_balance(ProviderID, DomainRevision)),
+    ?assertEqual(?FINAL_BALANCE(StartProviderAmount + 2, <<"RUB">>), get_provider_balance(ProviderID, DomainRevision)),
     ?assertEqual(?FINAL_BALANCE(0, <<"RUB">>), get_wallet_balance(WalletID)),
     ?assertEqual(?FINAL_BALANCE(80, <<"RUB">>), get_destination_balance(DestinationID)).
 
@@ -462,7 +468,7 @@ await_wallet_balance({Amount, Currency}, ID) ->
 assert_adjustment_same_revisions(WithdrawalID, AdjustmentID) ->
     Adjustment = get_adjustment(WithdrawalID, AdjustmentID),
     Withdrawal = get_withdrawal(WithdrawalID),
-    ?assertEqual(ff_withdrawal:domain_revision(Withdrawal), ff_adjustment:domain_revision(Adjustment)),
+    ?assertEqual(ff_withdrawal:final_domain_revision(Withdrawal), ff_adjustment:domain_revision(Adjustment)),
     ?assertEqual(ff_withdrawal:party_revision(Withdrawal), ff_adjustment:party_revision(Adjustment)),
     ?assertEqual(ff_withdrawal:created_at(Withdrawal), ff_adjustment:operation_timestamp(Adjustment)),
     ok.
