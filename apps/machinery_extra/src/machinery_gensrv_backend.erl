@@ -129,7 +129,6 @@ report_notfound(NS, ID) ->
 notify(_NS, _ID, _Range, _Args, _Opts) ->
     erlang:error({not_implemented, notify}).
 
-
 %% Gen Server + Supervisor
 
 -spec start_machine_link(logic_handler(_), namespace(), id(), args(_)) -> {ok, pid()}.
