@@ -791,11 +791,7 @@ do_process_routing(Withdrawal) ->
     do(fun() ->
         {Varset, Context} = make_routing_varset_and_context(Withdrawal),
         GatherResult = ff_withdrawal_routing:gather_routes(Varset, Context),
-        FilterResult = ff_withdrawal_routing:filter_limit_overflow_routes(
-            unwrap(filter_attempts(GatherResult, Withdrawal)),
-            Varset,
-            Context
-        ),
+        FilterResult = ff_withdrawal_routing:filter_limit_overflow_routes(GatherResult, Varset, Context),
         ff_withdrawal_routing:log_reject_context(FilterResult),
         Routes = unwrap(ff_withdrawal_routing:routes(FilterResult)),
         case quote(Withdrawal) of
@@ -808,33 +804,33 @@ do_process_routing(Withdrawal) ->
         end
     end).
 
-filter_attempts(#{routes := Routes} = Result, Withdrawal) ->
-    NextRoutesResult = ff_withdrawal_route_attempt_utils:next_routes(
-        [
-            ff_withdrawal_routing:make_route(ProviderID, TerminalID)
-         || #{
-                provider_ref := #domain_ProviderRef{id = ProviderID},
-                terminal_ref := #domain_TerminalRef{id = TerminalID}
-            } <- Routes
-        ],
-        attempts(Withdrawal),
-        get_attempt_limit(Withdrawal)
-    ),
-    case NextRoutesResult of
-        {ok, Left} ->
-            {ok, Result#{
-                routes => [
-                    Route
-                 || Route = #{
-                        provider_ref := #domain_ProviderRef{id = ProviderID},
-                        terminal_ref := #domain_TerminalRef{id = TerminalID}
-                    } <- Routes,
-                    lists:member(ff_withdrawal_routing:make_route(ProviderID, TerminalID), Left)
-                ]
-            }};
-        {error, Reason} ->
-            {error, Reason}
-    end.
+% filter_attempts(#{routes := Routes} = Result, Withdrawal) ->
+%     NextRoutesResult = ff_withdrawal_route_attempt_utils:next_routes(
+%         [
+%             ff_withdrawal_routing:make_route(ProviderID, TerminalID)
+%          || #{
+%                 provider_ref := #domain_ProviderRef{id = ProviderID},
+%                 terminal_ref := #domain_TerminalRef{id = TerminalID}
+%             } <- Routes
+%         ],
+%         attempts(Withdrawal),
+%         get_attempt_limit(Withdrawal)
+%     ),
+%     case NextRoutesResult of
+%         {ok, Left} ->
+%             {ok, Result#{
+%                 routes => [
+%                     Route
+%                  || Route = #{
+%                         provider_ref := #domain_ProviderRef{id = ProviderID},
+%                         terminal_ref := #domain_TerminalRef{id = TerminalID}
+%                     } <- Routes,
+%                     lists:member(ff_withdrawal_routing:make_route(ProviderID, TerminalID), Left)
+%                 ]
+%             }};
+%         {error, Reason} ->
+%             {error, Reason}
+%     end.
 
 do_rollback_routing(ExcludeRoute, Withdrawal) ->
     do(fun() ->
@@ -1725,13 +1721,8 @@ process_adjustment(Withdrawal) ->
 process_route_change(Withdrawal, Reason) ->
     case is_failure_transient(Reason, Withdrawal) of
         true ->
-            case do_process_routing(Withdrawal) of
-                {ok, Routes} ->
-                    do_process_route_change(Routes);
-                {error, _Reason} ->
-                    Events = process_transfer_fail(Reason, Withdrawal),
-                    {continue, Events}
-            end;
+            {ok, Providers} = do_process_routing(Withdrawal),
+            do_process_route_change(Providers, Withdrawal, Reason);
         false ->
             Events = process_transfer_fail(Reason, Withdrawal),
             {undefined, Events}
@@ -1798,9 +1789,24 @@ error_tokens_match([Token0 | Rest0], [Token1 | Rest1]) when Token0 =:= Token1 ->
 error_tokens_match([Token0 | _], [Token1 | _]) when Token0 =/= Token1 ->
     false.
 
--spec do_process_route_change([route()]) -> process_result().
-do_process_route_change([Route | _]) ->
-    {continue, [{route_changed, Route}]}.
+-spec do_process_route_change([route()], withdrawal_state(), fail_type()) -> process_result().
+do_process_route_change(Routes, Withdrawal, Reason) ->
+    Attempts = attempts(Withdrawal),
+    AttemptLimit = get_attempt_limit(Withdrawal),
+    case ff_withdrawal_route_attempt_utils:next_route(Routes, Attempts, AttemptLimit) of
+        {ok, Route} ->
+            {continue, [
+                {route_changed, Route}
+            ]};
+        {error, route_not_found} ->
+            %% No more routes, return last error
+            Events = process_transfer_fail(Reason, Withdrawal),
+            {continue, Events};
+        {error, attempt_limit_exceeded} ->
+            %% Attempt limit exceeded, return last error
+            Events = process_transfer_fail(Reason, Withdrawal),
+            {continue, Events}
+    end.
 
 -spec handle_adjustment_changes(ff_adjustment:changes()) -> [event()].
 handle_adjustment_changes(Changes) ->
