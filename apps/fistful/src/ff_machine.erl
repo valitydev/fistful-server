@@ -203,8 +203,7 @@ migrate_event(Mod, {ID, Ts, {ev, EventTs, EventBody}} = Event, MigrateParams) ->
 %%
 
 -spec init({machinery:args(_), ctx()}, machinery:machine(E, A), module(), _) -> machinery:result(E, A).
-init({Args, Ctx}, Machine, Mod, _) ->
-    _ = add_scoper_meta(Machine, #{activity => init}),
+init({Args, Ctx}, _Machine, Mod, _) ->
     Events = Mod:init(Args),
     #{
         events => emit_events(Events),
@@ -213,7 +212,6 @@ init({Args, Ctx}, Machine, Mod, _) ->
 
 -spec process_timeout(machinery:machine(E, A), module(), _) -> machinery:result(E, A).
 process_timeout(Machine, Mod, _) ->
-    _ = add_scoper_meta(Machine, #{activity => timeout}),
     Events = Mod:process_timeout(collapse(Mod, Machine)),
     #{
         events => emit_events(Events)
@@ -222,7 +220,6 @@ process_timeout(Machine, Mod, _) ->
 -spec process_call(machinery:args(_), machinery:machine(E, A), module(), _) ->
     {machinery:response(_), machinery:result(E, A)}.
 process_call(Args, Machine, Mod, _) ->
-    _ = add_scoper_meta(Machine, #{activity => call}),
     {Response, Events} = Mod:process_call(Args, collapse(Mod, Machine)),
     {Response, #{
         events => emit_events(Events)
@@ -231,7 +228,6 @@ process_call(Args, Machine, Mod, _) ->
 -spec process_repair(machinery:args(_), machinery:machine(E, A), module(), _) ->
     {ok, machinery:response(_), machinery:result(E, A)} | {error, machinery:error(_)}.
 process_repair(Args, Machine, Mod, _) ->
-    _ = add_scoper_meta(Machine, #{activity => repair}),
     case Mod:process_repair(Args, collapse(Mod, Machine)) of
         {ok, Response, Events} ->
             {ok, Response, #{
@@ -244,9 +240,3 @@ process_repair(Args, Machine, Mod, _) ->
 -spec process_notification(_, machine(_), _, _) -> result(_) | no_return().
 process_notification(_Args, _Machine, _HandlerArgs, _Opts) ->
     #{}.
-
-add_scoper_meta(Machine, Extra) ->
-    scoper:add_meta(Extra#{
-        namespace => maps:get(namespace, Machine),
-        id => maps:get(id, Machine)
-    }).
