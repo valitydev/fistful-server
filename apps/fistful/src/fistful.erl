@@ -71,54 +71,59 @@ notify(NS, ID, Range, Args, Backend) ->
 
 -spec init(args(_), machine(E, A), options(), handler_opts()) -> result(E, A).
 init(Args, Machine, Options = #{handler := Handler}, MachineryOptions) ->
-    _ = add_scoper_meta(Machine, #{activity => init}),
-    ok = ff_context:save(create_context(Options, MachineryOptions)),
-    try
-        machinery:dispatch_signal({init, Args}, Machine, machinery_utils:get_handler(Handler), #{})
-    after
-        ff_context:cleanup()
-    end.
+    _ = scope(Machine, #{activity => init}, fun() ->
+        ok = ff_context:save(create_context(Options, MachineryOptions)),
+        try
+            machinery:dispatch_signal({init, Args}, Machine, machinery_utils:get_handler(Handler), #{})
+        after
+            ff_context:cleanup()
+        end
+    end).
 
 -spec process_timeout(machine(E, A), options(), handler_opts()) -> result(E, A).
 process_timeout(Machine, Options = #{handler := Handler}, MachineryOptions) ->
-    _ = add_scoper_meta(Machine, #{activity => timeout}),
-    ok = ff_context:save(create_context(Options, MachineryOptions)),
-    try
-        machinery:dispatch_signal(timeout, Machine, machinery_utils:get_handler(Handler), #{})
-    after
-        ff_context:cleanup()
-    end.
+    _ = scope(Machine, #{activity => timeout}, fun() ->
+        ok = ff_context:save(create_context(Options, MachineryOptions)),
+        try
+            machinery:dispatch_signal(timeout, Machine, machinery_utils:get_handler(Handler), #{})
+        after
+            ff_context:cleanup()
+        end
+    end).
 
 -spec process_call(args(_), machine(E, A), options(), handler_opts()) -> {response(_), result(E, A)}.
 process_call(Args, Machine, Options = #{handler := Handler}, MachineryOptions) ->
-    _ = add_scoper_meta(Machine, #{activity => call}),
-    ok = ff_context:save(create_context(Options, MachineryOptions)),
-    try
-        machinery:dispatch_call(Args, Machine, machinery_utils:get_handler(Handler), #{})
-    after
-        ff_context:cleanup()
-    end.
+    _ = scope(Machine, #{activity => call}, fun() ->
+        ok = ff_context:save(create_context(Options, MachineryOptions)),
+        try
+            machinery:dispatch_call(Args, Machine, machinery_utils:get_handler(Handler), #{})
+        after
+            ff_context:cleanup()
+        end
+    end).
 
 -spec process_repair(args(_), machine(E, A), options(), handler_opts()) ->
     {ok, {response(_), result(E, A)}} | {error, machinery:error(_)}.
 process_repair(Args, Machine, Options = #{handler := Handler}, MachineryOptions) ->
-    _ = add_scoper_meta(Machine, #{activity => repair}),
-    ok = ff_context:save(create_context(Options, MachineryOptions)),
-    try
-        machinery:dispatch_repair(Args, Machine, machinery_utils:get_handler(Handler), #{})
-    after
-        ff_context:cleanup()
-    end.
+    _ = scope(Machine, #{activity => repair}, fun() ->
+        ok = ff_context:save(create_context(Options, MachineryOptions)),
+        try
+            machinery:dispatch_repair(Args, Machine, machinery_utils:get_handler(Handler), #{})
+        after
+            ff_context:cleanup()
+        end
+    end).
 
 -spec process_notification(args(_), machine(E, A), options(), handler_opts()) -> result(E, A).
 process_notification(Args, Machine, Options = #{handler := Handler}, MachineryOptions) ->
-    _ = add_scoper_meta(Machine, #{activity => notification}),
-    ok = ff_context:save(create_context(Options, MachineryOptions)),
-    try
-        machinery:dispatch_signal({notification, Args}, Machine, machinery_utils:get_handler(Handler), #{})
-    after
-        ff_context:cleanup()
-    end.
+    _ = scope(Machine, #{activity => notification}, fun() ->
+        ok = ff_context:save(create_context(Options, MachineryOptions)),
+        try
+            machinery:dispatch_signal({notification, Args}, Machine, machinery_utils:get_handler(Handler), #{})
+        after
+            ff_context:cleanup()
+        end
+    end).
 
 %% Internals
 
@@ -139,8 +144,12 @@ set_backend_context(Backend) ->
         woody_ctx => ff_context:get_woody_context(ff_context:load())
     }}.
 
-add_scoper_meta(Machine, Extra) ->
-    scoper:add_meta(Extra#{
-        namespace => maps:get(namespace, Machine),
-        id => maps:get(id, Machine)
-    }).
+scope(Machine, Extra, Fun) ->
+    scoper:scope(
+        machine,
+        Extra#{
+            namespace => maps:get(namespace, Machine),
+            id => maps:get(id, Machine)
+        },
+        Fun
+    ).
