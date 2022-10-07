@@ -21,6 +21,7 @@
 -export([limit_overflow/1]).
 -export([choose_provider_without_limit_overflow/1]).
 -export([provider_limits_exhaust_orderly/1]).
+-export([retryable_provider/1]).
 
 %% Internal types
 
@@ -44,7 +45,8 @@ groups() ->
             limit_success,
             limit_overflow,
             choose_provider_without_limit_overflow,
-            provider_limits_exhaust_orderly
+            provider_limits_exhaust_orderly,
+            retryable_provider
         ]}
     ].
 
@@ -234,7 +236,41 @@ provider_limits_exhaust_orderly(C) ->
     Result = await_final_withdrawal_status(WithdrawalID),
     ?assertMatch({failed, #{code := <<"no_route_found">>}}, Result).
 
+-spec retryable_provider(config()) -> test_return().
+retryable_provider(C) ->
+    Currency = <<"RUB">>,
+    Cash = {904000, Currency},
+    #{
+        wallet_id := WalletID,
+        destination_id := DestinationID,
+        party_id := PartyID
+    } = prepare_standard_environment(Cash, C),
+    _ = set_retryable_errors(PartyID, [<<"authorization_error">>]),
+    WithdrawalID = generate_id(),
+    WithdrawalParams = #{
+        id => WithdrawalID,
+        destination_id => DestinationID,
+        wallet_id => WalletID,
+        body => Cash,
+        external_id => WithdrawalID
+    },
+    ok = ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new()),
+    ?assertEqual(succeeded, await_final_withdrawal_status(WithdrawalID)),
+    Withdrawal = get_withdrawal(WithdrawalID),
+    ?assertEqual(WalletID, ff_withdrawal:wallet_id(Withdrawal)),
+    ?assertEqual(DestinationID, ff_withdrawal:destination_id(Withdrawal)),
+    ?assertEqual(Cash, ff_withdrawal:body(Withdrawal)),
+    ?assertEqual(WithdrawalID, ff_withdrawal:external_id(Withdrawal)),
+    _ = set_retryable_errors(PartyID, []).
+
 %% Utils
+
+set_retryable_errors(PartyID, ErrorList) ->
+    application:set_env(ff_transfer, withdrawal, #{
+        party_transient_errors => #{
+            PartyID => ErrorList
+        }
+    }).
 
 get_limit_amount(Cash, WalletID, DestinationID, LimitID, C) ->
     {ok, WalletMachine} = ff_wallet_machine:get(WalletID),

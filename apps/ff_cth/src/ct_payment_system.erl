@@ -461,6 +461,10 @@ domain_config(Options) ->
                     ?ruleset(?PAYINST1_ROUTING_POLICIES + 19)
                 ),
                 delegate(
+                    condition(cost_in, {904000, <<"RUB">>}),
+                    ?ruleset(?PAYINST1_ROUTING_POLICIES + 20)
+                ),
+                delegate(
                     {condition,
                         {payment_tool,
                             {bank_card, #domain_BankCardCondition{
@@ -588,6 +592,14 @@ domain_config(Options) ->
             {candidates, [
                 candidate({constant, true}, ?trm(2200), 1000),
                 candidate({constant, true}, ?trm(2100), 4000)
+            ]}
+        ),
+
+        routing_ruleset(
+            ?ruleset(?PAYINST1_ROUTING_POLICIES + 20),
+            {candidates, [
+                candidate({constant, true}, ?trm(2300), 1000),
+                candidate({constant, true}, ?trm(2400), 4000)
             ]}
         ),
 
@@ -916,6 +928,36 @@ domain_config(Options) ->
                         turnover_limit =
                             {value, [
                                 ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID2, 903000)
+                            ]}
+                    }
+                }
+            }
+        ),
+
+        ct_domain:withdrawal_terminal(
+            ?trm(2300),
+            ?prv(4),
+            #domain_ProvisionTermSet{
+                wallet = #domain_WalletProvisionTerms{
+                    withdrawals = #domain_WithdrawalProvisionTerms{
+                        turnover_limit =
+                            {value, [
+                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID2, 2000000)
+                            ]}
+                    }
+                }
+            }
+        ),
+
+        ct_domain:withdrawal_terminal(
+            ?trm(2400),
+            ?prv(5),
+            #domain_ProvisionTermSet{
+                wallet = #domain_WalletProvisionTerms{
+                    withdrawals = #domain_WithdrawalProvisionTerms{
+                        turnover_limit =
+                            {value, [
+                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID2, 2000000)
                             ]}
                     }
                 }
