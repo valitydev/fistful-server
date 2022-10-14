@@ -59,6 +59,9 @@
 
 -export([start_adjustment/2]).
 
+-export([call/2]).
+-export([activity/1]).
+
 %% Accessors
 
 -export([withdrawal/1]).
@@ -141,6 +144,21 @@ repair(ID, Scenario) ->
     | {error, start_adjustment_error()}.
 start_adjustment(WithdrawalID, Params) ->
     call(WithdrawalID, {start_adjustment, Params}).
+
+-spec call(id(), machinery:args(_)) -> machinery:response(_) | {error, unknown_withdrawal_error()}.
+call(ID, Call) ->
+    case machinery:call(?NS, ID, Call, backend()) of
+        {ok, Reply} ->
+            Reply;
+        {error, notfound} ->
+            {error, {unknown_withdrawal, ID}}
+    end.
+
+-spec activity(machine()) ->
+    ff_withdrawal:activity().
+activity(Machine) ->
+    State = ff_machine:collapse(ff_withdrawal, Machine),
+    ff_withdrawal:activity(withdrawal(State)).
 
 -spec notify(id(), notify_args()) ->
     ok | {error, notfound} | no_return().
@@ -243,11 +261,3 @@ set_action(undefined, _St) ->
     undefined;
 set_action(sleep, _St) ->
     unset_timer.
-
-call(ID, Call) ->
-    case machinery:call(?NS, ID, Call, backend()) of
-        {ok, Reply} ->
-            Reply;
-        {error, notfound} ->
-            {error, {unknown_withdrawal, ID}}
-    end.

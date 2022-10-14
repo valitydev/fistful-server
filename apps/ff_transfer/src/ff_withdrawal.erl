@@ -191,6 +191,7 @@
 -export_type([adjustment_params/0]).
 -export_type([start_adjustment_error/0]).
 -export_type([limit_check_details/0]).
+-export_type([activity/0]).
 
 %% Transfer logic callbacks
 
@@ -217,6 +218,7 @@
 -export([destination_resource/1]).
 -export([metadata/1]).
 -export([params/1]).
+-export([activity/1]).
 
 %% API
 
@@ -392,6 +394,10 @@ metadata(T) ->
 -spec params(withdrawal_state()) -> transfer_params().
 params(#{params := V}) ->
     V.
+
+-spec activity(withdrawal_state()) -> activity().
+activity(Withdrawal) ->
+    deduce_activity(Withdrawal).
 
 %% API
 

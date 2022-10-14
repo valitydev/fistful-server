@@ -12,7 +12,8 @@
 
 -type options() :: #{
     handler := machinery:modopts(_),
-    party_client := party_client:client()
+    party_client := party_client:client(),
+    handler_opts => machinery:handler_opts(_)
 }.
 
 -export([backend/1]).
@@ -74,7 +75,12 @@ init(Args, Machine, Options = #{handler := Handler}, MachineryOptions) ->
     _ = scope(Machine, #{activity => init}, fun() ->
         ok = ff_context:save(create_context(Options, MachineryOptions)),
         try
-            machinery:dispatch_signal({init, Args}, Machine, machinery_utils:get_handler(Handler), #{})
+            machinery:dispatch_signal(
+                {init, Args},
+                Machine,
+                machinery_utils:get_handler(Handler),
+                maps:get(handler_opts, Options, #{})
+            )
         after
             ff_context:cleanup()
         end
@@ -85,7 +91,12 @@ process_timeout(Machine, Options = #{handler := Handler}, MachineryOptions) ->
     _ = scope(Machine, #{activity => timeout}, fun() ->
         ok = ff_context:save(create_context(Options, MachineryOptions)),
         try
-            machinery:dispatch_signal(timeout, Machine, machinery_utils:get_handler(Handler), #{})
+            machinery:dispatch_signal(
+                timeout,
+                Machine,
+                machinery_utils:get_handler(Handler),
+                maps:get(handler_opts, Options, #{})
+            )
         after
             ff_context:cleanup()
         end
@@ -96,7 +107,12 @@ process_call(Args, Machine, Options = #{handler := Handler}, MachineryOptions) -
     _ = scope(Machine, #{activity => call}, fun() ->
         ok = ff_context:save(create_context(Options, MachineryOptions)),
         try
-            machinery:dispatch_call(Args, Machine, machinery_utils:get_handler(Handler), #{})
+            machinery:dispatch_call(
+                Args,
+                Machine,
+                machinery_utils:get_handler(Handler),
+                maps:get(handler_opts, Options, #{})
+            )
         after
             ff_context:cleanup()
         end
@@ -108,7 +124,12 @@ process_repair(Args, Machine, Options = #{handler := Handler}, MachineryOptions)
     _ = scope(Machine, #{activity => repair}, fun() ->
         ok = ff_context:save(create_context(Options, MachineryOptions)),
         try
-            machinery:dispatch_repair(Args, Machine, machinery_utils:get_handler(Handler), #{})
+            machinery:dispatch_repair(
+                Args,
+                Machine,
+                machinery_utils:get_handler(Handler),
+                maps:get(handler_opts, Options, #{})
+            )
         after
             ff_context:cleanup()
         end
@@ -119,7 +140,12 @@ process_notification(Args, Machine, Options = #{handler := Handler}, MachineryOp
     _ = scope(Machine, #{activity => notification}, fun() ->
         ok = ff_context:save(create_context(Options, MachineryOptions)),
         try
-            machinery:dispatch_signal({notification, Args}, Machine, machinery_utils:get_handler(Handler), #{})
+            machinery:dispatch_signal(
+                {notification, Args},
+                Machine,
+                machinery_utils:get_handler(Handler),
+                maps:get(handler_opts, Options, #{})
+            )
         after
             ff_context:cleanup()
         end

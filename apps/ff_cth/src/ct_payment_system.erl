@@ -598,8 +598,8 @@ domain_config(Options) ->
         routing_ruleset(
             ?ruleset(?PAYINST1_ROUTING_POLICIES + 20),
             {candidates, [
-                candidate({constant, true}, ?trm(2300), 1000),
-                candidate({constant, true}, ?trm(2400), 4000)
+                candidate({constant, true}, ?trm(2300), 4000),
+                candidate({constant, true}, ?trm(2400), 1000)
             ]}
         ),
 

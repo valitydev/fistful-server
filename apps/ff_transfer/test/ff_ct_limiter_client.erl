@@ -3,6 +3,9 @@
 -include_lib("limiter_proto/include/limproto_limiter_thrift.hrl").
 
 -export([get/3]).
+-export([hold/4]).
+-export([commit/4]).
+-export([rollback/4]).
 
 -export([create_config/2]).
 -export([get_config/2]).
@@ -10,6 +13,7 @@
 -type client() :: woody_context:ctx().
 
 -type limit_id() :: limproto_limiter_thrift:'LimitID'().
+-type change_id() :: limproto_limiter_thrift:'LimitChangeID'().
 -type limit_context() :: limproto_limiter_thrift:'LimitContext'().
 -type clock() :: limproto_limiter_thrift:'Clock'().
 -type limit_config_params() :: limproto_config_thrift:'LimitConfigParams'().
@@ -19,6 +23,30 @@
 -spec get(limit_id(), limit_context(), client()) -> woody:result() | no_return().
 get(LimitID, Context, Client) ->
     call('Get', {LimitID, clock(), Context}, Client).
+
+-spec hold(limit_id(), change_id(), limit_context(), client()) -> woody:result() | no_return().
+hold(LimitID, ChangeID, Context, Client) ->
+    Change = #limiter_LimitChange{
+        id = LimitID,
+        change_id = ChangeID
+    },
+    call('Hold', {Change, clock(), Context}, Client).
+
+-spec commit(limit_id(), change_id(), limit_context(), client()) -> woody:result() | no_return().
+commit(LimitID, ChangeID, Context, Client) ->
+    Change = #limiter_LimitChange{
+        id = LimitID,
+        change_id = ChangeID
+    },
+    call('Commit', {Change, clock(), Context}, Client).
+
+-spec rollback(limit_id(), change_id(), limit_context(), client()) -> woody:result() | no_return().
+rollback(LimitID, ChangeID, Context, Client) ->
+    Change = #limiter_LimitChange{
+        id = LimitID,
+        change_id = ChangeID
+    },
+    call('Rollback', {Change, clock(), Context}, Client).
 
 -spec create_config(limit_config_params(), client()) -> woody:result() | no_return().
 create_config(LimitCreateParams, Client) ->

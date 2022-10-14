@@ -21,7 +21,8 @@
 -export([limit_overflow/1]).
 -export([choose_provider_without_limit_overflow/1]).
 -export([provider_limits_exhaust_orderly/1]).
--export([retryable_provider/1]).
+-export([provider_retry/1]).
+-export([limit_exhaust_on_provider_retry/1]).
 
 %% Internal types
 
@@ -46,12 +47,14 @@ groups() ->
             limit_overflow,
             choose_provider_without_limit_overflow,
             provider_limits_exhaust_orderly,
-            retryable_provider
+            provider_retry,
+            limit_exhaust_on_provider_retry
         ]}
     ].
 
 -spec init_per_suite(config()) -> config().
 init_per_suite(C0) ->
+    load_meck_per_suite(),
     C1 = ct_helper:makeup_cfg(
         [
             ct_helper:test_case_name(init),
@@ -64,6 +67,7 @@ init_per_suite(C0) ->
 
 -spec end_per_suite(config()) -> _.
 end_per_suite(C) ->
+    unload_meck_per_suite(),
     ok = ct_payment_system:shutdown(C).
 
 %%
@@ -80,6 +84,7 @@ end_per_group(_, _) ->
 
 -spec init_per_testcase(test_case_name(), config()) -> config().
 init_per_testcase(Name, C) ->
+    load_meck_per_testcase(),
     C1 = ct_helper:makeup_cfg(
         [
             ct_helper:test_case_name(Name),
@@ -92,7 +97,38 @@ init_per_testcase(Name, C) ->
 
 -spec end_per_testcase(test_case_name(), config()) -> _.
 end_per_testcase(_Name, _C) ->
-    ok = ct_helper:unset_context().
+    ok = ct_helper:unset_context(),
+    unload_meck_per_testcase().
+
+load_meck_per_suite() ->
+    Construct = fun(NS, Handler, PartyClient) ->
+        {
+            BackendSpec,
+            _HandlerSpec,
+            ModernizerSpec
+        } = meck:passthrough([NS, Handler, PartyClient]),
+        Options = #{
+            handler => ff_ct_machine,
+            party_client => PartyClient,
+            handler_opts => #{handler => Handler}
+        },
+        HandlerSpec = {{fistful, Options}, #{
+            path => ff_string:join(["/v1/stateproc/", NS]),
+            backend_config => #{schema => ff_server_utils:get_namespace_schema(NS)}
+        }},
+        {BackendSpec, HandlerSpec, ModernizerSpec}
+    end,
+    meck:new(ff_server_utils, [no_link, passthrough]),
+    meck:expect(ff_server_utils, contruct_backend_childspec, Construct).
+
+unload_meck_per_suite() ->
+    meck:unload(ff_server_utils).
+
+load_meck_per_testcase() ->
+    meck:new(ff_ct_machine_options, [no_link, passthrough]).
+
+unload_meck_per_testcase() ->
+    meck:unload(ff_ct_machine_options).
 
 %% Tests
 
@@ -236,8 +272,8 @@ provider_limits_exhaust_orderly(C) ->
     Result = await_final_withdrawal_status(WithdrawalID),
     ?assertMatch({failed, #{code := <<"no_route_found">>}}, Result).
 
--spec retryable_provider(config()) -> test_return().
-retryable_provider(C) ->
+-spec provider_retry(config()) -> test_return().
+provider_retry(C) ->
     Currency = <<"RUB">>,
     Cash = {904000, Currency},
     #{
@@ -263,6 +299,41 @@ retryable_provider(C) ->
     ?assertEqual(WithdrawalID, ff_withdrawal:external_id(Withdrawal)),
     _ = set_retryable_errors(PartyID, []).
 
+-spec limit_exhaust_on_provider_retry(config()) -> test_return().
+limit_exhaust_on_provider_retry(C) ->
+    Activity = {fail, session},
+    GetOptions = fun
+        (ff_withdrawal_machine) -> [Activity];
+        (_) -> []
+    end,
+    meck:expect(ff_ct_machine_options, get_options, GetOptions),
+    Currency = <<"RUB">>,
+    Cash = {904000, Currency},
+    #{
+        wallet_id := WalletID,
+        destination_id := DestinationID,
+        party_id := PartyID
+    } = prepare_standard_environment(Cash, C),
+    _ = set_retryable_errors(PartyID, [<<"authorization_error">>]),
+    WithdrawalID = generate_id(),
+    WithdrawalParams = #{
+        id => WithdrawalID,
+        destination_id => DestinationID,
+        wallet_id => WalletID,
+        body => Cash,
+        external_id => WithdrawalID
+    },
+    ok = ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new()),
+    await_withdrawal_activity(Activity, WithdrawalID),
+    LimitWithdrawal = get_limit_withdrawal({3000000, Currency}, WalletID, DestinationID),
+    ok = ff_limiter_helper:hold_and_commit_limit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID2, generate_id(), LimitWithdrawal, C),
+    ok = ff_withdrawal_machine:call(WithdrawalID, mock_test),
+    ?assertEqual(
+        {failed, #{code => <<"authorization_error">>, sub => #{code => <<"insufficient_funds">>}}},
+        await_final_withdrawal_status(WithdrawalID)
+    ),
+    _ = set_retryable_errors(PartyID, []).
+
 %% Utils
 
 set_retryable_errors(PartyID, ErrorList) ->
@@ -272,14 +343,14 @@ set_retryable_errors(PartyID, ErrorList) ->
         }
     }).
 
-get_limit_amount(Cash, WalletID, DestinationID, LimitID, C) ->
+get_limit_withdrawal(Cash, WalletID, DestinationID) ->
     {ok, WalletMachine} = ff_wallet_machine:get(WalletID),
     Wallet = ff_wallet_machine:wallet(WalletMachine),
     WalletAccount = ff_wallet:account(Wallet),
     {ok, SenderSt} = ff_identity_machine:get(ff_account:identity(WalletAccount)),
     SenderIdentity = ff_identity_machine:identity(SenderSt),
 
-    Withdrawal = #wthd_domain_Withdrawal{
+    #wthd_domain_Withdrawal{
         created_at = ff_codec:marshal(timestamp_ms, ff_time:now()),
         body = ff_dmsl_codec:marshal(cash, Cash),
         destination = ff_adapter_withdrawal_codec:marshal(resource, get_destination_resource(DestinationID)),
@@ -287,7 +358,10 @@ get_limit_amount(Cash, WalletID, DestinationID, LimitID, C) ->
             id => ff_identity:id(SenderIdentity),
             owner_id => ff_identity:party(SenderIdentity)
         })
-    },
+    }.
+
+get_limit_amount(Cash, WalletID, DestinationID, LimitID, C) ->
+    Withdrawal = get_limit_withdrawal(Cash, WalletID, DestinationID),
     ff_limiter_helper:get_limit_amount(LimitID, Withdrawal, C).
 
 get_destination_resource(DestinationID) ->
@@ -334,6 +408,22 @@ await_final_withdrawal_status(WithdrawalID) ->
         genlib_retry:linear(20, 1000)
     ),
     get_withdrawal_status(WithdrawalID).
+
+await_withdrawal_activity(Activity0, WithdrawalID) ->
+    finished = ct_helper:await(
+        finished,
+        fun() ->
+            {ok, Machine} = ff_withdrawal_machine:get(WithdrawalID),
+            Activity1 = ff_withdrawal:activity(ff_withdrawal_machine:withdrawal(Machine)),
+            case Activity0 =:= Activity1 of
+                false ->
+                    {not_finished, Activity1};
+                true ->
+                    finished
+            end
+        end,
+        genlib_retry:linear(20, 1000)
+    ).
 
 create_party(_C) ->
     ID = genlib:bsuuid(),
