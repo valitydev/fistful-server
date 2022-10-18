@@ -5,6 +5,7 @@
 -export([prepare_routes/2]).
 -export([prepare_routes/3]).
 -export([gather_routes/2]).
+-export([gather_routes/3]).
 -export([filter_limit_overflow_routes/3]).
 -export([rollback_routes_limits/3]).
 -export([commit_routes_limits/3]).
@@ -27,8 +28,8 @@
 -type routing_context() :: #{
     domain_revision := domain_revision(),
     identity := identity(),
-    withdrawal => withdrawal(),
-    iteration => pos_integer()
+    iteration := pos_integer(),
+    withdrawal => withdrawal()
 }.
 
 -type routing_state() :: #{
@@ -67,7 +68,7 @@
 -spec prepare_routes(party_varset(), identity(), domain_revision()) ->
     {ok, [route()]} | {error, route_not_found}.
 prepare_routes(PartyVarset, Identity, DomainRevision) ->
-    prepare_routes(PartyVarset, #{identity => Identity, domain_revision => DomainRevision}).
+    prepare_routes(PartyVarset, #{identity => Identity, domain_revision => DomainRevision, iteration => 1}).
 
 -spec prepare_routes(party_varset(), routing_context()) ->
     {ok, [route()]} | {error, route_not_found}.
@@ -78,7 +79,12 @@ prepare_routes(PartyVarset, Context) ->
 
 -spec gather_routes(party_varset(), routing_context()) ->
     routing_state().
-gather_routes(PartyVarset, Context = #{identity := Identity, domain_revision := DomainRevision}) ->
+gather_routes(PartyVarset, Context) ->
+    gather_routes(PartyVarset, Context, []).
+
+-spec gather_routes(party_varset(), routing_context(), [terminal_id()]) ->
+    routing_state().
+gather_routes(PartyVarset, Context = #{identity := Identity, domain_revision := DomainRevision}, ExcludeRoutes) ->
     {ok, PaymentInstitutionID} = ff_party:get_identity_payment_institution_id(Identity),
     {ok, PaymentInstitution} = ff_payment_institution:get(PaymentInstitutionID, PartyVarset, DomainRevision),
     {Routes, RejectContext} = ff_routing_rule:gather_routes(
@@ -87,7 +93,11 @@ gather_routes(PartyVarset, Context = #{identity := Identity, domain_revision := 
         PartyVarset,
         DomainRevision
     ),
-    filter_valid_routes(#{routes => Routes, reject_context => RejectContext}, PartyVarset, Context).
+    FilteredRoutes = lists:filter(
+        fun(Route) -> not lists:member(ff_routing_rule:terminal_id(Route), ExcludeRoutes) end,
+        Routes
+    ),
+    filter_valid_routes(#{routes => FilteredRoutes, reject_context => RejectContext}, PartyVarset, Context).
 
 -spec filter_limit_overflow_routes(routing_state(), party_varset(), routing_context()) ->
     routing_state().
@@ -131,9 +141,9 @@ make_route(ProviderID, TerminalID) ->
 get_provider(#{provider_id := ProviderID}) ->
     ProviderID.
 
--spec get_terminal(route()) -> ff_maybe:maybe(terminal_id()).
-get_terminal(Route) ->
-    maps:get(terminal_id, Route, undefined).
+-spec get_terminal(route()) -> terminal_id().
+get_terminal(#{terminal_id := TerminalID}) ->
+    TerminalID.
 
 -spec merge_withdrawal_terms(
     ff_payouts_provider:provision_terms() | undefined,

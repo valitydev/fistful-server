@@ -6,11 +6,18 @@
 -export([gather_routes/4]).
 -export([log_reject_context/1]).
 
+%% Accessors
+
+-export([provider_id/1]).
+-export([terminal_id/1]).
+
 -type payment_institution() :: ff_payment_institution:payment_institution().
 -type routing_ruleset_ref() :: dmsl_domain_thrift:'RoutingRulesetRef'().
 -type provider_ref() :: dmsl_domain_thrift:'ProviderRef'().
 -type provider() :: dmsl_domain_thrift:'Provider'().
 -type terminal_ref() :: dmsl_domain_thrift:'TerminalRef'().
+-type provider_id() :: dmsl_domain_thrift:'ObjectID'().
+-type terminal_id() :: dmsl_domain_thrift:'ObjectID'().
 -type priority() :: integer().
 -type weight() :: integer().
 -type varset() :: ff_varset:varset().
@@ -41,6 +48,16 @@
 %% Pipeline
 
 -import(ff_pipeline, [do/1, unwrap/1]).
+
+%% Accessors
+
+-spec provider_id(route()) -> provider_id().
+provider_id(#{provider_ref := #domain_ProviderRef{id = ProviderID}}) ->
+    ProviderID.
+
+-spec terminal_id(route()) -> terminal_id().
+terminal_id(#{terminal_ref := #domain_TerminalRef{id = TerminalID}}) ->
+    TerminalID.
 
 %%
 

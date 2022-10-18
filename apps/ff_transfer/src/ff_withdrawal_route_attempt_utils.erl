@@ -20,6 +20,7 @@
 -export([new_route/2]).
 -export([next_route/3]).
 -export([next_routes/3]).
+-export([get_index/1]).
 -export([get_current_session/1]).
 -export([get_current_p_transfer/1]).
 -export([get_current_limit_checks/1]).
@@ -29,13 +30,19 @@
 
 -export([get_sessions/1]).
 -export([get_attempt/1]).
+-export([get_terminals/1]).
+-export([get_terminals_without_current/1]).
 
 -opaque attempts() :: #{
     attempts := #{route_key() => attempt()},
     inversed_routes := [route_key()],
     attempt := non_neg_integer(),
-    current => route_key()
+    current => route_key(),
+    index := index()
 }.
+
+-type index() :: non_neg_integer().
+-define(DEFAULT_INDEX, 1).
 
 -export_type([attempts/0]).
 
@@ -43,7 +50,6 @@
 
 -type p_transfer() :: ff_postings_transfer:transfer().
 -type limit_check_details() :: ff_withdrawal:limit_check_details().
--type account() :: ff_account:account().
 -type route() :: ff_withdrawal_routing:route().
 -type route_key() :: {ff_payouts_provider:id(), ff_payouts_terminal:id()} | unknown.
 -type session() :: ff_withdrawal:session().
@@ -62,7 +68,8 @@ new() ->
     #{
         attempts => #{},
         inversed_routes => [],
-        attempt => 0
+        attempt => 0,
+        index => ?DEFAULT_INDEX
     }.
 
 -spec new_route(route(), attempts()) -> attempts().
@@ -99,6 +106,12 @@ next_routes(Routes, #{attempts := Existing}, _AttemptLimit) ->
             Routes
         )}.
 
+-spec get_index(attempts() | undefined) -> index().
+get_index(undefined) ->
+    ?DEFAULT_INDEX;
+get_index(#{index := Index}) ->
+    Index.
+
 -spec get_current_session(attempts()) -> undefined | session().
 get_current_session(Attempts) ->
     Attempt = current(Attempts),
@@ -122,13 +135,19 @@ update_current_session(Session, Attempts) ->
     },
     update_current(Updated, Attempts).
 
--spec update_current_p_transfer(account(), attempts()) -> attempts().
-update_current_p_transfer(Account, Attempts) ->
+-spec update_current_p_transfer(p_transfer(), attempts()) -> attempts().
+update_current_p_transfer(PTransfer, Attempts = #{index := Index}) ->
     Attempt = current(Attempts),
     Updated = Attempt#{
-        p_transfer => Account
+        p_transfer => PTransfer
     },
-    update_current(Updated, Attempts).
+    NewIndex =
+        case maps:get(status, PTransfer, undefined) of
+            committed -> Index + 1;
+            cancelled -> Index + 1;
+            _ -> Index
+        end,
+    update_current(Updated, Attempts#{index => NewIndex}).
 
 -spec update_current_limit_checks([limit_check_details()], attempts()) -> attempts().
 update_current_limit_checks(LimitChecks, Routes) ->
@@ -159,6 +178,19 @@ get_sessions(#{attempts := Attempts, inversed_routes := InvRoutes}) ->
 -spec get_attempt(attempts()) -> non_neg_integer().
 get_attempt(#{attempt := Attempt}) ->
     Attempt.
+
+-spec get_terminals(attempts()) -> [ff_payouts_terminal:id()].
+get_terminals(#{attempts := Attempts}) ->
+    lists:map(fun({_, TerminalID}) -> TerminalID end, maps:keys(Attempts));
+get_terminals(_) ->
+    [].
+
+-spec get_terminals_without_current(attempts()) -> [ff_payouts_terminal:id()].
+get_terminals_without_current(Attempts = #{current := {_, TerminalID}}) ->
+    TerminalIDs = get_terminals(Attempts),
+    lists:filter(fun(ID) -> ID =/= TerminalID end, TerminalIDs);
+get_terminals_without_current(_) ->
+    [].
 
 %% Internal
 
