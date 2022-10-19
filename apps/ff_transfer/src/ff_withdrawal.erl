@@ -749,7 +749,7 @@ do_process_transfer(routing, Withdrawal) ->
 do_process_transfer(p_transfer_start, Withdrawal) ->
     process_p_transfer_creation(Withdrawal);
 do_process_transfer(p_transfer_prepare, Withdrawal) ->
-    ok = do_rollback_routing(route(Withdrawal), Withdrawal),
+    ok = do_rollback_routing([route(Withdrawal)], Withdrawal),
     Tr = ff_withdrawal_route_attempt_utils:get_current_p_transfer(attempts(Withdrawal)),
     {ok, Events} = ff_postings_transfer:prepare(Tr),
     {continue, [{p_transfer, Ev} || Ev <- Events]};
@@ -795,7 +795,7 @@ process_routing(Withdrawal) ->
 
 -spec process_rollback_routing(withdrawal_state()) -> process_result().
 process_rollback_routing(Withdrawal) ->
-    _ = do_rollback_routing([], Withdrawal),
+    ok = do_rollback_routing([], Withdrawal),
     {undefined, []}.
 
 -spec do_process_routing(withdrawal_state()) -> {ok, [route()]} | {error, Reason} when
@@ -820,16 +820,12 @@ do_process_routing(Withdrawal) ->
     end).
 
 do_rollback_routing(ExcludeRoutes0, Withdrawal) ->
-    do(fun() ->
-        {Varset, Context} = make_routing_varset_and_context(Withdrawal),
-        ExcludeUsedRoutes = ff_withdrawal_route_attempt_utils:get_terminals_without_current(attempts(Withdrawal)),
-        ExcludeRoutes1 =
-            ExcludeUsedRoutes ++ lists:map(fun(R) -> ff_withdrawal_routing:get_terminal(R) end, ExcludeRoutes0),
-        Routes = unwrap(
-            ff_withdrawal_routing:routes(ff_withdrawal_routing:gather_routes(Varset, Context, ExcludeRoutes1))
-        ),
-        rollback_routes_limits(Routes, Varset, Context)
-    end).
+    {Varset, Context} = make_routing_varset_and_context(Withdrawal),
+    ExcludeUsedRoutes = ff_withdrawal_route_attempt_utils:get_terminals_without_current(attempts(Withdrawal)),
+    ExcludeRoutes1 =
+        ExcludeUsedRoutes ++ lists:map(fun(R) -> ff_withdrawal_routing:get_terminal(R) end, ExcludeRoutes0),
+    Routes = ff_withdrawal_routing:get_routes(ff_withdrawal_routing:gather_routes(Varset, Context, ExcludeRoutes1)),
+    rollback_routes_limits(Routes, Varset, Context).
 
 rollback_routes_limits(Routes, Withdrawal) ->
     {Varset, Context} = make_routing_varset_and_context(Withdrawal),

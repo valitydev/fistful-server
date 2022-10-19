@@ -14,6 +14,7 @@
 -export([get_terminal/1]).
 -export([merge_withdrawal_terms/2]).
 -export([routes/1]).
+-export([get_routes/1]).
 -export([log_reject_context/1]).
 
 -import(ff_pipeline, [do/1, unwrap/1]).
@@ -178,6 +179,17 @@ routes(#{routes := Routes = [_ | _]}) ->
     {ok, sort_routes(Routes)};
 routes(_) ->
     {error, route_not_found}.
+
+-spec get_routes(routing_state()) ->
+    [route()].
+get_routes(#{routes := Routes}) ->
+    [
+        make_route(P, T)
+     || #{
+            provider_ref := #domain_ProviderRef{id = P},
+            terminal_ref := #domain_TerminalRef{id = T}
+        } <- Routes
+    ].
 
 -spec sort_routes([routing_rule_route()]) -> [route()].
 sort_routes(RoutingRuleRoutes) ->
