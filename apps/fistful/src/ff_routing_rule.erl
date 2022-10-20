@@ -40,6 +40,7 @@
 
 -type reject_context() :: #{
     varset := varset(),
+    accepted_routes := [route()],
     rejected_routes := [rejected_route()]
 }.
 
@@ -65,6 +66,7 @@ terminal_id(#{terminal_ref := #domain_TerminalRef{id = TerminalID}}) ->
 new_reject_context(VS) ->
     #{
         varset => VS,
+        accepted_routes => [],
         rejected_routes => []
     }.
 
@@ -73,7 +75,10 @@ gather_routes(PaymentInstitution, RoutingRuleTag, VS, Revision) ->
     RejectContext = new_reject_context(VS),
     case do_gather_routes(PaymentInstitution, RoutingRuleTag, VS, Revision) of
         {ok, {AcceptedRoutes, RejectedRoutes}} ->
-            {AcceptedRoutes, RejectContext#{rejected_routes => RejectedRoutes}};
+            {AcceptedRoutes, RejectContext#{
+                accepted_routes => AcceptedRoutes,
+                rejected_routes => RejectedRoutes
+            }};
         {error, misconfiguration} ->
             logger:warning("Routing rule misconfiguration. Varset:~n~p", [VS]),
             {[], RejectContext}
@@ -172,18 +177,14 @@ make_route(Candidate, Revision) ->
 
 -spec log_reject_context(reject_context()) -> ok.
 log_reject_context(RejectContext) ->
-    Level = warning,
-    RejectReason = unknown,
     _ = logger:log(
-        Level,
-        "No route found, reason = ~p, varset: ~p",
-        [RejectReason, maps:get(varset, RejectContext)],
-        logger:get_process_metadata()
-    ),
-    _ = logger:log(
-        Level,
-        "No route found, reason = ~p, rejected routes: ~p",
-        [RejectReason, maps:get(rejected_routes, RejectContext)],
+        info,
+        "Routing reject context: varset: ~p, accepted routes: ~p, rejected routes: ~p",
+        [
+            maps:get(varset, RejectContext),
+            maps:get(accepted_routes, RejectContext),
+            maps:get(rejected_routes, RejectContext)
+        ],
         logger:get_process_metadata()
     ),
     ok.

@@ -94,11 +94,8 @@ gather_routes(PartyVarset, Context = #{identity := Identity, domain_revision := 
         PartyVarset,
         DomainRevision
     ),
-    FilteredRoutes = lists:filter(
-        fun(Route) -> not lists:member(ff_routing_rule:terminal_id(Route), ExcludeRoutes) end,
-        Routes
-    ),
-    filter_valid_routes(#{routes => FilteredRoutes, reject_context => RejectContext}, PartyVarset, Context).
+    State = filter_routes(ExcludeRoutes, #{routes => Routes, reject_context => RejectContext}),
+    filter_valid_routes(State, PartyVarset, Context).
 
 -spec filter_limit_overflow_routes(routing_state(), party_varset(), routing_context()) ->
     routing_state().
@@ -282,6 +279,26 @@ get_route_terms_and_process(
         {error, Error} ->
             {error, Error}
     end.
+
+filter_routes(ExcludeRoutes, #{routes := Routes, reject_context := RejectContext}) ->
+    lists:foldl(
+        fun(Route, State = #{routes := ValidRoutes0, reject_context := RejectContext0}) ->
+            ProviderRef = maps:get(provider_ref, Route),
+            TerminalRef = maps:get(terminal_ref, Route),
+            case not lists:member(ff_routing_rule:terminal_id(Route), ExcludeRoutes) of
+                true ->
+                    ValidRoutes1 = [Route | ValidRoutes0],
+                    State#{routes => ValidRoutes1};
+                false ->
+                    RejectedRoutes0 = maps:get(rejected_routes, RejectContext0),
+                    RejectedRoutes1 = [{ProviderRef, TerminalRef, member_of_exlude_list} | RejectedRoutes0],
+                    RejectContext1 = maps:put(rejected_routes, RejectedRoutes1, RejectContext0),
+                    State#{reject_context => RejectContext1}
+            end
+        end,
+        #{routes => [], reject_context => RejectContext},
+        Routes
+    ).
 
 -spec do_rollback_limits(withdrawal_provision_terms(), party_varset(), route(), routing_context()) ->
     ok.
