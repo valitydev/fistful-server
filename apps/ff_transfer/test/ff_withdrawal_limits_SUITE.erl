@@ -85,27 +85,26 @@ end_per_group(_, _) ->
 -spec init_per_testcase(test_case_name(), config()) -> config().
 init_per_testcase(Name, C0) ->
     load_meck_per_testcase(),
-    PartyID = create_party(C0),
-    C1 = ct_helper:cfg('$party', PartyID, C0),
+    C1 = ct_helper:makeup_cfg(
+        [
+            ct_helper:test_case_name(Name),
+            ct_helper:woody_ctx()
+        ],
+        C0
+    ),
+    ok = ct_helper:set_context(C1),
+    PartyID = create_party(C1),
+    C2 = ct_helper:cfg('$party', PartyID, C1),
     case Name of
         Name when Name =:= provider_retry orelse Name =:= limit_exhaust_on_provider_retry ->
             _ = set_retryable_errors(PartyID, [<<"authorization_error">>]);
         _ ->
             ok
     end,
-    C2 = ct_helper:makeup_cfg(
-        [
-            ct_helper:test_case_name(Name),
-            ct_helper:woody_ctx()
-        ],
-        C1
-    ),
-    ok = ct_helper:set_context(C2),
     C2.
 
 -spec end_per_testcase(test_case_name(), config()) -> _.
 end_per_testcase(Name, C) ->
-    ok = ct_helper:unset_context(),
     case Name of
         Name when Name =:= provider_retry orelse Name =:= limit_exhaust_on_provider_retry ->
             PartyID = ct_helper:cfg('$party', C),
@@ -113,6 +112,7 @@ end_per_testcase(Name, C) ->
         _ ->
             ok
     end,
+    ok = ct_helper:unset_context(),
     unload_meck_per_testcase().
 
 load_meck_per_suite() ->
