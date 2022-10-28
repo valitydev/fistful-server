@@ -83,21 +83,36 @@ end_per_group(_, _) ->
 %%
 
 -spec init_per_testcase(test_case_name(), config()) -> config().
-init_per_testcase(Name, C) ->
+init_per_testcase(Name, C0) ->
     load_meck_per_testcase(),
-    C1 = ct_helper:makeup_cfg(
+    PartyID = create_party(C0),
+    C1 = ct_helper:cfg('$party', PartyID, C0),
+    case Name of
+        Name when Name =:= provider_retry orelse Name =:= limit_exhaust_on_provider_retry ->
+            _ = set_retryable_errors(PartyID, [<<"authorization_error">>]);
+        _ ->
+            ok
+    end,
+    C2 = ct_helper:makeup_cfg(
         [
             ct_helper:test_case_name(Name),
             ct_helper:woody_ctx()
         ],
-        C
+        C1
     ),
-    ok = ct_helper:set_context(C1),
-    C1.
+    ok = ct_helper:set_context(C2),
+    C2.
 
 -spec end_per_testcase(test_case_name(), config()) -> _.
-end_per_testcase(_Name, _C) ->
+end_per_testcase(Name, C) ->
     ok = ct_helper:unset_context(),
+    case Name of
+        Name when Name =:= provider_retry orelse Name =:= limit_exhaust_on_provider_retry ->
+            PartyID = ct_helper:cfg('$party', C),
+            _ = set_retryable_errors(PartyID, []);
+        _ ->
+            ok
+    end,
     unload_meck_per_testcase().
 
 load_meck_per_suite() ->
@@ -278,10 +293,8 @@ provider_retry(C) ->
     Cash = {904000, Currency},
     #{
         wallet_id := WalletID,
-        destination_id := DestinationID,
-        party_id := PartyID
+        destination_id := DestinationID
     } = prepare_standard_environment(Cash, C),
-    _ = set_retryable_errors(PartyID, [<<"authorization_error">>]),
     WithdrawalID = generate_id(),
     WithdrawalParams = #{
         id => WithdrawalID,
@@ -296,8 +309,7 @@ provider_retry(C) ->
     ?assertEqual(WalletID, ff_withdrawal:wallet_id(Withdrawal)),
     ?assertEqual(DestinationID, ff_withdrawal:destination_id(Withdrawal)),
     ?assertEqual(Cash, ff_withdrawal:body(Withdrawal)),
-    ?assertEqual(WithdrawalID, ff_withdrawal:external_id(Withdrawal)),
-    _ = set_retryable_errors(PartyID, []).
+    ?assertEqual(WithdrawalID, ff_withdrawal:external_id(Withdrawal)).
 
 -spec limit_exhaust_on_provider_retry(config()) -> test_return().
 limit_exhaust_on_provider_retry(C) ->
@@ -311,10 +323,8 @@ limit_exhaust_on_provider_retry(C) ->
     Cash = {904000, Currency},
     #{
         wallet_id := WalletID,
-        destination_id := DestinationID,
-        party_id := PartyID
+        destination_id := DestinationID
     } = prepare_standard_environment(Cash, C),
-    _ = set_retryable_errors(PartyID, [<<"authorization_error">>]),
     WithdrawalID = generate_id(),
     WithdrawalParams = #{
         id => WithdrawalID,
@@ -331,8 +341,7 @@ limit_exhaust_on_provider_retry(C) ->
     ?assertEqual(
         {failed, #{code => <<"authorization_error">>, sub => #{code => <<"insufficient_funds">>}}},
         await_final_withdrawal_status(WithdrawalID)
-    ),
-    _ = set_retryable_errors(PartyID, []).
+    ).
 
 %% Utils
 
@@ -371,15 +380,15 @@ get_destination_resource(DestinationID) ->
     Resource.
 
 prepare_standard_environment({_Amount, Currency} = WithdrawalCash, C) ->
-    Party = create_party(C),
-    IdentityID = create_person_identity(Party, C),
+    PartyID = ct_helper:cfg('$party', C),
+    IdentityID = create_person_identity(PartyID, C),
     WalletID = create_wallet(IdentityID, <<"My wallet">>, Currency, C),
     ok = await_wallet_balance({0, Currency}, WalletID),
     DestinationID = create_destination(IdentityID, Currency, C),
     ok = set_wallet_balance(WithdrawalCash, WalletID),
     #{
         identity_id => IdentityID,
-        party_id => Party,
+        party_id => PartyID,
         wallet_id => WalletID,
         destination_id => DestinationID
     }.

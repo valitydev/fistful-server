@@ -179,11 +179,11 @@ make_route(Candidate, Revision) ->
 log_reject_context(RejectContext) ->
     _ = logger:log(
         info,
-        "Routing reject context: varset: ~p, accepted routes: ~p, rejected routes: ~p",
+        "Routing reject context: rejected routes: ~p, accepted routes: ~p, varset: ~p",
         [
-            maps:get(varset, RejectContext),
+            maps:get(rejected_routes, RejectContext),
             maps:get(accepted_routes, RejectContext),
-            maps:get(rejected_routes, RejectContext)
+            maps:get(varset, RejectContext)
         ],
         logger:get_process_metadata()
     ),

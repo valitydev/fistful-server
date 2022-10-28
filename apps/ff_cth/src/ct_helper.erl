@@ -3,6 +3,7 @@
 -include_lib("common_test/include/ct.hrl").
 
 -export([cfg/2]).
+-export([cfg/3]).
 
 -export([start_apps/1]).
 -export([start_app/1]).

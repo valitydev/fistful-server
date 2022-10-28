@@ -94,7 +94,7 @@ gather_routes(PartyVarset, Context = #{identity := Identity, domain_revision := 
         PartyVarset,
         DomainRevision
     ),
-    State = filter_routes(ExcludeRoutes, #{routes => Routes, reject_context => RejectContext}),
+    State = exclude_routes(#{routes => Routes, reject_context => RejectContext}, ExcludeRoutes),
     filter_valid_routes(State, PartyVarset, Context).
 
 -spec filter_limit_overflow_routes(routing_state(), party_varset(), routing_context()) ->
@@ -280,7 +280,7 @@ get_route_terms_and_process(
             {error, Error}
     end.
 
-filter_routes(ExcludeRoutes, #{routes := Routes, reject_context := RejectContext}) ->
+exclude_routes(#{routes := Routes, reject_context := RejectContext}, ExcludeRoutes) ->
     lists:foldl(
         fun(Route, State = #{routes := ValidRoutes0, reject_context := RejectContext0}) ->
             ProviderRef = maps:get(provider_ref, Route),

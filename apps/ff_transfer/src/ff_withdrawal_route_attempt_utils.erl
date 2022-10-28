@@ -31,7 +31,7 @@
 -export([get_sessions/1]).
 -export([get_attempt/1]).
 -export([get_terminals/1]).
--export([get_terminals_without_current/1]).
+-export([get_current_terminal/1]).
 
 -opaque attempts() :: #{
     attempts := #{route_key() => attempt()},
@@ -185,12 +185,11 @@ get_terminals(#{attempts := Attempts}) ->
 get_terminals(_) ->
     [].
 
--spec get_terminals_without_current(attempts()) -> [ff_payouts_terminal:id()].
-get_terminals_without_current(Attempts = #{current := {_, TerminalID}}) ->
-    TerminalIDs = get_terminals(Attempts),
-    lists:filter(fun(ID) -> ID =/= TerminalID end, TerminalIDs);
-get_terminals_without_current(_) ->
-    [].
+-spec get_current_terminal(attempts()) -> undefined | ff_payouts_terminal:id().
+get_current_terminal(#{current := {_, TerminalID}}) ->
+    TerminalID;
+get_current_terminal(_) ->
+    undefined.
 
 %% Internal
 
