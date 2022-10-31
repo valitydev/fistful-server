@@ -54,7 +54,7 @@ groups() ->
 
 -spec init_per_suite(config()) -> config().
 init_per_suite(C0) ->
-    load_meck_per_suite(),
+    ff_ct_machine:load_per_suite(),
     C1 = ct_helper:makeup_cfg(
         [
             ct_helper:test_case_name(init),
@@ -67,7 +67,7 @@ init_per_suite(C0) ->
 
 -spec end_per_suite(config()) -> _.
 end_per_suite(C) ->
-    unload_meck_per_suite(),
+    ff_ct_machine:unload_per_suite(),
     ok = ct_payment_system:shutdown(C).
 
 %%
@@ -114,30 +114,6 @@ end_per_testcase(Name, C) ->
     end,
     ok = ct_helper:unset_context(),
     unload_meck_per_testcase().
-
-load_meck_per_suite() ->
-    Construct = fun(NS, Handler, PartyClient) ->
-        {
-            BackendSpec,
-            _HandlerSpec,
-            ModernizerSpec
-        } = meck:passthrough([NS, Handler, PartyClient]),
-        Options = #{
-            handler => ff_ct_machine,
-            party_client => PartyClient,
-            handler_opts => #{handler => Handler}
-        },
-        HandlerSpec = {{fistful, Options}, #{
-            path => ff_string:join(["/v1/stateproc/", NS]),
-            backend_config => #{schema => ff_server_utils:get_namespace_schema(NS)}
-        }},
-        {BackendSpec, HandlerSpec, ModernizerSpec}
-    end,
-    meck:new(ff_server_utils, [no_link, passthrough]),
-    meck:expect(ff_server_utils, contruct_backend_childspec, Construct).
-
-unload_meck_per_suite() ->
-    meck:unload(ff_server_utils).
 
 load_meck_per_testcase() ->
     meck:new(ff_ct_machine_options, [no_link, passthrough]).

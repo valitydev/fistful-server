@@ -4,124 +4,47 @@
 
 -module(ff_ct_machine).
 
--type id() :: machinery:id().
--type state() :: map().
--type ctx() :: ff_entity_context:context().
-% -type event_range() :: {After :: non_neg_integer() | undefined, Limit :: non_neg_integer() | undefined}.
+-export([load_per_suite/0]).
+-export([unload_per_suite/0]).
 
--type st() :: ff_machine:st(state()).
+-spec load_per_suite() -> ok.
+load_per_suite() ->
+    meck:new(machinery, [no_link, passthrough]),
+    meck:expect(machinery, dispatch_signal, fun dispatch_signal/4),
+    meck:expect(machinery, dispatch_call, fun dispatch_call/4).
 
--type params() :: map().
+-spec unload_per_suite() -> ok.
+unload_per_suite() ->
+    meck:unload(machinery).
 
--type repair_error() :: ff_repair:repair_error().
--type repair_response() :: ff_repair:repair_response().
-
--export_type([id/0]).
--export_type([params/0]).
--export_type([repair_error/0]).
--export_type([repair_response/0]).
-
-%% Accessors
-
--export([state/1]).
--export([ctx/1]).
-
-%% Machinery
-
--behaviour(machinery).
-
--export([init/4]).
--export([process_timeout/3]).
--export([process_repair/4]).
--export([process_call/4]).
--export([process_notification/4]).
-
-%% Accessors
-
--spec state(st()) -> state().
-state(St) ->
-    ff_machine:model(St).
-
--spec ctx(st()) -> ctx().
-ctx(St) ->
-    ff_machine:ctx(St).
-
-%% machinery
-
--type event() :: tuple().
-
--type machine() :: ff_machine:machine(event()).
--type result() :: ff_machine:result(event()).
--type handler_opts() :: machinery:handler_opts(_).
--type handler_args() :: machinery:handler_args(_).
-
--spec init({[event()], ctx()} | [event()], machine(), _, handler_opts()) -> result().
-init(InitData, Machine, Args, #{handler := Handler}) ->
-    machinery:dispatch_signal(
-        {init, InitData},
-        Machine,
-        {Handler, Args},
-        #{}
-    ).
-
--spec process_timeout(machine(), _, handler_opts()) -> result().
-process_timeout(Machine, Args, #{handler := Handler}) ->
+dispatch_signal({init, Args}, Machine, {Handler, HandlerArgs}, Opts) ->
+    Handler:init(Args, Machine, HandlerArgs, Opts);
+dispatch_signal(timeout, Machine, {Handler, HandlerArgs}, Opts) when Handler =/= fistful ->
     do_if_in_options(
         Machine,
         Handler,
         fun() -> #{} end,
         fun() ->
-            machinery:dispatch_signal(
-                timeout,
-                Machine,
-                {Handler, Args},
-                #{}
-            )
+            Handler:process_timeout(Machine, HandlerArgs, Opts)
         end
-    ).
+    );
+dispatch_signal(timeout, Machine, {Handler, HandlerArgs}, Opts) ->
+    Handler:process_timeout(Machine, HandlerArgs, Opts);
+dispatch_signal({notification, Args}, Machine, {Handler, HandlerArgs}, Opts) ->
+    Handler:process_notification(Args, Machine, HandlerArgs, Opts).
 
--spec process_call(_CallArgs, machine(), _, handler_opts()) -> {ok, result()}.
-process_call(mock_test, Machine, Args, #{handler := Handler}) ->
+dispatch_call(mock_test, Machine, {Handler, HandlerArgs}, Opts) when Handler =/= fistful ->
     Result = do_if_in_options(
         Machine,
         Handler,
         fun() ->
-            machinery:dispatch_signal(
-                timeout,
-                Machine,
-                {Handler, Args},
-                #{}
-            )
+            Handler:process_timeout(Machine, HandlerArgs, Opts)
         end,
         fun() -> #{} end
     ),
     {ok, Result};
-process_call(CallArgs, Machine, Args, #{handler := Handler}) ->
-    machinery:dispatch_call(
-        CallArgs,
-        Machine,
-        {Handler, Args},
-        #{}
-    ).
-
--spec process_repair(ff_repair:scenario(), machine(), handler_args(), handler_opts()) ->
-    {ok, {repair_response(), result()}} | {error, repair_error()}.
-process_repair(Scenario, Machine, Args, #{handler := Handler}) ->
-    machinery:dispatch_repair(
-        Scenario,
-        Machine,
-        {Handler, Args},
-        #{}
-    ).
-
--spec process_notification(_, machine(), handler_args(), handler_opts()) -> result().
-process_notification(NotificationArgs, Machine, Args, #{handler := Handler}) ->
-    machinery:dispatch_signal(
-        {notification, NotificationArgs},
-        Machine,
-        {Handler, Args},
-        #{}
-    ).
+dispatch_call(Args, Machine, {Handler, HandlerArgs}, Opts) ->
+    Handler:process_call(Args, Machine, HandlerArgs, Opts).
 
 do_if_in_options(Machine, Handler, YesFunc, NoFunc) ->
     case ff_ct_machine_options:get_options(Handler) of
