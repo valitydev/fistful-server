@@ -20,7 +20,7 @@ unload_per_suite() ->
 dispatch_signal({init, Args}, Machine, {Handler, HandlerArgs}, Opts) ->
     Handler:init(Args, Machine, HandlerArgs, Opts);
 dispatch_signal(timeout, Machine, {Handler, HandlerArgs}, Opts) when Handler =/= fistful ->
-    do_if_in_options(
+    do_if_enter(
         Machine,
         Handler,
         fun() -> #{} end,
@@ -33,8 +33,8 @@ dispatch_signal(timeout, Machine, {Handler, HandlerArgs}, Opts) ->
 dispatch_signal({notification, Args}, Machine, {Handler, HandlerArgs}, Opts) ->
     Handler:process_notification(Args, Machine, HandlerArgs, Opts).
 
-dispatch_call(mock_test, Machine, {Handler, HandlerArgs}, Opts) when Handler =/= fistful ->
-    Result = do_if_in_options(
+dispatch_call(release, Machine, {Handler, HandlerArgs}, Opts) when Handler =/= fistful ->
+    Result = do_if_enter(
         Machine,
         Handler,
         fun() ->
@@ -46,13 +46,14 @@ dispatch_call(mock_test, Machine, {Handler, HandlerArgs}, Opts) when Handler =/=
 dispatch_call(Args, Machine, {Handler, HandlerArgs}, Opts) ->
     Handler:process_call(Args, Machine, HandlerArgs, Opts).
 
-do_if_in_options(Machine, Handler, YesFunc, NoFunc) ->
-    case ff_ct_machine_options:get_options(Handler) of
-        BreakPoints when is_list(BreakPoints), length(BreakPoints) > 0 ->
-            case lists:member(apply(Handler, activity, [Machine]), BreakPoints) of
-                true -> YesFunc();
-                false -> NoFunc()
-            end;
-        _ ->
-            NoFunc()
+do_if_enter(Machine, Handler, YesFunc, NoFunc) ->
+    Activity = try
+        apply(Handler, activity, [Machine])
+    catch
+        error:undef ->
+            undefined
+    end,
+    case ff_ct_barrier:enter(Activity, Handler, Machine) of
+        true -> YesFunc();
+        false -> NoFunc()
     end.

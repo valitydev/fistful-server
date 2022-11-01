@@ -84,7 +84,7 @@ end_per_group(_, _) ->
 
 -spec init_per_testcase(test_case_name(), config()) -> config().
 init_per_testcase(Name, C0) ->
-    load_meck_per_testcase(),
+    ff_ct_barrier:load(),
     C1 = ct_helper:makeup_cfg(
         [
             ct_helper:test_case_name(Name),
@@ -113,13 +113,7 @@ end_per_testcase(Name, C) ->
             ok
     end,
     ok = ct_helper:unset_context(),
-    unload_meck_per_testcase().
-
-load_meck_per_testcase() ->
-    meck:new(ff_ct_machine_options, [no_link, passthrough]).
-
-unload_meck_per_testcase() ->
-    meck:unload(ff_ct_machine_options).
+    ff_ct_barrier:unload().
 
 %% Tests
 
@@ -289,12 +283,6 @@ provider_retry(C) ->
 
 -spec limit_exhaust_on_provider_retry(config()) -> test_return().
 limit_exhaust_on_provider_retry(C) ->
-    Activity = {fail, session},
-    GetOptions = fun
-        (ff_withdrawal_machine) -> [Activity];
-        (_) -> []
-    end,
-    meck:expect(ff_ct_machine_options, get_options, GetOptions),
     Currency = <<"RUB">>,
     Cash = {904000, Currency},
     #{
@@ -309,11 +297,23 @@ limit_exhaust_on_provider_retry(C) ->
         body => Cash,
         external_id => WithdrawalID
     },
+    Activity = {fail, session},
+    Enter = fun
+        (A, ff_withdrawal_machine, Machine) ->
+            Withdrawal = ff_machine:model(ff_machine:collapse(ff_withdrawal, Machine)),
+            ID = ff_withdrawal:id(Withdrawal),
+            case {ID, A} of
+                {WithdrawalID, Activity} -> true;
+                _ -> false
+            end;
+        (_A, _Handler, _Machine) -> false
+    end,
+    ok = ff_ct_barrier:init(Enter),
     ok = ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new()),
     await_withdrawal_activity(Activity, WithdrawalID),
     LimitWithdrawal = get_limit_withdrawal({3000000, Currency}, WalletID, DestinationID),
     ok = ff_limiter_helper:hold_and_commit_limit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID2, generate_id(), LimitWithdrawal, C),
-    ok = ff_withdrawal_machine:call(WithdrawalID, mock_test),
+    ok = ff_ct_barrier:release(WithdrawalID, ff_withdrawal_machine),
     ?assertEqual(
         {failed, #{code => <<"authorization_error">>, sub => #{code => <<"insufficient_funds">>}}},
         await_final_withdrawal_status(WithdrawalID)
