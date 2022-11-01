@@ -23,6 +23,7 @@
 -export([provider_limits_exhaust_orderly/1]).
 -export([provider_retry/1]).
 -export([limit_exhaust_on_provider_retry/1]).
+-export([first_limit_exhaust_on_provider_retry/1]).
 
 %% Internal types
 
@@ -48,7 +49,8 @@ groups() ->
             choose_provider_without_limit_overflow,
             provider_limits_exhaust_orderly,
             provider_retry,
-            limit_exhaust_on_provider_retry
+            limit_exhaust_on_provider_retry,
+            first_limit_exhaust_on_provider_retry
         ]}
     ].
 
@@ -96,7 +98,11 @@ init_per_testcase(Name, C0) ->
     PartyID = create_party(C1),
     C2 = ct_helper:cfg('$party', PartyID, C1),
     case Name of
-        Name when Name =:= provider_retry orelse Name =:= limit_exhaust_on_provider_retry ->
+        Name when
+            Name =:= provider_retry orelse
+                Name =:= limit_exhaust_on_provider_retry orelse
+                Name =:= first_limit_exhaust_on_provider_retry
+        ->
             _ = set_retryable_errors(PartyID, [<<"authorization_error">>]);
         _ ->
             ok
@@ -106,7 +112,11 @@ init_per_testcase(Name, C0) ->
 -spec end_per_testcase(test_case_name(), config()) -> _.
 end_per_testcase(Name, C) ->
     case Name of
-        Name when Name =:= provider_retry orelse Name =:= limit_exhaust_on_provider_retry ->
+        Name when
+            Name =:= provider_retry orelse
+                Name =:= limit_exhaust_on_provider_retry orelse
+                Name =:= first_limit_exhaust_on_provider_retry
+        ->
             PartyID = ct_helper:cfg('$party', C),
             _ = set_retryable_errors(PartyID, []);
         _ ->
@@ -283,17 +293,27 @@ provider_retry(C) ->
 
 -spec limit_exhaust_on_provider_retry(config()) -> test_return().
 limit_exhaust_on_provider_retry(C) ->
+    ?assertEqual(
+        {failed, #{code => <<"authorization_error">>, sub => #{code => <<"insufficient_funds">>}}},
+        await_provider_retry(904000, 3000000, 4000000, C)
+    ).
+
+-spec first_limit_exhaust_on_provider_retry(config()) -> test_return().
+first_limit_exhaust_on_provider_retry(C) ->
+    ?assertEqual(succeeded, await_provider_retry(905000, 3001000, 4000000, C)).
+
+await_provider_retry(FirstAmount, SecondAmount, TotalAmount, C) ->
     Currency = <<"RUB">>,
     #{
         wallet_id := WalletID,
         destination_id := DestinationID
-    } = prepare_standard_environment({4000000, Currency}, C),
+    } = prepare_standard_environment({TotalAmount, Currency}, C),
     WithdrawalID1 = generate_id(),
     WithdrawalParams1 = #{
         id => WithdrawalID1,
         destination_id => DestinationID,
         wallet_id => WalletID,
-        body => {904000, Currency},
+        body => {FirstAmount, Currency},
         external_id => WithdrawalID1
     },
     WithdrawalID2 = generate_id(),
@@ -301,7 +321,7 @@ limit_exhaust_on_provider_retry(C) ->
         id => WithdrawalID2,
         destination_id => DestinationID,
         wallet_id => WalletID,
-        body => {3000000, Currency},
+        body => {SecondAmount, Currency},
         external_id => WithdrawalID2
     },
     Activity = {fail, session},
@@ -324,10 +344,7 @@ limit_exhaust_on_provider_retry(C) ->
     ok = ff_ct_barrier:release(WithdrawalID2, ff_withdrawal_machine),
     ?assertEqual(succeeded, await_final_withdrawal_status(WithdrawalID2)),
     ok = ff_ct_barrier:release(WithdrawalID1, ff_withdrawal_machine),
-    ?assertEqual(
-        {failed, #{code => <<"authorization_error">>, sub => #{code => <<"insufficient_funds">>}}},
-        await_final_withdrawal_status(WithdrawalID1)
-    ).
+    await_final_withdrawal_status(WithdrawalID1).
 
 %% Utils
 

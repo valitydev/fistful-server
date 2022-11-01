@@ -469,6 +469,14 @@ domain_config(Options) ->
                     ?ruleset(?PAYINST1_ROUTING_POLICIES + 21)
                 ),
                 delegate(
+                    condition(cost_in, {905000, <<"RUB">>}),
+                    ?ruleset(?PAYINST1_ROUTING_POLICIES + 22)
+                ),
+                delegate(
+                    condition(cost_in, {3001000, <<"RUB">>}),
+                    ?ruleset(?PAYINST1_ROUTING_POLICIES + 23)
+                ),
+                delegate(
                     {condition,
                         {payment_tool,
                             {bank_card, #domain_BankCardCondition{
@@ -611,6 +619,21 @@ domain_config(Options) ->
             ?ruleset(?PAYINST1_ROUTING_POLICIES + 21),
             {candidates, [
                 candidate({constant, true}, ?trm(2400))
+            ]}
+        ),
+
+        routing_ruleset(
+            ?ruleset(?PAYINST1_ROUTING_POLICIES + 22),
+            {candidates, [
+                candidate({constant, true}, ?trm(2500), 4000),
+                candidate({constant, true}, ?trm(2600), 1000)
+            ]}
+        ),
+
+        routing_ruleset(
+            ?ruleset(?PAYINST1_ROUTING_POLICIES + 23),
+            {candidates, [
+                candidate({constant, true}, ?trm(2700))
             ]}
         ),
 
@@ -969,6 +992,51 @@ domain_config(Options) ->
                         turnover_limit =
                             {value, [
                                 ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID2, 3000000)
+                            ]}
+                    }
+                }
+            }
+        ),
+
+        ct_domain:withdrawal_terminal(
+            ?trm(2500),
+            ?prv(4),
+            #domain_ProvisionTermSet{
+                wallet = #domain_WalletProvisionTerms{
+                    withdrawals = #domain_WithdrawalProvisionTerms{
+                        turnover_limit =
+                            {value, [
+                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID3, 2000000)
+                            ]}
+                    }
+                }
+            }
+        ),
+
+        ct_domain:withdrawal_terminal(
+            ?trm(2600),
+            ?prv(5),
+            #domain_ProvisionTermSet{
+                wallet = #domain_WalletProvisionTerms{
+                    withdrawals = #domain_WithdrawalProvisionTerms{
+                        turnover_limit =
+                            {value, [
+                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID4, 3000000)
+                            ]}
+                    }
+                }
+            }
+        ),
+
+        ct_domain:withdrawal_terminal(
+            ?trm(2700),
+            ?prv(5),
+            #domain_ProvisionTermSet{
+                wallet = #domain_WalletProvisionTerms{
+                    withdrawals = #domain_WithdrawalProvisionTerms{
+                        turnover_limit =
+                            {value, [
+                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID3, 4000000)
                             ]}
                     }
                 }
