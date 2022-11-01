@@ -4,6 +4,8 @@
 
 -module(ff_ct_machine).
 
+-dialyzer({nowarn_function, do_if_enter/4}).
+
 -export([load_per_suite/0]).
 -export([unload_per_suite/0]).
 
@@ -47,12 +49,13 @@ dispatch_call(Args, Machine, {Handler, HandlerArgs}, Opts) ->
     Handler:process_call(Args, Machine, HandlerArgs, Opts).
 
 do_if_enter(Machine, Handler, YesFunc, NoFunc) ->
-    Activity = try
-        apply(Handler, activity, [Machine])
-    catch
-        error:undef ->
-            undefined
-    end,
+    Activity =
+        try
+            apply(Handler, activity, [Machine])
+        catch
+            error:undef ->
+                undefined
+        end,
     case ff_ct_barrier:enter(Activity, Handler, Machine) of
         true -> YesFunc();
         false -> NoFunc()

@@ -284,18 +284,25 @@ provider_retry(C) ->
 -spec limit_exhaust_on_provider_retry(config()) -> test_return().
 limit_exhaust_on_provider_retry(C) ->
     Currency = <<"RUB">>,
-    Cash = {904000, Currency},
     #{
         wallet_id := WalletID,
         destination_id := DestinationID
-    } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
-    WithdrawalParams = #{
-        id => WithdrawalID,
+    } = prepare_standard_environment({4000000, Currency}, C),
+    WithdrawalID1 = generate_id(),
+    WithdrawalParams1 = #{
+        id => WithdrawalID1,
         destination_id => DestinationID,
         wallet_id => WalletID,
-        body => Cash,
-        external_id => WithdrawalID
+        body => {904000, Currency},
+        external_id => WithdrawalID1
+    },
+    WithdrawalID2 = generate_id(),
+    WithdrawalParams2 = #{
+        id => WithdrawalID2,
+        destination_id => DestinationID,
+        wallet_id => WalletID,
+        body => {3000000, Currency},
+        external_id => WithdrawalID2
     },
     Activity = {fail, session},
     Enter = fun
@@ -303,20 +310,23 @@ limit_exhaust_on_provider_retry(C) ->
             Withdrawal = ff_machine:model(ff_machine:collapse(ff_withdrawal, Machine)),
             ID = ff_withdrawal:id(Withdrawal),
             case {ID, A} of
-                {WithdrawalID, Activity} -> true;
+                {WithdrawalID1, Activity} -> true;
+                {WithdrawalID2, routing} -> true;
                 _ -> false
             end;
-        (_A, _Handler, _Machine) -> false
+        (_A, _Handler, _Machine) ->
+            false
     end,
     ok = ff_ct_barrier:init(Enter),
-    ok = ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new()),
-    await_withdrawal_activity(Activity, WithdrawalID),
-    LimitWithdrawal = get_limit_withdrawal({3000000, Currency}, WalletID, DestinationID),
-    ok = ff_limiter_helper:hold_and_commit_limit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID2, generate_id(), LimitWithdrawal, C),
-    ok = ff_ct_barrier:release(WithdrawalID, ff_withdrawal_machine),
+    ok = ff_withdrawal_machine:create(WithdrawalParams1, ff_entity_context:new()),
+    ok = ff_withdrawal_machine:create(WithdrawalParams2, ff_entity_context:new()),
+    await_withdrawal_activity(Activity, WithdrawalID1),
+    ok = ff_ct_barrier:release(WithdrawalID2, ff_withdrawal_machine),
+    ?assertEqual(succeeded, await_final_withdrawal_status(WithdrawalID2)),
+    ok = ff_ct_barrier:release(WithdrawalID1, ff_withdrawal_machine),
     ?assertEqual(
         {failed, #{code => <<"authorization_error">>, sub => #{code => <<"insufficient_funds">>}}},
-        await_final_withdrawal_status(WithdrawalID)
+        await_final_withdrawal_status(WithdrawalID1)
     ).
 
 %% Utils
