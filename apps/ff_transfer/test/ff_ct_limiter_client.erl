@@ -3,9 +3,6 @@
 -include_lib("limiter_proto/include/limproto_limiter_thrift.hrl").
 
 -export([get/3]).
--export([hold/4]).
--export([commit/4]).
--export([rollback/4]).
 
 -export([create_config/2]).
 -export([get_config/2]).
