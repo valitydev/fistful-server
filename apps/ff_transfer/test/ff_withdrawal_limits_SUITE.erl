@@ -86,17 +86,17 @@ end_per_group(_, _) ->
 
 -spec init_per_testcase(test_case_name(), config()) -> config().
 init_per_testcase(Name, C0) ->
-    ff_ct_barrier:load(),
-    C1 = ct_helper:makeup_cfg(
+    C1 = ff_ct_barrier:load(C0),
+    C2 = ct_helper:makeup_cfg(
         [
             ct_helper:test_case_name(Name),
             ct_helper:woody_ctx()
         ],
-        C0
+        C1
     ),
-    ok = ct_helper:set_context(C1),
-    PartyID = create_party(C1),
-    C2 = ct_helper:cfg('$party', PartyID, C1),
+    ok = ct_helper:set_context(C2),
+    PartyID = create_party(C2),
+    C3 = ct_helper:cfg('$party', PartyID, C2),
     case Name of
         Name when
             Name =:= provider_retry orelse
@@ -107,7 +107,7 @@ init_per_testcase(Name, C0) ->
         _ ->
             ok
     end,
-    C2.
+    C3.
 
 -spec end_per_testcase(test_case_name(), config()) -> _.
 end_per_testcase(Name, C) ->
@@ -123,7 +123,7 @@ end_per_testcase(Name, C) ->
             ok
     end,
     ok = ct_helper:unset_context(),
-    ff_ct_barrier:unload().
+    ff_ct_barrier:unload(C).
 
 %% Tests
 
@@ -326,24 +326,25 @@ await_provider_retry(FirstAmount, SecondAmount, TotalAmount, C) ->
     },
     Activity = {fail, session},
     Enter = fun
-        (A, ff_withdrawal_machine, Machine) ->
+        (ff_withdrawal_machine, Machine) ->
             Withdrawal = ff_machine:model(ff_machine:collapse(ff_withdrawal, Machine)),
             ID = ff_withdrawal:id(Withdrawal),
+            A = ff_withdrawal:activity(Withdrawal),
             case {ID, A} of
                 {WithdrawalID1, Activity} -> true;
                 {WithdrawalID2, routing} -> true;
                 _ -> false
             end;
-        (_A, _Handler, _Machine) ->
+        (_Handler, _Machine) ->
             false
     end,
-    ok = ff_ct_barrier:init(Enter),
+    ok = ff_ct_barrier:init_barrier(Enter),
     ok = ff_withdrawal_machine:create(WithdrawalParams1, ff_entity_context:new()),
     ok = ff_withdrawal_machine:create(WithdrawalParams2, ff_entity_context:new()),
     await_withdrawal_activity(Activity, WithdrawalID1),
-    ok = ff_ct_barrier:release(WithdrawalID2, ff_withdrawal_machine),
+    _ = ff_ct_barrier:release({WithdrawalID2, ff_withdrawal_machine}, C),
     ?assertEqual(succeeded, await_final_withdrawal_status(WithdrawalID2)),
-    ok = ff_ct_barrier:release(WithdrawalID1, ff_withdrawal_machine),
+    _ = ff_ct_barrier:release({WithdrawalID1, ff_withdrawal_machine}, C),
     await_final_withdrawal_status(WithdrawalID1).
 
 %% Utils

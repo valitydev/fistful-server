@@ -4,7 +4,7 @@
 
 -module(ff_ct_machine).
 
--dialyzer({nowarn_function, do_if_enter/4}).
+-dialyzer({nowarn_function, dispatch_signal/4}).
 
 -export([load_per_suite/0]).
 -export([unload_per_suite/0]).
@@ -22,41 +22,15 @@ unload_per_suite() ->
 dispatch_signal({init, Args}, Machine, {Handler, HandlerArgs}, Opts) ->
     Handler:init(Args, Machine, HandlerArgs, Opts);
 dispatch_signal(timeout, Machine, {Handler, HandlerArgs}, Opts) when Handler =/= fistful ->
-    do_if_enter(
-        Machine,
-        Handler,
-        fun() -> #{} end,
-        fun() ->
-            Handler:process_timeout(Machine, HandlerArgs, Opts)
-        end
-    );
+    ok = case ff_ct_barrier:check(Handler, Machine) of
+        {true, ID} -> ff_ct_barrier:enter(barrier, {ID, Handler});
+        false -> ok
+    end,
+    Handler:process_timeout(Machine, HandlerArgs, Opts);
 dispatch_signal(timeout, Machine, {Handler, HandlerArgs}, Opts) ->
     Handler:process_timeout(Machine, HandlerArgs, Opts);
 dispatch_signal({notification, Args}, Machine, {Handler, HandlerArgs}, Opts) ->
     Handler:process_notification(Args, Machine, HandlerArgs, Opts).
 
-dispatch_call(release, Machine, {Handler, HandlerArgs}, Opts) when Handler =/= fistful ->
-    Result = do_if_enter(
-        Machine,
-        Handler,
-        fun() ->
-            Handler:process_timeout(Machine, HandlerArgs, Opts)
-        end,
-        fun() -> #{} end
-    ),
-    {ok, Result};
 dispatch_call(Args, Machine, {Handler, HandlerArgs}, Opts) ->
     Handler:process_call(Args, Machine, HandlerArgs, Opts).
-
-do_if_enter(Machine, Handler, YesFunc, NoFunc) ->
-    Activity =
-        try
-            apply(Handler, activity, [Machine])
-        catch
-            error:undef ->
-                undefined
-        end,
-    case ff_ct_barrier:enter(Activity, Handler, Machine) of
-        true -> YesFunc();
-        false -> NoFunc()
-    end.
