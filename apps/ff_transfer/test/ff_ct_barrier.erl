@@ -61,7 +61,7 @@ check(_Handler, _) ->
 
 %%
 
--spec enter(gen_server:server_ref(), channel()) -> ok.
+-spec enter(atom(), channel()) -> ok.
 enter(ServerRef, Ch) ->
     gen_server:call(ServerRef, {enter, Ch}).
 
@@ -69,7 +69,7 @@ enter(ServerRef, Ch) ->
 release(Ch, C) ->
     gen_server:call(ct_helper:cfg('$barrier', C), {release, Ch}).
 
--spec start_barrier(gen_server:server_ref()) -> {ok, pid()}.
+-spec start_barrier(pid()) -> {ok, pid()}.
 start_barrier(SupPid) ->
     supervisor:start_child(SupPid, child_spec()).
 
