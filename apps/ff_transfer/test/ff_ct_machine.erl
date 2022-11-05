@@ -22,10 +22,11 @@ unload_per_suite() ->
 dispatch_signal({init, Args}, Machine, {Handler, HandlerArgs}, Opts) ->
     Handler:init(Args, Machine, HandlerArgs, Opts);
 dispatch_signal(timeout, Machine, {Handler, HandlerArgs}, Opts) when Handler =/= fistful ->
-    ok = case ff_ct_barrier:check(Handler, Machine) of
-        {true, ID} -> ff_ct_barrier:enter(barrier, {ID, Handler});
-        false -> ok
-    end,
+    ok =
+        case ff_ct_barrier:check(Handler, Machine) of
+            {true, ID} -> ff_ct_barrier:enter(barrier, {ID, Handler});
+            false -> ok
+        end,
     Handler:process_timeout(Machine, HandlerArgs, Opts);
 dispatch_signal(timeout, Machine, {Handler, HandlerArgs}, Opts) ->
     Handler:process_timeout(Machine, HandlerArgs, Opts);

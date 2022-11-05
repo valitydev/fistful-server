@@ -331,8 +331,8 @@ await_provider_retry(FirstAmount, SecondAmount, TotalAmount, C) ->
             ID = ff_withdrawal:id(Withdrawal),
             A = ff_withdrawal:activity(Withdrawal),
             case {ID, A} of
-                {WithdrawalID1, Activity} -> true;
-                {WithdrawalID2, routing} -> true;
+                {WithdrawalID1, Activity} -> {true, ID};
+                {WithdrawalID2, routing} -> {true, ID};
                 _ -> false
             end;
         (_Handler, _Machine) ->
