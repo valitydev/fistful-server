@@ -989,7 +989,7 @@ domain_config(Options) ->
             #domain_ProvisionTermSet{
                 wallet = #domain_WalletProvisionTerms{
                     withdrawals = #domain_WithdrawalProvisionTerms{
-                        allow = {all_of, [{constant, false}]}
+                        allow = {condition, {category_is, ?cat(1)}}
                     }
                 }
             }
