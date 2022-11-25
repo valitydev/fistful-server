@@ -8,6 +8,8 @@
 
 -module(ff_destination).
 
+-include_lib("damsel/include/dmsl_domain_thrift.hrl").
+
 -type id() :: binary().
 -type name() :: binary().
 -type account() :: ff_account:account().
@@ -181,7 +183,12 @@ create(Params) ->
         valid = ff_resource:check_resource(Resource),
         CreatedAt = ff_time:now(),
         Method = ff_resource:method(Resource),
-        TermVarset = #{currency => ff_dmsl_codec:marshal(currency_ref, CurrencyID)},
+        PartyID = ff_identity:party(Identity),
+        TermVarset = #{
+            currency => ff_dmsl_codec:marshal(currency_ref, CurrencyID),
+            party_id => PartyID,
+            payout_method => #domain_PayoutMethodRef{id = wallet_info}
+        },
         Terms = ff_identity:get_terms(Identity, #{timestamp => CreatedAt, varset => TermVarset}),
         valid = unwrap(terms, ff_party:validate_destination_creation(Terms, Method)),
         Currency = unwrap(currency, ff_currency:get(CurrencyID)),
