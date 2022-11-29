@@ -87,7 +87,7 @@ services:
       retries: 20
 
   party-management:
-    image: ghcr.io/valitydev/party-management:sha-1e9f4fd
+    image: ghcr.io/valitydev/party-management:sha-bc8368d
     command: /opt/party-management/bin/party-management foreground
     depends_on:
       machinegun:
