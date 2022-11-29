@@ -1,7 +1,6 @@
 -module(ff_withdrawal_limits_SUITE).
 
 -include_lib("stdlib/include/assert.hrl").
--include_lib("fistful_proto/include/fistful_fistful_base_thrift.hrl").
 -include_lib("ff_cth/include/ct_domain.hrl").
 -include_lib("damsel/include/dmsl_wthd_domain_thrift.hrl").
 
@@ -86,17 +85,16 @@ end_per_group(_, _) ->
 
 -spec init_per_testcase(test_case_name(), config()) -> config().
 init_per_testcase(Name, C0) ->
-    C1 = ff_ct_barrier:load(C0),
-    C2 = ct_helper:makeup_cfg(
+    C1 = ct_helper:makeup_cfg(
         [
             ct_helper:test_case_name(Name),
             ct_helper:woody_ctx()
         ],
-        C1
+        C0
     ),
-    ok = ct_helper:set_context(C2),
-    PartyID = create_party(C2),
-    C3 = ct_helper:cfg('$party', PartyID, C2),
+    ok = ct_helper:set_context(C1),
+    PartyID = create_party(C1),
+    C2 = ct_helper:cfg('$party', PartyID, C1),
     case Name of
         Name when
             Name =:= provider_retry orelse
@@ -107,7 +105,7 @@ init_per_testcase(Name, C0) ->
         _ ->
             ok
     end,
-    C3.
+    C2.
 
 -spec end_per_testcase(test_case_name(), config()) -> _.
 end_per_testcase(Name, C) ->
@@ -122,8 +120,7 @@ end_per_testcase(Name, C) ->
         _ ->
             ok
     end,
-    ok = ct_helper:unset_context(),
-    ff_ct_barrier:unload(C).
+    ct_helper:unset_context().
 
 %% Tests
 
@@ -325,29 +322,31 @@ await_provider_retry(FirstAmount, SecondAmount, TotalAmount, C) ->
         external_id => WithdrawalID2
     },
     Activity = {fail, session},
-    Enter = fun
-        (ff_withdrawal_machine, Machine) ->
-            Withdrawal = ff_machine:model(ff_machine:collapse(ff_withdrawal, Machine)),
-            ID = ff_withdrawal:id(Withdrawal),
-            A = ff_withdrawal:activity(Withdrawal),
-            case {ID, A} of
-                {WithdrawalID1, Activity} -> {true, ID};
-                {WithdrawalID2, routing} -> {true, ID};
-                _ -> false
-            end;
-        (_Handler, _Machine) ->
-            false
-    end,
-    ok = ff_ct_barrier:init_barrier(Enter),
+    {ok, Barrier} = ff_ct_barrier:start_link(),
+    ok = ff_ct_machine:set_hook(
+        timeout,
+        fun
+            (Machine, ff_withdrawal_machine, _Args) ->
+                Withdrawal = ff_machine:model(ff_machine:collapse(ff_withdrawal, Machine)),
+                case {ff_withdrawal:id(Withdrawal), ff_withdrawal:activity(Withdrawal)} of
+                    {WithdrawalID1, Activity} ->
+                        ff_ct_barrier:enter(Barrier, _Timeout = 10000);
+                    _ ->
+                        ok
+                end;
+            (_Machine, _Handler, _Args) ->
+                false
+        end
+    ),
     ok = ff_withdrawal_machine:create(WithdrawalParams1, ff_entity_context:new()),
+    _ = await_withdrawal_activity(Activity, WithdrawalID1),
     ok = ff_withdrawal_machine:create(WithdrawalParams2, ff_entity_context:new()),
-    await_withdrawal_activity(Activity, WithdrawalID1),
-    _ = ff_ct_barrier:release({WithdrawalID2, ff_withdrawal_machine}, C),
     ?assertEqual(succeeded, await_final_withdrawal_status(WithdrawalID2)),
-    _ = ff_ct_barrier:release({WithdrawalID1, ff_withdrawal_machine}, C),
-    await_final_withdrawal_status(WithdrawalID1).
-
-%% Utils
+    ok = ff_ct_barrier:release(Barrier),
+    Status = await_final_withdrawal_status(WithdrawalID1),
+    ok = ff_ct_machine:clear_hook(timeout),
+    ok = ff_ct_barrier:stop(Barrier),
+    Status.
 
 set_retryable_errors(PartyID, ErrorList) ->
     application:set_env(ff_transfer, withdrawal, #{
@@ -422,18 +421,12 @@ await_final_withdrawal_status(WithdrawalID) ->
     ),
     get_withdrawal_status(WithdrawalID).
 
-await_withdrawal_activity(Activity0, WithdrawalID) ->
-    finished = ct_helper:await(
-        finished,
+await_withdrawal_activity(Activity, WithdrawalID) ->
+    ct_helper:await(
+        Activity,
         fun() ->
             {ok, Machine} = ff_withdrawal_machine:get(WithdrawalID),
-            Activity1 = ff_withdrawal:activity(ff_withdrawal_machine:withdrawal(Machine)),
-            case Activity0 =:= Activity1 of
-                false ->
-                    {not_finished, Activity1};
-                true ->
-                    finished
-            end
+            ff_withdrawal:activity(ff_withdrawal_machine:withdrawal(Machine))
         end,
         genlib_retry:linear(20, 1000)
     ).

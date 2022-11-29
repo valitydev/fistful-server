@@ -100,6 +100,23 @@ start_app(dmt_client = AppName) ->
         ]),
         #{}
     };
+start_app(party_client = AppName) ->
+    {
+        start_app_with(AppName, [
+            {services, #{
+                party_management => "http://party-management:8022/v1/processing/partymgmt"
+            }},
+            {woody, #{
+                cache_mode => safe,
+                options => #{
+                    woody_client => #{
+                        event_handler => {scoper_woody_event_handler, #{}}
+                    }
+                }
+            }}
+        ]),
+        #{}
+    };
 start_app(ff_server = AppName) ->
     {
         start_app_with(AppName, [

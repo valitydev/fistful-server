@@ -71,6 +71,7 @@ start_processing_apps(Options) ->
         scoper,
         woody,
         dmt_client,
+        party_client,
         {fistful, [
             {services, services(Options)},
             {providers, identity_provider_config(Options)}
