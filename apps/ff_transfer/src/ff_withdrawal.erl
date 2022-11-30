@@ -822,8 +822,14 @@ do_process_routing(Withdrawal) ->
 do_rollback_routing(ExcludeRoutes0, Withdrawal) ->
     {Varset, Context} = make_routing_varset_and_context(Withdrawal),
     ExcludeUsedRoutes0 = ff_withdrawal_route_attempt_utils:get_terminals(attempts(Withdrawal)),
-    CurrentRoute = ff_withdrawal_route_attempt_utils:get_current_terminal(attempts(Withdrawal)),
-    ExcludeUsedRoutes1 = lists:filter(fun(R) -> CurrentRoute =/= R end, ExcludeUsedRoutes0),
+    ExcludeUsedRoutes1 =
+        case ff_withdrawal_route_attempt_utils:get_current_p_transfer_status(attempts(Withdrawal)) of
+            cancelled ->
+                ExcludeUsedRoutes0;
+            _ ->
+                CurrentRoute = ff_withdrawal_route_attempt_utils:get_current_terminal(attempts(Withdrawal)),
+                lists:filter(fun(R) -> CurrentRoute =/= R end, ExcludeUsedRoutes0)
+        end,
     ExcludeRoutes1 =
         ExcludeUsedRoutes1 ++ lists:map(fun(R) -> ff_withdrawal_routing:get_terminal(R) end, ExcludeRoutes0),
     Routes = ff_withdrawal_routing:get_routes(ff_withdrawal_routing:gather_routes(Varset, Context, ExcludeRoutes1)),

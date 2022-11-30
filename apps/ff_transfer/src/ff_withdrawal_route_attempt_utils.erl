@@ -23,6 +23,7 @@
 -export([get_index/1]).
 -export([get_current_session/1]).
 -export([get_current_p_transfer/1]).
+-export([get_current_p_transfer_status/1]).
 -export([get_current_limit_checks/1]).
 -export([update_current_session/2]).
 -export([update_current_p_transfer/2]).
@@ -49,6 +50,7 @@
 %% Iternal types
 
 -type p_transfer() :: ff_postings_transfer:transfer().
+-type p_transfer_status() :: ff_postings_transfer:status().
 -type limit_check_details() :: ff_withdrawal:limit_check_details().
 -type route() :: ff_withdrawal_routing:route().
 -type route_key() :: {ff_payouts_provider:id(), ff_payouts_terminal:id()} | unknown.
@@ -121,6 +123,11 @@ get_current_session(Attempts) ->
 get_current_p_transfer(Attempts) ->
     Attempt = current(Attempts),
     maps:get(p_transfer, Attempt, undefined).
+
+-spec get_current_p_transfer_status(attempts()) -> undefined | p_transfer_status().
+get_current_p_transfer_status(Attempts) ->
+    Attempt = current(Attempts),
+    maps:get(status, maps:get(p_transfer, Attempt, #{}), undefined).
 
 -spec get_current_limit_checks(attempts()) -> undefined | [limit_check_details()].
 get_current_limit_checks(Attempts) ->
@@ -223,8 +230,4 @@ update_current(Attempt, #{current := Route, attempts := Attempts} = R) ->
         attempts => Attempts#{
             Route => Attempt
         }
-    };
-update_current(Attempt, R) when not is_map_key(current, R) ->
-    % There are some legacy operations without a route in storage
-    % It looks like we should save other data without route.
-    update_current(Attempt, add_route(unknown, R)).
+    }.
