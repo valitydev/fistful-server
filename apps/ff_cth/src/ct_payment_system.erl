@@ -478,6 +478,18 @@ domain_config(Options) ->
                     ?ruleset(?PAYINST1_ROUTING_POLICIES + 23)
                 ),
                 delegate(
+                    condition(cost_in, {910000, <<"RUB">>}),
+                    ?ruleset(?PAYINST1_ROUTING_POLICIES + 30)
+                ),
+                delegate(
+                    condition(cost_in, {920000, <<"RUB">>}),
+                    ?ruleset(?PAYINST1_ROUTING_POLICIES + 31)
+                ),
+                delegate(
+                    condition(cost_in, {930000, <<"RUB">>}),
+                    ?ruleset(?PAYINST1_ROUTING_POLICIES + 32)
+                ),
+                delegate(
                     {condition,
                         {payment_tool,
                             {bank_card, #domain_BankCardCondition{
@@ -635,6 +647,27 @@ domain_config(Options) ->
             ?ruleset(?PAYINST1_ROUTING_POLICIES + 23),
             {candidates, [
                 candidate({constant, true}, ?trm(2700))
+            ]}
+        ),
+
+        routing_ruleset(
+            ?ruleset(?PAYINST1_ROUTING_POLICIES + 30),
+            {candidates, [
+                candidate({constant, true}, ?trm(3000))
+            ]}
+        ),
+
+        routing_ruleset(
+            ?ruleset(?PAYINST1_ROUTING_POLICIES + 31),
+            {candidates, [
+                candidate({constant, true}, ?trm(3100))
+            ]}
+        ),
+
+        routing_ruleset(
+            ?ruleset(?PAYINST1_ROUTING_POLICIES + 32),
+            {candidates, [
+                candidate({constant, true}, ?trm(3200))
             ]}
         ),
 
@@ -1044,6 +1077,46 @@ domain_config(Options) ->
             }
         ),
 
+        ct_domain:withdrawal_terminal(
+            ?trm(3000),
+            ?prv(1),
+            #domain_ProvisionTermSet{
+                wallet = #domain_WalletProvisionTerms{
+                    withdrawals = #domain_WithdrawalProvisionTerms{
+                        allow = {constant, true}
+                    }
+                }
+            }
+        ),
+
+        ct_domain:withdrawal_terminal(
+            ?trm(3100),
+            ?prv(1),
+            #domain_ProvisionTermSet{
+                wallet = #domain_WalletProvisionTerms{
+                    withdrawals = #domain_WithdrawalProvisionTerms{
+                        allow = {constant, false},
+                        turnover_limit =
+                            {value, [
+                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID2, 123123)
+                            ]}
+                    }
+                }
+            }
+        ),
+
+        ct_domain:withdrawal_terminal(
+            ?trm(3200),
+            ?prv(1),
+            #domain_ProvisionTermSet{
+                wallet = #domain_WalletProvisionTerms{
+                    withdrawals = #domain_WithdrawalProvisionTerms{
+                        allow = {condition, {category_is, ?cat(1)}}
+                    }
+                }
+            }
+        ),
+
         ct_domain:currency(?cur(<<"RUB">>)),
         ct_domain:currency(?cur(<<"USD">>)),
         ct_domain:currency(?cur(<<"EUR">>)),
@@ -1052,12 +1125,16 @@ domain_config(Options) ->
         ct_domain:category(?cat(1), <<"Generic Store">>, live),
 
         ct_domain:payment_method(?pmt(?PAYMENT_METHOD_BANK_CARD(<<"VISA">>))),
+        ct_domain:payment_method(?pmt(?PAYMENT_METHOD_BANK_CARD(<<"MASTERCARD">>))),
+        ct_domain:payment_method(?pmt(?PAYMENT_METHOD_BANK_CARD_WITH_EMPTY_CVV(<<"MASTERCARD">>))),
+        ct_domain:payment_method(?pmt(?PAYMENT_METHOD_BANK_CARD(<<"NSPK MIR">>))),
         ct_domain:payment_method(?pmt(?PAYMENT_METHOD_GENERIC(<<"IND">>))),
         ct_domain:payment_method(?pmt(?PAYMENT_METHOD_DIGITAL_WALLET(<<"webmoney">>))),
         ct_domain:payment_method(?pmt(?PAYMENT_METHOD_CRYPTO_CURRENCY(<<"Litecoin">>))),
         ct_domain:payment_method(?pmt(?PAYMENT_METHOD_CRYPTO_CURRENCY(<<"bitcoin_cash">>))),
         ct_domain:payment_method(?pmt(?PAYMENT_METHOD_CRYPTO_CURRENCY(<<"ripple">>))),
 
+        ct_domain:payment_system(?pmtsys(<<"MASTERCARD">>), <<"MASTERCARD">>),
         ct_domain:payment_system(?pmtsys(<<"VISA">>), <<"VISA">>),
         ct_domain:payment_system(?pmtsys(<<"NSPK MIR">>), <<"NSPK MIR">>),
 
@@ -1131,7 +1208,10 @@ default_termset(Options) ->
                 methods =
                     {value,
                         ?ordset([
+                            ?pmt(?PAYMENT_METHOD_BANK_CARD(<<"MASTERCARD">>)),
+                            ?pmt(?PAYMENT_METHOD_BANK_CARD_WITH_EMPTY_CVV(<<"MASTERCARD">>)),
                             ?pmt(?PAYMENT_METHOD_BANK_CARD(<<"VISA">>)),
+                            ?pmt(?PAYMENT_METHOD_BANK_CARD(<<"NSPK MIR">>)),
                             ?pmt(?PAYMENT_METHOD_GENERIC(<<"IND">>)),
                             ?pmt(?PAYMENT_METHOD_DIGITAL_WALLET(<<"webmoney">>)),
                             ?pmt(?PAYMENT_METHOD_CRYPTO_CURRENCY(<<"Litecoin">>)),
