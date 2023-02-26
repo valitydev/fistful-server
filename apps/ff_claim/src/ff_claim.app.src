@@ -1,0 +1,16 @@
+{application, ff_claim, [
+    {description, "Wallet claims"},
+    {vsn, "1"},
+    {registered, []},
+    {applications, [
+        kernel,
+        stdlib,
+        genlib,
+        ff_core,
+        damsel,
+        fistful,
+        ff_transfer
+    ]},
+    {licenses, ["Apache 2.0"]},
+    {links, ["https://github.com/rbkmoney/fistful-server"]}
+]}.
