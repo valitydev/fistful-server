@@ -104,7 +104,7 @@ assert_wallet_creation_modification_applicable(IdentityID, WalletID, DomainCurre
     case ff_wallet:check_creation(#{identity => IdentityID, currency => CurrencyID}) of
         {ok, {Identity, Currency}} ->
             case ff_account:check_account_creation(WalletID, Identity, Currency, Revision) of
-                ok ->
+                {ok, valid} ->
                     ok;
                 %% not_allowed_currency
                 {error, {terms, _}} ->

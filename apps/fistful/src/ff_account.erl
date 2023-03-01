@@ -121,7 +121,7 @@ is_accessible(Account) ->
     end).
 
 -spec check_account_creation(id(), identity(), currency(), domain_revision()) ->
-    ok
+    {ok, valid}
     | {error, create_error()}.
 check_account_creation(ID, Identity, Currency, undefined) ->
     check_account_creation(ID, Identity, Currency, ff_domain_config:head());
