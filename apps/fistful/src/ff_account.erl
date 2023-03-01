@@ -37,6 +37,8 @@
     {terms, ff_party:validate_account_creation_error()}
     | {party, ff_party:inaccessibility()}.
 
+-type domain_revision() :: ff_domain_config:revision().
+
 -export_type([id/0]).
 -export_type([accounter_account_id/0]).
 -export_type([account/0]).
@@ -50,7 +52,9 @@
 -export([accounter_account_id/1]).
 
 -export([create/3]).
+-export([create/4]).
 -export([is_accessible/1]).
+-export([check_account_creation/4]).
 
 -export([apply_event/2]).
 
@@ -85,25 +89,15 @@ accounter_account_id(#{accounter_account_id := AccounterID}) ->
     AccounterID.
 
 %% Actuators
-
 -spec create(id(), identity(), currency()) -> {ok, [event()]} | {error, create_error()}.
 create(ID, Identity, Currency) ->
+    create(ID, Identity, Currency, undefined).
+
+-spec create(id(), identity(), currency(), domain_revision() | undefined) -> {ok, [event()]} | {error, create_error()}.
+create(ID, Identity, Currency, DomainRevision) ->
     do(fun() ->
-        PartyID = ff_identity:party(Identity),
-        accessible = unwrap(party, ff_party:is_accessible(PartyID)),
-        TermVarset = #{
-            wallet_id => ID,
-            currency => ff_currency:to_domain_ref(Currency)
-        },
-        {ok, PartyRevision} = ff_party:get_revision(PartyID),
-        DomainRevision = ff_domain_config:head(),
-        Terms = ff_identity:get_terms(Identity, #{
-            party_revision => PartyRevision,
-            domain_revision => DomainRevision,
-            varset => TermVarset
-        }),
+        unwrap(check_account_creation(ID, Identity, Currency, DomainRevision)),
         CurrencyID = ff_currency:id(Currency),
-        valid = unwrap(terms, ff_party:validate_account_creation(Terms, CurrencyID)),
         CurrencyCode = ff_currency:symcode(Currency),
         Description = ff_string:join($/, [<<"ff/account">>, ID]),
         {ok, AccounterID} = ff_accounting:create_account(CurrencyCode, Description),
@@ -124,6 +118,29 @@ is_accessible(Account) ->
     do(fun() ->
         Identity = get_identity(Account),
         accessible = unwrap(ff_identity:is_accessible(Identity))
+    end).
+
+-spec check_account_creation(id(), identity(), currency(), domain_revision()) ->
+    ok
+    | {error, create_error()}.
+check_account_creation(ID, Identity, Currency, undefined) ->
+    check_account_creation(ID, Identity, Currency, ff_domain_config:head());
+check_account_creation(ID, Identity, Currency, DomainRevision) ->
+    do(fun() ->
+        PartyID = ff_identity:party(Identity),
+        accessible = unwrap(party, ff_party:is_accessible(PartyID)),
+        TermVarset = #{
+            wallet_id => ID,
+            currency => ff_currency:to_domain_ref(Currency)
+        },
+        {ok, PartyRevision} = ff_party:get_revision(PartyID),
+        Terms = ff_identity:get_terms(Identity, #{
+            party_revision => PartyRevision,
+            domain_revision => DomainRevision,
+            varset => TermVarset
+        }),
+        CurrencyID = ff_currency:id(Currency),
+        valid = unwrap(terms, ff_party:validate_account_creation(Terms, CurrencyID))
     end).
 
 get_identity(Account) ->

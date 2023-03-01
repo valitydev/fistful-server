@@ -16,26 +16,20 @@ handle_function(Func, Args, Opts) ->
         end
     ).
 
--spec handle_function_(woody:func(), woody:args(), pm_woody_wrapper:handler_opts()) -> term() | no_return().
 handle_function_('Accept', {PartyID, #claimmgmt_Claim{changeset = Changeset}}, _Opts) ->
-    % Params = ff_deposit_codec:unmarshal(deposit_params, MarshaledParams),
-    % Context = ff_deposit_codec:unmarshal(context, MarshaledContext),
     ok = scoper:add_meta(#{party_id => PartyID}),
-    Timestamp = pm_datetime:format_now(),
-    Revision = pm_domain:head(),
+    Revision = ff_domain_config:head(),
     Modifications = ff_claim_committer:filter_ff_modifications(Changeset),
-    ok = ff_claim_committer:assert_modifications_applicable(Modifications, Timestamp, Revision),
+    ok = ff_claim_committer:assert_modifications_applicable(Modifications, Revision),
     {ok, ok};
 handle_function_('Commit', {PartyID, Claim}, _Opts) ->
     #claimmgmt_Claim{
         id = ID,
-        changeset = Changeset
-        % revision = Revision,
-        % created_at = CreatedAt,
-        % updated_at = UpdatedAt
+        changeset = Changeset,
+        revision = Revision
     } = Claim,
     ok = scoper:add_meta(#{party_id => PartyID, claim_id => ID}),
-    _Modifications = pm_claim_committer:filter_party_modifications(Changeset),
-    %% make identity or wallet using modification
-    %% resp ok if ok
+    Modifications = ff_claim_committer:filter_ff_modifications(Changeset),
+    ok = ff_claim_committer:assert_modifications_applicable(Modifications, Revision),
+    ff_claim_committer:apply_modifications(Modifications, Revision),
     {ok, ok}.

@@ -7,6 +7,7 @@
 -type id() :: ff_account:id().
 -type external_id() :: id() | undefined.
 -type metadata() :: ff_entity_context:md().
+-type domain_revision() :: ff_domain_config:revision().
 
 -define(ACTUAL_FORMAT_VERSION, 2).
 
@@ -38,13 +39,24 @@
     name := binary(),
     currency := ff_currency:id(),
     external_id => id(),
-    metadata => metadata()
+    metadata => metadata(),
+    domain_revision => domain_revision()
+}.
+
+-type check_params() :: #{
+    identity := ff_identity_machine:id(),
+    currency := ff_currency:id(),
+    domain_revision => domain_revision()
 }.
 
 -type create_error() ::
     {identity, notfound}
     | {currency, notfound}
     | ff_account:create_error().
+
+-type check_error() ::
+    {identity, notfound}
+    | {currency, notfound}.
 
 -export_type([id/0]).
 -export_type([wallet/0]).
@@ -72,6 +84,7 @@
 -export([is_accessible/1]).
 -export([close/1]).
 -export([get_account_balance/1]).
+-export([check_creation/1]).
 
 -export([apply_event/2]).
 
@@ -133,11 +146,10 @@ metadata(Wallet) ->
 -spec create(params()) ->
     {ok, [event()]}
     | {error, create_error()}.
-create(Params = #{id := ID, identity := IdentityID, name := Name, currency := CurrencyID}) ->
+create(Params = #{id := ID, name := Name}) ->
     do(fun() ->
-        IdentityMachine = unwrap(identity, ff_identity_machine:get(IdentityID)),
-        Identity = ff_identity_machine:identity(IdentityMachine),
-        Currency = unwrap(currency, ff_currency:get(CurrencyID)),
+        {Identity, Currency} = unwrap(check_creation(maps:with([identity, currency, domain_revision], Params))),
+        DomainRevision = maps:get(domain_revision, Params, undefined),
         Wallet = genlib_map:compact(#{
             version => ?ACTUAL_FORMAT_VERSION,
             name => Name,
@@ -147,7 +159,7 @@ create(Params = #{id := ID, identity := IdentityID, name := Name, currency := Cu
             metadata => maps:get(metadata, Params, undefined)
         }),
         [{created, Wallet}] ++
-            [{account, Ev} || Ev <- unwrap(ff_account:create(ID, Identity, Currency))]
+            [{account, Ev} || Ev <- unwrap(ff_account:create(ID, Identity, Currency, DomainRevision))]
     end).
 
 -spec is_accessible(wallet_state()) ->
@@ -169,6 +181,18 @@ close(Wallet) ->
         accessible = unwrap(is_accessible(Wallet)),
         % TODO
         []
+    end).
+
+-spec check_creation(check_params()) ->
+    {ok, {ff_identity:identity_state(), ff_currency:currency()}}
+    | {error, check_error()}.
+
+check_creation(#{identity := IdentityID, currency := CurrencyID}) ->
+    do(fun() ->
+        IdentityMachine = unwrap(identity, ff_identity_machine:get(IdentityID)),
+        Identity = ff_identity_machine:identity(IdentityMachine),
+        Currency = unwrap(currency, ff_currency:get(CurrencyID)),
+        {Identity, Currency}
     end).
 
 %%
