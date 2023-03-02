@@ -164,30 +164,28 @@ unmarshal_identity_params(IdentityID, #claimmgmt_IdentityParams{
 unmarshal_wallet_params(WalletID, #claimmgmt_NewWalletParams{
     identity_id = IdentityID,
     name = Name,
-    currency = Currency,
+    currency = DomainCurrency,
     metadata = Metadata
 }) ->
+    #domain_CurrencyRef{symbolic_code = CurrencyID} = DomainCurrency,
     genlib_map:compact(#{
         id => WalletID,
         name => Name,
         identity => IdentityID,
-        currency => Currency,
+        currency => CurrencyID,
         metadata => maybe_unmarshal_metadata(Metadata)
     }).
 
 maybe_unmarshal_metadata(undefined) ->
     undefined;
-maybe_unmarshal_metadata(Metadata) ->
-    Metadata.
+maybe_unmarshal_metadata(Metadata) when is_map(Metadata) ->
+    maps:map(fun(_NS, V) -> ff_adapter_withdrawal_codec:unmarshal_msgpack(V) end, Metadata).
 
 create_context(PartyID, Metadata) ->
     #{
         %% same as used in wapi lib
         <<"com.rbkmoney.wapi">> => genlib_map:compact(#{
             <<"owner">> => PartyID,
-            <<"metadata">> => unmarshal_metadata(Metadata)
+            <<"metadata">> => maybe_unmarshal_metadata(Metadata)
         })
     }.
-
-unmarshal_metadata(Ctx) when is_map(Ctx) ->
-    maps:map(fun(_NS, V) -> ff_adapter_withdrawal_codec:unmarshal_msgpack(V) end, Ctx).

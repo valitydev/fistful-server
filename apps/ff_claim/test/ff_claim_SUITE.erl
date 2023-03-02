@@ -17,19 +17,15 @@
 -export([init_per_testcase/2]).
 -export([end_per_testcase/2]).
 
--define(test_identity_creation(IdentityID, Params),
-    #claimmgmt_IdentityModificationUnit{
-        id = IdentityID,
-        modification = {creation, Params}
-    }
-).
+-define(TEST_IDENTITY_CREATION(IdentityID, Params), #claimmgmt_IdentityModificationUnit{
+    id = IdentityID,
+    modification = {creation, Params}
+}).
 
--define(test_wallet_creation(WalletID, Params),
-    #claimmgmt_NewWalletModificationUnit{
-        id = WalletID,
-        modification = {creation, Params}
-    }
-).
+-define(TEST_WALLET_CREATION(WalletID, Params), #claimmgmt_NewWalletModificationUnit{
+    id = WalletID,
+    modification = {creation, Params}
+}).
 
 %% Tests
 
@@ -39,6 +35,7 @@
 
 -export([accept_wallet_creation/1]).
 -export([accept_wallet_creation_already_exists/1]).
+-export([apply_wallet_creation/1]).
 
 %% Internal types
 
@@ -61,7 +58,8 @@ groups() ->
             accept_identity_creation_already_exists,
             apply_identity_creation,
             accept_wallet_creation,
-            accept_wallet_creation_already_exists
+            accept_wallet_creation_already_exists,
+            apply_wallet_creation
             % wallet_creation,
             % identity_already_exists,
             % wallet_already_exists,
@@ -158,6 +156,18 @@ accept_wallet_creation_already_exists(C) ->
         call_service('Accept', {PartyID, make_claim_with_changeset(PartyID, Claim)})
     ).
 
+-spec apply_wallet_creation(config()) -> test_return().
+apply_wallet_creation(C) ->
+    #{
+        party_id := PartyID,
+        identity_id := IdentityID
+    } = prepare_standard_environment(C),
+    WalletID = genlib:bsuuid(),
+    Claim = make_wallet_creation_claim(WalletID, IdentityID, <<"RUB">>),
+    {ok, ok} = call_service('Commit', {PartyID, make_claim_with_changeset(PartyID, Claim)}),
+    _Wallet = get_wallet(WalletID),
+    ok.
+
 %% Utils
 
 call_service(Fun, Args) ->
@@ -194,7 +204,7 @@ create_identity(Party, Name, ProviderID, _C) ->
     ID = genlib:unique(),
     ok = ff_identity_machine:create(
         #{id => ID, name => Name, party => Party, provider => ProviderID},
-        #{<<"com.rbkmoney.wapi">> => #{<<"name">> => Name}}
+        #{<<"com.rbkmoney.wapi">> => #{<<"name">> => Name, <<"owner">> => Party}}
     ),
     ID.
 
@@ -210,9 +220,9 @@ create_wallet(IdentityID, Name, Currency, _C) ->
     ),
     ID.
 
-% get_wallet(ID) ->
-%     {ok, Machine} = ff_wallet_machine:get(ID),
-%     ff_wallet_machine:wallet(Machine).
+get_wallet(ID) ->
+    {ok, Machine} = ff_wallet_machine:get(ID),
+    ff_wallet_machine:wallet(Machine).
 
 make_identity_creation_claim(PartyID, IdentityID, Provider) ->
     Params = #claimmgmt_IdentityParams{
@@ -220,7 +230,7 @@ make_identity_creation_claim(PartyID, IdentityID, Provider) ->
         party_id = PartyID,
         provider = Provider
     },
-    Mod = ?test_identity_creation(IdentityID, Params),
+    Mod = ?TEST_IDENTITY_CREATION(IdentityID, Params),
     ?cm_identity_modification(1, <<"2026-03-22T06:12:27Z">>, Mod, make_user()).
 
 make_wallet_creation_claim(WalletID, IdentityID, CurrencyID) ->
@@ -231,11 +241,11 @@ make_wallet_creation_claim(WalletID, IdentityID, CurrencyID) ->
             symbolic_code = CurrencyID
         }
     },
-    Mod = ?test_wallet_creation(WalletID, Params),
+    Mod = ?TEST_WALLET_CREATION(WalletID, Params),
     ?cm_wallet_modification(1, <<"2026-03-22T06:12:27Z">>, Mod, make_user()).
 
 make_user() ->
-    #claimmgmt_UserInfo {
+    #claimmgmt_UserInfo{
         id = <<"id">>,
         email = <<"email">>,
         username = <<"username">>,
