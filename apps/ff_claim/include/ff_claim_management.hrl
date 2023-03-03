@@ -1,8 +1,6 @@
 -ifndef(__ff_claim_management_hrl__).
 -define(__ff_claim_management_hrl__, included).
 
--include_lib("damsel/include/dmsl_claimmgmt_thrift.hrl").
-
 -define(cm_modification_unit(ModID, Timestamp, Mod, UserInfo), #claimmgmt_ModificationUnit{
     modification_id = ModID,
     created_at = Timestamp,
