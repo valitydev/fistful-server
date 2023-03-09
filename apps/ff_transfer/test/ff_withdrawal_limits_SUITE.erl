@@ -1,6 +1,7 @@
 -module(ff_withdrawal_limits_SUITE).
 
 -include_lib("stdlib/include/assert.hrl").
+-include_lib("fistful_proto/include/fistful_fistful_base_thrift.hrl").
 -include_lib("ff_cth/include/ct_domain.hrl").
 -include_lib("damsel/include/dmsl_wthd_domain_thrift.hrl").
 
@@ -20,9 +21,6 @@
 -export([limit_overflow/1]).
 -export([choose_provider_without_limit_overflow/1]).
 -export([provider_limits_exhaust_orderly/1]).
--export([provider_retry/1]).
--export([limit_exhaust_on_provider_retry/1]).
--export([first_limit_exhaust_on_provider_retry/1]).
 
 %% Internal types
 
@@ -46,16 +44,12 @@ groups() ->
             limit_success,
             limit_overflow,
             choose_provider_without_limit_overflow,
-            provider_limits_exhaust_orderly,
-            provider_retry,
-            limit_exhaust_on_provider_retry,
-            first_limit_exhaust_on_provider_retry
+            provider_limits_exhaust_orderly
         ]}
     ].
 
 -spec init_per_suite(config()) -> config().
 init_per_suite(C0) ->
-    ff_ct_machine:load_per_suite(),
     C1 = ct_helper:makeup_cfg(
         [
             ct_helper:test_case_name(init),
@@ -68,7 +62,6 @@ init_per_suite(C0) ->
 
 -spec end_per_suite(config()) -> _.
 end_per_suite(C) ->
-    ff_ct_machine:unload_per_suite(),
     ok = ct_payment_system:shutdown(C).
 
 %%
@@ -84,43 +77,20 @@ end_per_group(_, _) ->
 %%
 
 -spec init_per_testcase(test_case_name(), config()) -> config().
-init_per_testcase(Name, C0) ->
+init_per_testcase(Name, C) ->
     C1 = ct_helper:makeup_cfg(
         [
             ct_helper:test_case_name(Name),
             ct_helper:woody_ctx()
         ],
-        C0
+        C
     ),
     ok = ct_helper:set_context(C1),
-    PartyID = create_party(C1),
-    C2 = ct_helper:cfg('$party', PartyID, C1),
-    case Name of
-        Name when
-            Name =:= provider_retry orelse
-                Name =:= limit_exhaust_on_provider_retry orelse
-                Name =:= first_limit_exhaust_on_provider_retry
-        ->
-            _ = set_retryable_errors(PartyID, [<<"authorization_error">>]);
-        _ ->
-            ok
-    end,
-    C2.
+    C1.
 
 -spec end_per_testcase(test_case_name(), config()) -> _.
-end_per_testcase(Name, C) ->
-    case Name of
-        Name when
-            Name =:= provider_retry orelse
-                Name =:= limit_exhaust_on_provider_retry orelse
-                Name =:= first_limit_exhaust_on_provider_retry
-        ->
-            PartyID = ct_helper:cfg('$party', C),
-            _ = set_retryable_errors(PartyID, []);
-        _ ->
-            ok
-    end,
-    ct_helper:unset_context().
+end_per_testcase(_Name, _C) ->
+    ok = ct_helper:unset_context().
 
 %% Tests
 
@@ -264,105 +234,16 @@ provider_limits_exhaust_orderly(C) ->
     Result = await_final_withdrawal_status(WithdrawalID),
     ?assertMatch({failed, #{code := <<"no_route_found">>}}, Result).
 
--spec provider_retry(config()) -> test_return().
-provider_retry(C) ->
-    Currency = <<"RUB">>,
-    Cash = {904000, Currency},
-    #{
-        wallet_id := WalletID,
-        destination_id := DestinationID
-    } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
-    WithdrawalParams = #{
-        id => WithdrawalID,
-        destination_id => DestinationID,
-        wallet_id => WalletID,
-        body => Cash,
-        external_id => WithdrawalID
-    },
-    ok = ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new()),
-    ?assertEqual(succeeded, await_final_withdrawal_status(WithdrawalID)),
-    Withdrawal = get_withdrawal(WithdrawalID),
-    ?assertEqual(WalletID, ff_withdrawal:wallet_id(Withdrawal)),
-    ?assertEqual(DestinationID, ff_withdrawal:destination_id(Withdrawal)),
-    ?assertEqual(Cash, ff_withdrawal:body(Withdrawal)),
-    ?assertEqual(WithdrawalID, ff_withdrawal:external_id(Withdrawal)).
+%% Utils
 
--spec limit_exhaust_on_provider_retry(config()) -> test_return().
-limit_exhaust_on_provider_retry(C) ->
-    ?assertEqual(
-        {failed, #{code => <<"authorization_error">>, sub => #{code => <<"insufficient_funds">>}}},
-        await_provider_retry(904000, 3000000, 4000000, C)
-    ).
-
--spec first_limit_exhaust_on_provider_retry(config()) -> test_return().
-first_limit_exhaust_on_provider_retry(C) ->
-    ?assertEqual(succeeded, await_provider_retry(905000, 3001000, 4000000, C)).
-
-await_provider_retry(FirstAmount, SecondAmount, TotalAmount, C) ->
-    Currency = <<"RUB">>,
-    #{
-        wallet_id := WalletID,
-        destination_id := DestinationID
-    } = prepare_standard_environment({TotalAmount, Currency}, C),
-    WithdrawalID1 = generate_id(),
-    WithdrawalParams1 = #{
-        id => WithdrawalID1,
-        destination_id => DestinationID,
-        wallet_id => WalletID,
-        body => {FirstAmount, Currency},
-        external_id => WithdrawalID1
-    },
-    WithdrawalID2 = generate_id(),
-    WithdrawalParams2 = #{
-        id => WithdrawalID2,
-        destination_id => DestinationID,
-        wallet_id => WalletID,
-        body => {SecondAmount, Currency},
-        external_id => WithdrawalID2
-    },
-    Activity = {fail, session},
-    {ok, Barrier} = ff_ct_barrier:start_link(),
-    ok = ff_ct_machine:set_hook(
-        timeout,
-        fun
-            (Machine, ff_withdrawal_machine, _Args) ->
-                Withdrawal = ff_machine:model(ff_machine:collapse(ff_withdrawal, Machine)),
-                case {ff_withdrawal:id(Withdrawal), ff_withdrawal:activity(Withdrawal)} of
-                    {WithdrawalID1, Activity} ->
-                        ff_ct_barrier:enter(Barrier, _Timeout = 10000);
-                    _ ->
-                        ok
-                end;
-            (_Machine, _Handler, _Args) ->
-                false
-        end
-    ),
-    ok = ff_withdrawal_machine:create(WithdrawalParams1, ff_entity_context:new()),
-    _ = await_withdrawal_activity(Activity, WithdrawalID1),
-    ok = ff_withdrawal_machine:create(WithdrawalParams2, ff_entity_context:new()),
-    ?assertEqual(succeeded, await_final_withdrawal_status(WithdrawalID2)),
-    ok = ff_ct_barrier:release(Barrier),
-    Status = await_final_withdrawal_status(WithdrawalID1),
-    ok = ff_ct_machine:clear_hook(timeout),
-    ok = ff_ct_barrier:stop(Barrier),
-    Status.
-
-set_retryable_errors(PartyID, ErrorList) ->
-    application:set_env(ff_transfer, withdrawal, #{
-        party_transient_errors => #{
-            PartyID => ErrorList
-        }
-    }).
-
-get_limit_withdrawal(Cash, WalletID, DestinationID) ->
+get_limit_amount(Cash, WalletID, DestinationID, LimitID, C) ->
     {ok, WalletMachine} = ff_wallet_machine:get(WalletID),
     Wallet = ff_wallet_machine:wallet(WalletMachine),
     WalletAccount = ff_wallet:account(Wallet),
     {ok, SenderSt} = ff_identity_machine:get(ff_account:identity(WalletAccount)),
     SenderIdentity = ff_identity_machine:identity(SenderSt),
 
-    #wthd_domain_Withdrawal{
+    Withdrawal = #wthd_domain_Withdrawal{
         created_at = ff_codec:marshal(timestamp_ms, ff_time:now()),
         body = ff_dmsl_codec:marshal(cash, Cash),
         destination = ff_adapter_withdrawal_codec:marshal(resource, get_destination_resource(DestinationID)),
@@ -370,10 +251,7 @@ get_limit_withdrawal(Cash, WalletID, DestinationID) ->
             id => ff_identity:id(SenderIdentity),
             owner_id => ff_identity:party(SenderIdentity)
         })
-    }.
-
-get_limit_amount(Cash, WalletID, DestinationID, LimitID, C) ->
-    Withdrawal = get_limit_withdrawal(Cash, WalletID, DestinationID),
+    },
     ff_limiter_helper:get_limit_amount(LimitID, Withdrawal, C).
 
 get_destination_resource(DestinationID) ->
@@ -383,15 +261,15 @@ get_destination_resource(DestinationID) ->
     Resource.
 
 prepare_standard_environment({_Amount, Currency} = WithdrawalCash, C) ->
-    PartyID = ct_helper:cfg('$party', C),
-    IdentityID = create_person_identity(PartyID, C),
+    Party = create_party(C),
+    IdentityID = create_person_identity(Party, C),
     WalletID = create_wallet(IdentityID, <<"My wallet">>, Currency, C),
     ok = await_wallet_balance({0, Currency}, WalletID),
     DestinationID = create_destination(IdentityID, Currency, C),
     ok = set_wallet_balance(WithdrawalCash, WalletID),
     #{
         identity_id => IdentityID,
-        party_id => PartyID,
+        party_id => Party,
         wallet_id => WalletID,
         destination_id => DestinationID
     }.
@@ -420,16 +298,6 @@ await_final_withdrawal_status(WithdrawalID) ->
         genlib_retry:linear(20, 1000)
     ),
     get_withdrawal_status(WithdrawalID).
-
-await_withdrawal_activity(Activity, WithdrawalID) ->
-    ct_helper:await(
-        Activity,
-        fun() ->
-            {ok, Machine} = ff_withdrawal_machine:get(WithdrawalID),
-            ff_withdrawal:activity(ff_withdrawal_machine:withdrawal(Machine))
-        end,
-        genlib_retry:linear(20, 1000)
-    ).
 
 create_party(_C) ->
     ID = genlib:bsuuid(),
