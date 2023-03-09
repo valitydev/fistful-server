@@ -64,7 +64,7 @@ handle_function_('GetWithdrawalMethods', {ID}, _Opts) ->
                 end,
                 DmslMethods
             ),
-            {ok, ordsets:from_list(Methods)};
+            {ok, Methods};
         {error, notfound} ->
             woody_error:raise(business, #fistful_IdentityNotFound{})
     end;
