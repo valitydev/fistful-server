@@ -39,7 +39,9 @@ get_limit(LimitId, Withdrawal, Config) ->
             withdrawal = #context_withdrawal_Withdrawal{withdrawal = MarshaledWithdrawal}
         }
     },
-    {ok, Limit} = ff_ct_limiter_client:get(LimitId, Context, ct_helper:get_woody_ctx(Config)),
+    #domain_conf_VersionedObject{version = Version} =
+        dmt_client:checkout_versioned_object({'limit_config', #domain_LimitConfigRef{id = LimitId}}),
+    {ok, Limit} = ff_ct_limiter_client:get(LimitId, Version, Context, ct_helper:get_woody_ctx(Config)),
     Limit.
 
 maybe_marshal_withdrawal(Withdrawal = #wthd_domain_Withdrawal{}) ->
