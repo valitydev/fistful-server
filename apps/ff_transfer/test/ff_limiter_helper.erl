@@ -23,7 +23,8 @@ init_per_suite(_Config) ->
     _ = dmt_client:upsert({limit_config, limiter_mk_config_object_amount(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID1)}),
     _ = dmt_client:upsert({limit_config, limiter_mk_config_object_amount(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID2)}),
     _ = dmt_client:upsert({limit_config, limiter_mk_config_object_amount(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID3)}),
-    _ = dmt_client:upsert({limit_config, limiter_mk_config_object_amount(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID4)}).
+    _ = dmt_client:upsert({limit_config, limiter_mk_config_object_amount(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID4)}),
+    ok.
 
 -spec get_limit_amount(id(), withdrawal(), config()) -> integer().
 get_limit_amount(LimitID, Withdrawal, Config) ->
