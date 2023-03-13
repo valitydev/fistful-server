@@ -67,6 +67,12 @@ on:
         required: false
         default: "v1"
         type: string
+    secrets:
+      CODECOV_TOKEN:
+        description: >
+          Token to upload coverage reports to codecov.io (required for private repos).
+          See also: https://docs.codecov.com/docs/codecov-uploader#upload-token
+        required: true
 
 jobs:
   build:
@@ -269,14 +275,15 @@ jobs:
         run: rebar3 lcov convert
 
       - name: Upload coverage statistics (codecov)
-        if: ${{ inputs.upload-coverage == true }}
         uses: codecov/codecov-action@v2
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
           fail_ci_if_error: true
           files: _build/test/covertool/*.covertool.xml
 
       - name: Upload coverage statistics (coveralls)
-        if: ${{ inputs.upload-coverage == true && inputs.use-coveralls == true }}
+        if: ${{ inputs.use-coveralls == true }}
         uses: coverallsapp/github-action@1.1.3
         with:
           path-to-lcov: _build/test/lcov/lcov.info

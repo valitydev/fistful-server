@@ -37,3 +37,5 @@ jobs:
       thrift-version: ${{ needs.setup.outputs.thrift-version }}
       run-ct-with-compose: true
       cache-version: v99
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
