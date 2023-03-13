@@ -41,9 +41,7 @@ on:
         type: string
       # Test env
       run-ct-with-compose:
-        description: >
-          'Run tests in a docker-compose environment, requires a docker-compose.yml file
-          (see `valitydev/erlang-templates` for examples).'
+        description: 'Run tests in a docker-compose environment, requires a docker-compose.yml file (see `valitydev/erlang-templates` for examples).'
         required: false
         default: false
         type: boolean
@@ -53,6 +51,11 @@ on:
         default: "testrunner"
         type: string
       # Coverage env
+      upload-coverage:
+        description: 'Upload coverage coverage or not'
+        required: false
+        default: true
+        type: boolean
       use-coveralls:
         description: 'Use coveralls for code coverage analysis.'
         required: false
@@ -64,14 +67,6 @@ on:
         required: false
         default: "v1"
         type: string
-    secrets:
-      ACTIONS_FETCH_TOKEN:
-        required: true
-      CODECOV_TOKEN:
-        description: >
-          Token to upload coverage reports to codecov.io (required for private repos).
-          See also: https://docs.codecov.com/docs/codecov-uploader#upload-token
-        required: true
 
 jobs:
   build:
@@ -80,12 +75,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-
-      # yamllint disable-line rule:line-length
-      - run: >
-          git config --global
-          url."https://${{ secrets.ACTIONS_FETCH_TOKEN}}@github.com/".insteadOf
-          ssh://git@github.com/
 
       - name: Setup BEAM
         uses: erlef/setup-beam@v1.15
@@ -110,10 +99,10 @@ jobs:
         uses: actions/cache@v3
         with:
           path: _build/default/lib
-          # yamllint disable-line rule:line-length
           key: ${{ inputs.cache-version }}-${{ runner.os }}-otp-${{ inputs.otp-version }}-build-${{ hashFiles('rebar.lock') }}
           restore-keys: |
             ${{ inputs.cache-version }}-${{ runner.os }}-otp-${{ inputs.otp-version }}-build-
+
       - name: Compile
         run: rebar3 compile
 
@@ -125,11 +114,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - run: >
-          git config --global
-          url."https://${{ secrets.ACTIONS_FETCH_TOKEN}}@github.com/".insteadOf
-          ssh://git@github.com/
-
       - name: Setup BEAM
         uses: erlef/setup-beam@v1.15
         with:
@@ -153,10 +137,10 @@ jobs:
         uses: actions/cache@v3
         with:
           path: _build/default/lib
-          # yamllint disable-line rule:line-length
           key: ${{ inputs.cache-version }}-${{ runner.os }}-otp-${{ inputs.otp-version }}-build-${{ hashFiles('rebar.lock') }}
           restore-keys: |
             ${{ inputs.cache-version }}-${{ runner.os }}-otp-${{ inputs.otp-version }}-build-
+
       - name: Check formatting
         run: rebar3 fmt -c
 
@@ -174,11 +158,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - run: >
-          git config --global
-          url."https://${{ secrets.ACTIONS_FETCH_TOKEN}}@github.com/".insteadOf
-          ssh://git@github.com/
-
       - name: Setup BEAM
         uses: erlef/setup-beam@v1.15
         with:
@@ -202,18 +181,18 @@ jobs:
         uses: actions/cache@v3
         with:
           path: _build/default/lib
-          # yamllint disable-line rule:line-length
           key: ${{ inputs.cache-version }}-${{ runner.os }}-otp-${{ inputs.otp-version }}-build-${{ hashFiles('rebar.lock') }}
           restore-keys: |
             ${{ inputs.cache-version }}-${{ runner.os }}-otp-${{ inputs.otp-version }}-build-
+
       - name: Cache PLTs
         uses: actions/cache@v3
         with:
           path: _build/test/rebar3_*_plt
-          # yamllint disable-line rule:line-length
           key: ${{ inputs.cache-version }}-${{ runner.os }}-otp-${{ inputs.otp-version }}-plt-${{ hashFiles('rebar.lock') }}
           restore-keys: |
             ${{ inputs.cache-version }}-${{ runner.os }}-otp-${{ inputs.otp-version }}-plt-
+
       - name: Run dialyzer
         run: rebar3 as test dialyzer
 
@@ -225,11 +204,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - run: >
-          git config --global
-          url."https://${{ secrets.ACTIONS_FETCH_TOKEN}}@github.com/".insteadOf
-          ssh://git@github.com/
-
       - name: Setup BEAM
         uses: erlef/setup-beam@v1.15
         with:
@@ -253,10 +227,10 @@ jobs:
         uses: actions/cache@v3
         with:
           path: _build/default/lib
-          # yamllint disable-line rule:line-length
           key: ${{ inputs.cache-version }}-${{ runner.os }}-otp-${{ inputs.otp-version }}-build-${{ hashFiles('rebar.lock') }}
           restore-keys: |
             ${{ inputs.cache-version }}-${{ runner.os }}-otp-${{ inputs.otp-version }}-build-
+
       - name: Run EUnit
         run: rebar3 eunit --cover
 
@@ -278,6 +252,7 @@ jobs:
           DOCKER_BUILDKIT: true
         run: |
           docker-compose run --use-aliases --rm ${{ inputs.run-ct-compose-container-name }} rebar3 ct --cover
+
       - name: Store CT Logs
         if: ${{ failure() && (steps.run-ct.outcome == 'failure' || steps.run-ct-w-compose.outcome == 'failure') }}
         uses: actions/upload-artifact@v3
@@ -286,22 +261,22 @@ jobs:
           path: _build/test/logs
 
       - name: Run test coverage conversion (covertool)
+        if: ${{ inputs.upload-coverage == true }}
         run: rebar3 covertool generate
 
       - name: Run test coverage conversion (lcov)
-        if: ${{ inputs.use-coveralls == true }}
+        if: ${{ inputs.upload-coverage == true && inputs.use-coveralls == true }}
         run: rebar3 lcov convert
 
       - name: Upload coverage statistics (codecov)
+        if: ${{ inputs.upload-coverage == true }}
         uses: codecov/codecov-action@v2
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
           fail_ci_if_error: true
           files: _build/test/covertool/*.covertool.xml
 
       - name: Upload coverage statistics (coveralls)
-        if: ${{ inputs.use-coveralls == true }}
+        if: ${{ inputs.upload-coverage == true && inputs.use-coveralls == true }}
         uses: coverallsapp/github-action@1.1.3
         with:
           path-to-lcov: _build/test/lcov/lcov.info
