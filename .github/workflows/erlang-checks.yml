@@ -28,12 +28,15 @@ jobs:
 
   run:
     name: Run checks
+    runs-on: ubuntu-latest
     needs: setup
-    uses: valitydev/erlang-workflows/.github/workflows/erlang-parallel-build.yml@c87ced626ca09efb6658d51a71e87c2c405db1cd
-    with:
-      otp-version: ${{ needs.setup.outputs.otp-version }}
-      rebar-version: ${{ needs.setup.outputs.rebar-version }}
-      use-thrift: true
-      thrift-version: ${{ needs.setup.outputs.thrift-version }}
-      run-ct-with-compose: true
-      cache-version: v99
+    steps:
+      - name: Checks
+        uses: valitydev/erlang-workflows/.github/workflows/erlang-parallel-build.yml@c87ced626ca09efb6658d51a71e87c2c405db1cd
+        with:
+          otp-version: ${{ needs.setup.outputs.otp-version }}
+          rebar-version: ${{ needs.setup.outputs.rebar-version }}
+          use-thrift: true
+          thrift-version: ${{ needs.setup.outputs.thrift-version }}
+          run-ct-with-compose: true
+          cache-version: v99
