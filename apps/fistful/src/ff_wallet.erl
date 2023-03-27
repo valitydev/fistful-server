@@ -7,7 +7,6 @@
 -type id() :: ff_account:id().
 -type external_id() :: id() | undefined.
 -type metadata() :: ff_entity_context:md().
--type domain_revision() :: ff_domain_config:revision().
 
 -define(ACTUAL_FORMAT_VERSION, 2).
 
@@ -39,14 +38,12 @@
     name := binary(),
     currency := ff_currency:id(),
     external_id => id(),
-    metadata => metadata(),
-    domain_revision => domain_revision()
+    metadata => metadata()
 }.
 
 -type check_params() :: #{
     identity := ff_identity_machine:id(),
-    currency := ff_currency:id(),
-    domain_revision => domain_revision()
+    currency := ff_currency:id()
 }.
 
 -type create_error() ::
@@ -148,8 +145,7 @@ metadata(Wallet) ->
     | {error, create_error()}.
 create(Params = #{id := ID, name := Name}) ->
     do(fun() ->
-        {Identity, Currency} = unwrap(check_creation(maps:with([identity, currency, domain_revision], Params))),
-        DomainRevision = maps:get(domain_revision, Params, undefined),
+        {Identity, Currency} = unwrap(check_creation(maps:with([identity, currency], Params))),
         Wallet = genlib_map:compact(#{
             version => ?ACTUAL_FORMAT_VERSION,
             name => Name,
@@ -159,7 +155,7 @@ create(Params = #{id := ID, name := Name}) ->
             metadata => maps:get(metadata, Params, undefined)
         }),
         [{created, Wallet}] ++
-            [{account, Ev} || Ev <- unwrap(ff_account:create(ID, Identity, Currency, DomainRevision))]
+            [{account, Ev} || Ev <- unwrap(ff_account:create(ID, Identity, Currency))]
     end).
 
 -spec is_accessible(wallet_state()) ->

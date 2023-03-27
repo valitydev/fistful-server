@@ -37,8 +37,6 @@
     {terms, ff_party:validate_account_creation_error()}
     | {party, ff_party:inaccessibility()}.
 
--type domain_revision() :: ff_domain_config:revision().
-
 -export_type([id/0]).
 -export_type([accounter_account_id/0]).
 -export_type([account/0]).
@@ -52,9 +50,8 @@
 -export([accounter_account_id/1]).
 
 -export([create/3]).
--export([create/4]).
 -export([is_accessible/1]).
--export([check_account_creation/4]).
+-export([check_account_creation/3]).
 
 -export([apply_event/2]).
 
@@ -89,14 +86,11 @@ accounter_account_id(#{accounter_account_id := AccounterID}) ->
     AccounterID.
 
 %% Actuators
+
 -spec create(id(), identity(), currency()) -> {ok, [event()]} | {error, create_error()}.
 create(ID, Identity, Currency) ->
-    create(ID, Identity, Currency, undefined).
-
--spec create(id(), identity(), currency(), domain_revision() | undefined) -> {ok, [event()]} | {error, create_error()}.
-create(ID, Identity, Currency, DomainRevision) ->
     do(fun() ->
-        unwrap(check_account_creation(ID, Identity, Currency, DomainRevision)),
+        unwrap(check_account_creation(ID, Identity, Currency)),
         CurrencyID = ff_currency:id(Currency),
         CurrencyCode = ff_currency:symcode(Currency),
         Description = ff_string:join($/, [<<"ff/account">>, ID]),
@@ -120,13 +114,12 @@ is_accessible(Account) ->
         accessible = unwrap(ff_identity:is_accessible(Identity))
     end).
 
--spec check_account_creation(id(), identity(), currency(), domain_revision()) ->
+-spec check_account_creation(id(), identity(), currency()) ->
     {ok, valid}
     | {error, create_error()}.
-check_account_creation(ID, Identity, Currency, undefined) ->
-    check_account_creation(ID, Identity, Currency, ff_domain_config:head());
-check_account_creation(ID, Identity, Currency, DomainRevision) ->
+check_account_creation(ID, Identity, Currency) ->
     do(fun() ->
+        DomainRevision = ff_domain_config:head(),
         PartyID = ff_identity:party(Identity),
         accessible = unwrap(party, ff_party:is_accessible(PartyID)),
         TermVarset = #{

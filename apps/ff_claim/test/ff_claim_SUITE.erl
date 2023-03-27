@@ -60,11 +60,6 @@ groups() ->
             accept_wallet_creation,
             accept_wallet_creation_already_exists,
             apply_wallet_creation
-            % wallet_creation,
-            % identity_already_exists,
-            % wallet_already_exists,
-            % invalid_identity_claim,
-            % invalid_wallet_claim
         ]}
     ].
 

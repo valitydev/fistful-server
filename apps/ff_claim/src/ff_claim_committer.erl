@@ -99,11 +99,11 @@ apply_identity_creation(IdentityID, Metadata, ChangeParams, _Revision, Change) -
             woody_error:raise(system, {internal, result_unexpected, woody_error:format_details(Error)})
     end.
 
-assert_wallet_creation_modification_applicable(IdentityID, WalletID, DomainCurrency, Revision, Change) ->
+assert_wallet_creation_modification_applicable(IdentityID, WalletID, DomainCurrency, _Revision, Change) ->
     #domain_CurrencyRef{symbolic_code = CurrencyID} = DomainCurrency,
     case ff_wallet:check_creation(#{identity => IdentityID, currency => CurrencyID}) of
         {ok, {Identity, Currency}} ->
-            case ff_account:check_account_creation(WalletID, Identity, Currency, Revision) of
+            case ff_account:check_account_creation(WalletID, Identity, Currency) of
                 {ok, valid} ->
                     ok;
                 %% not_allowed_currency
@@ -118,7 +118,7 @@ assert_wallet_creation_modification_applicable(IdentityID, WalletID, DomainCurre
             raise_invalid_changeset(?cm_invalid_wallet_currency_not_found(WalletID), [Change])
     end.
 
-apply_wallet_creation(WalletID, Metadata, ChangeParams, Revision, Change) ->
+apply_wallet_creation(WalletID, Metadata, ChangeParams, _Revision, Change) ->
     Params = #{identity := IdentityID} = unmarshal_wallet_params(WalletID, ChangeParams),
     PartyID =
         case ff_identity_machine:get(IdentityID) of
@@ -128,7 +128,7 @@ apply_wallet_creation(WalletID, Metadata, ChangeParams, Revision, Change) ->
             {error, notfound} ->
                 raise_invalid_changeset(?cm_invalid_wallet_identity_not_found(WalletID), [Change])
         end,
-    case ff_wallet_machine:create(Params#{domain_revision => Revision}, create_context(PartyID, Metadata)) of
+    case ff_wallet_machine:create(Params, create_context(PartyID, Metadata)) of
         ok ->
             ok;
         {error, {identity, notfound}} ->

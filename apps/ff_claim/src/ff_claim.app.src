@@ -6,7 +6,6 @@
         kernel,
         stdlib,
         genlib,
-        ff_core,
         damsel,
         fistful,
         ff_transfer
