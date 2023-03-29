@@ -27,6 +27,22 @@
     modification = {creation, Params}
 }).
 
+-define(USER_INFO, #claimmgmt_UserInfo{
+    id = <<"id">>,
+    email = <<"email">>,
+    username = <<"username">>,
+    type = {internal_user, #claimmgmt_InternalUser{}}
+}).
+
+-define(CLAIM(PartyID, Claim), #claimmgmt_Claim{
+    id = 1,
+    party_id = PartyID,
+    status = {pending, #claimmgmt_ClaimPending{}},
+    revision = 1,
+    created_at = <<"2026-03-22T06:12:27Z">>,
+    changeset = [Claim]
+}).
+
 %% Tests
 
 -export([accept_identity_creation/1]).
@@ -102,64 +118,64 @@ end_per_testcase(_Name, _C) ->
 %% Tests
 
 -spec accept_identity_creation(config()) -> test_return().
-accept_identity_creation(C) ->
-    #{party_id := PartyID} = prepare_standard_environment(C),
+accept_identity_creation(_C) ->
+    #{party_id := PartyID} = prepare_standard_environment(),
     IdentityID = genlib:bsuuid(),
     Claim = make_identity_creation_claim(PartyID, IdentityID, <<"good-one">>),
-    {ok, ok} = call_service('Accept', {PartyID, make_claim_with_changeset(PartyID, Claim)}),
+    {ok, ok} = call_service('Accept', {PartyID, ?CLAIM(PartyID, Claim)}),
     ok.
 
 -spec accept_identity_creation_already_exists(config()) -> test_return().
-accept_identity_creation_already_exists(C) ->
-    #{party_id := PartyID, identity_id := IdentityID} = prepare_standard_environment(C),
+accept_identity_creation_already_exists(_C) ->
+    #{party_id := PartyID, identity_id := IdentityID} = prepare_standard_environment(),
     Claim = make_identity_creation_claim(PartyID, IdentityID, <<"good-one">>),
     ?assertMatch(
         {exception, #claimmgmt_InvalidChangeset{reason = ?cm_invalid_identity_already_exists(IdentityID)}},
-        call_service('Accept', {PartyID, make_claim_with_changeset(PartyID, Claim)})
+        call_service('Accept', {PartyID, ?CLAIM(PartyID, Claim)})
     ).
 
 -spec apply_identity_creation(config()) -> test_return().
-apply_identity_creation(C) ->
-    #{party_id := PartyID} = prepare_standard_environment(C),
+apply_identity_creation(_C) ->
+    #{party_id := PartyID} = prepare_standard_environment(),
     IdentityID = genlib:bsuuid(),
     Claim = make_identity_creation_claim(PartyID, IdentityID, <<"good-one">>),
-    {ok, ok} = call_service('Commit', {PartyID, make_claim_with_changeset(PartyID, Claim)}),
+    {ok, ok} = call_service('Commit', {PartyID, ?CLAIM(PartyID, Claim)}),
     _Identity = get_identity(IdentityID),
     ok.
 
 -spec accept_wallet_creation(config()) -> test_return().
-accept_wallet_creation(C) ->
+accept_wallet_creation(_C) ->
     #{
         party_id := PartyID,
         identity_id := IdentityID
-    } = prepare_standard_environment(C),
+    } = prepare_standard_environment(),
     WalletID = genlib:bsuuid(),
     Claim = make_wallet_creation_claim(WalletID, IdentityID, <<"RUB">>),
-    {ok, ok} = call_service('Accept', {PartyID, make_claim_with_changeset(PartyID, Claim)}),
+    {ok, ok} = call_service('Accept', {PartyID, ?CLAIM(PartyID, Claim)}),
     ok.
 
 -spec accept_wallet_creation_already_exists(config()) -> test_return().
-accept_wallet_creation_already_exists(C) ->
+accept_wallet_creation_already_exists(_C) ->
     #{
         party_id := PartyID,
         identity_id := IdentityID,
         wallet_id := WalletID
-    } = prepare_standard_environment(C),
+    } = prepare_standard_environment(),
     Claim = make_wallet_creation_claim(WalletID, IdentityID, <<"RUB">>),
     ?assertMatch(
         {exception, #claimmgmt_InvalidChangeset{reason = ?cm_invalid_wallet_already_exists(WalletID)}},
-        call_service('Accept', {PartyID, make_claim_with_changeset(PartyID, Claim)})
+        call_service('Accept', {PartyID, ?CLAIM(PartyID, Claim)})
     ).
 
 -spec apply_wallet_creation(config()) -> test_return().
-apply_wallet_creation(C) ->
+apply_wallet_creation(_C) ->
     #{
         party_id := PartyID,
         identity_id := IdentityID
-    } = prepare_standard_environment(C),
+    } = prepare_standard_environment(),
     WalletID = genlib:bsuuid(),
     Claim = make_wallet_creation_claim(WalletID, IdentityID, <<"RUB">>),
-    {ok, ok} = call_service('Commit', {PartyID, make_claim_with_changeset(PartyID, Claim)}),
+    {ok, ok} = call_service('Commit', {PartyID, ?CLAIM(PartyID, Claim)}),
     _Wallet = get_wallet(WalletID),
     ok.
 
@@ -174,31 +190,25 @@ call_service(Fun, Args) ->
     }),
     ff_woody_client:call(Client, Request).
 
-prepare_standard_environment(C) ->
-    PartyID = create_party(C),
-    IdentityID = create_identity(PartyID, C),
-    WalletID = create_wallet(IdentityID, <<"My wallet">>, <<"RUB">>, C),
+prepare_standard_environment() ->
+    PartyID = create_party(),
+    IdentityID = create_identity(PartyID),
+    WalletID = create_wallet(IdentityID, <<"My wallet">>, <<"RUB">>),
     #{
         wallet_id => WalletID,
         identity_id => IdentityID,
         party_id => PartyID
     }.
 
-create_party(_C) ->
+create_party() ->
     ID = genlib:bsuuid(),
     _ = ff_party:create(ID),
     ID.
-
-create_identity(Party, C) ->
-    create_identity(Party, <<"good-one">>, C).
-
-create_identity(Party, ProviderID, C) ->
-    create_identity(Party, <<"Identity Name">>, ProviderID, C).
-
-create_identity(Party, Name, ProviderID, _C) ->
+create_identity(Party) ->
+    Name = <<"Identity Name">>,
     ID = genlib:unique(),
     ok = ff_identity_machine:create(
-        #{id => ID, name => Name, party => Party, provider => ProviderID},
+        #{id => ID, name => Name, party => Party, provider => <<"good-one">>},
         #{<<"com.rbkmoney.wapi">> => #{<<"name">> => Name, <<"owner">> => Party}}
     ),
     ID.
@@ -207,7 +217,7 @@ get_identity(ID) ->
     {ok, Machine} = ff_identity_machine:get(ID),
     ff_identity_machine:identity(Machine).
 
-create_wallet(IdentityID, Name, Currency, _C) ->
+create_wallet(IdentityID, Name, Currency) ->
     ID = genlib:unique(),
     ok = ff_wallet_machine:create(
         #{id => ID, identity => IdentityID, name => Name, currency => Currency},
@@ -226,7 +236,7 @@ make_identity_creation_claim(PartyID, IdentityID, Provider) ->
         provider = Provider
     },
     Mod = ?TEST_IDENTITY_CREATION(IdentityID, Params),
-    ?cm_identity_modification(1, <<"2026-03-22T06:12:27Z">>, Mod, make_user()).
+    ?cm_identity_modification(1, <<"2026-03-22T06:12:27Z">>, Mod, ?USER_INFO).
 
 make_wallet_creation_claim(WalletID, IdentityID, CurrencyID) ->
     Params = #claimmgmt_NewWalletParams{
@@ -237,22 +247,4 @@ make_wallet_creation_claim(WalletID, IdentityID, CurrencyID) ->
         }
     },
     Mod = ?TEST_WALLET_CREATION(WalletID, Params),
-    ?cm_wallet_modification(1, <<"2026-03-22T06:12:27Z">>, Mod, make_user()).
-
-make_user() ->
-    #claimmgmt_UserInfo{
-        id = <<"id">>,
-        email = <<"email">>,
-        username = <<"username">>,
-        type = {internal_user, #claimmgmt_InternalUser{}}
-    }.
-
-make_claim_with_changeset(PartyID, Claim) ->
-    #claimmgmt_Claim{
-        id = 1,
-        party_id = PartyID,
-        status = {pending, #claimmgmt_ClaimPending{}},
-        revision = 1,
-        created_at = <<"2026-03-22T06:12:27Z">>,
-        changeset = [Claim]
-    }.
+    ?cm_wallet_modification(1, <<"2026-03-22T06:12:27Z">>, Mod, ?USER_INFO).

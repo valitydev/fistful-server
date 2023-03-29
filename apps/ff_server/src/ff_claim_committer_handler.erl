@@ -18,18 +18,15 @@ handle_function(Func, Args, Opts) ->
 
 handle_function_('Accept', {PartyID, #claimmgmt_Claim{changeset = Changeset}}, _Opts) ->
     ok = scoper:add_meta(#{party_id => PartyID}),
-    Revision = ff_domain_config:head(),
     Modifications = ff_claim_committer:filter_ff_modifications(Changeset),
-    ok = ff_claim_committer:assert_modifications_applicable(Modifications, Revision),
+    ok = ff_claim_committer:assert_modifications_applicable(Modifications),
     {ok, ok};
 handle_function_('Commit', {PartyID, Claim}, _Opts) ->
     #claimmgmt_Claim{
         id = ID,
-        changeset = Changeset,
-        revision = Revision
+        changeset = Changeset
     } = Claim,
     ok = scoper:add_meta(#{party_id => PartyID, claim_id => ID}),
     Modifications = ff_claim_committer:filter_ff_modifications(Changeset),
-    ok = ff_claim_committer:assert_modifications_applicable(Modifications, Revision),
-    ff_claim_committer:apply_modifications(Modifications, Revision),
+    ff_claim_committer:apply_modifications(Modifications),
     {ok, ok}.

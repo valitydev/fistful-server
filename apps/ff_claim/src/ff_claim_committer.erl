@@ -8,11 +8,10 @@
 -include("ff_claim_management.hrl").
 
 -export([filter_ff_modifications/1]).
--export([assert_modifications_applicable/2]).
--export([apply_modifications/2]).
+-export([assert_modifications_applicable/1]).
+-export([apply_modifications/1]).
 
 -type changeset() :: dmsl_claimmgmt_thrift:'ClaimChangeset'().
--type revision() :: ff_domain_config:revision().
 -type modification() :: dmsl_claimmgmt_thrift:'PartyModification'().
 -type modifications() :: [modification()].
 
@@ -33,44 +32,47 @@ filter_ff_modifications(Changeset) ->
         Changeset
     ).
 
--spec assert_modifications_applicable(modifications(), revision()) -> ok | no_return().
-assert_modifications_applicable([FFChange | Others], Revision) ->
-    case FFChange of
-        ?cm_identity_creation(PartyID, IdentityID, Provider, _Params) ->
-            case ff_identity_machine:get(IdentityID) of
-                {ok, _Machine} ->
-                    raise_invalid_changeset(?cm_invalid_identity_already_exists(IdentityID), [FFChange]);
-                {error, notfound} ->
-                    assert_identity_creation_applicable(PartyID, IdentityID, Provider, Revision, FFChange)
-            end;
-        ?cm_wallet_creation(IdentityID, WalletID, Currency, _Params) ->
-            case ff_wallet_machine:get(WalletID) of
-                {ok, _Machine} ->
-                    raise_invalid_changeset(?cm_invalid_wallet_already_exists(WalletID), [FFChange]);
-                {error, notfound} ->
-                    assert_wallet_creation_modification_applicable(IdentityID, WalletID, Currency, Revision, FFChange)
-            end
-    end,
-    assert_modifications_applicable(Others, Revision);
-assert_modifications_applicable([], _) ->
+%% Used same checks as in identity/wallet create function
+-spec assert_modifications_applicable(modifications()) -> ok | no_return().
+assert_modifications_applicable([FFChange | Others]) ->
+    ok =
+        case FFChange of
+            ?cm_identity_creation(PartyID, IdentityID, Provider, _Params) ->
+                case ff_identity_machine:get(IdentityID) of
+                    {ok, _Machine} ->
+                        raise_invalid_changeset(?cm_invalid_identity_already_exists(IdentityID), [FFChange]);
+                    {error, notfound} ->
+                        assert_identity_creation_applicable(PartyID, IdentityID, Provider, FFChange)
+                end;
+            ?cm_wallet_creation(IdentityID, WalletID, Currency, _Params) ->
+                case ff_wallet_machine:get(WalletID) of
+                    {ok, _Machine} ->
+                        raise_invalid_changeset(?cm_invalid_wallet_already_exists(WalletID), [FFChange]);
+                    {error, notfound} ->
+                        assert_wallet_creation_modification_applicable(IdentityID, WalletID, Currency, FFChange)
+                end
+        end,
+    assert_modifications_applicable(Others);
+assert_modifications_applicable([]) ->
     ok.
 
--spec apply_modifications(modifications(), revision()) -> ok | no_return().
-apply_modifications([FFChange | Others], Revision) ->
-    case FFChange of
-        ?cm_identity_creation(_PartyID, IdentityID, _Provider, Params) ->
-            #claimmgmt_IdentityParams{metadata = Metadata} = Params,
-            apply_identity_creation(IdentityID, Metadata, Params, Revision, FFChange);
-        ?cm_wallet_creation(_IdentityID, WalletID, _Currency, Params) ->
-            #claimmgmt_NewWalletParams{metadata = Metadata} = Params,
-            apply_wallet_creation(WalletID, Metadata, Params, Revision, FFChange)
-    end,
-    apply_modifications(Others, Revision);
-apply_modifications([], _) ->
+-spec apply_modifications(modifications()) -> ok | no_return().
+apply_modifications([FFChange | Others]) ->
+    ok =
+        case FFChange of
+            ?cm_identity_creation(_PartyID, IdentityID, _Provider, Params) ->
+                #claimmgmt_IdentityParams{metadata = Metadata} = Params,
+                apply_identity_creation(IdentityID, Metadata, Params, FFChange);
+            ?cm_wallet_creation(_IdentityID, WalletID, _Currency, Params) ->
+                #claimmgmt_NewWalletParams{metadata = Metadata} = Params,
+                apply_wallet_creation(WalletID, Metadata, Params, FFChange)
+        end,
+    apply_modifications(Others);
+apply_modifications([]) ->
     ok.
 
 %%% Internal functions
-assert_identity_creation_applicable(PartyID, IdentityID, Provider, _Revision, Change) ->
+assert_identity_creation_applicable(PartyID, IdentityID, Provider, Change) ->
     case ff_identity:check_identity_creation(#{party => PartyID, provider => Provider}) of
         {ok, _} ->
             ok;
@@ -82,7 +84,7 @@ assert_identity_creation_applicable(PartyID, IdentityID, Provider, _Revision, Ch
             raise_invalid_changeset(?cm_invalid_identity_party_inaccessible(IdentityID), [Change])
     end.
 
-apply_identity_creation(IdentityID, Metadata, ChangeParams, _Revision, Change) ->
+apply_identity_creation(IdentityID, Metadata, ChangeParams, Change) ->
     Params = #{party := PartyID} = unmarshal_identity_params(IdentityID, ChangeParams),
     case ff_identity_machine:create(Params, create_context(PartyID, Metadata)) of
         ok ->
@@ -99,7 +101,7 @@ apply_identity_creation(IdentityID, Metadata, ChangeParams, _Revision, Change) -
             woody_error:raise(system, {internal, result_unexpected, woody_error:format_details(Error)})
     end.
 
-assert_wallet_creation_modification_applicable(IdentityID, WalletID, DomainCurrency, _Revision, Change) ->
+assert_wallet_creation_modification_applicable(IdentityID, WalletID, DomainCurrency, Change) ->
     #domain_CurrencyRef{symbolic_code = CurrencyID} = DomainCurrency,
     case ff_wallet:check_creation(#{identity => IdentityID, currency => CurrencyID}) of
         {ok, {Identity, Currency}} ->
@@ -118,7 +120,7 @@ assert_wallet_creation_modification_applicable(IdentityID, WalletID, DomainCurre
             raise_invalid_changeset(?cm_invalid_wallet_currency_not_found(WalletID), [Change])
     end.
 
-apply_wallet_creation(WalletID, Metadata, ChangeParams, _Revision, Change) ->
+apply_wallet_creation(WalletID, Metadata, ChangeParams, Change) ->
     Params = #{identity := IdentityID} = unmarshal_wallet_params(WalletID, ChangeParams),
     PartyID =
         case ff_identity_machine:get(IdentityID) of
