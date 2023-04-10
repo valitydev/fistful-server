@@ -3,6 +3,8 @@
 -include_lib("stdlib/include/assert.hrl").
 -include_lib("ff_cth/include/ct_domain.hrl").
 -include_lib("damsel/include/dmsl_wthd_domain_thrift.hrl").
+-include_lib("limiter_proto/include/limproto_limiter_thrift.hrl").
+-include_lib("damsel/include/dmsl_limiter_config_thrift.hrl").
 
 %% Common test API
 
@@ -18,6 +20,9 @@
 %% Tests
 -export([limit_success/1]).
 -export([limit_overflow/1]).
+-export([limit_hold_currency_error/1]).
+-export([limit_hold_operation_error/1]).
+-export([limit_hold_paytool_error/1]).
 -export([choose_provider_without_limit_overflow/1]).
 -export([provider_limits_exhaust_orderly/1]).
 -export([provider_retry/1]).
@@ -45,6 +50,9 @@ groups() ->
         {default, [sequence], [
             limit_success,
             limit_overflow,
+            limit_hold_currency_error,
+            limit_hold_operation_error,
+            limit_hold_paytool_error,
             choose_provider_without_limit_overflow,
             provider_limits_exhaust_orderly,
             provider_retry,
@@ -84,7 +92,18 @@ end_per_group(_, _) ->
 %%
 
 -spec init_per_testcase(test_case_name(), config()) -> config().
+init_per_testcase(Name, C0) when
+    Name =:= limit_hold_currency_error orelse
+        Name =:= limit_hold_operation_error orelse
+        Name =:= limit_hold_paytool_error
+->
+    C1 = do_init_per_testcase(Name, C0),
+    meck:new(ff_limiter, [no_link, passthrough]),
+    C1;
 init_per_testcase(Name, C0) ->
+    do_init_per_testcase(Name, C0).
+
+do_init_per_testcase(Name, C0) ->
     C1 = ct_helper:makeup_cfg(
         [
             ct_helper:test_case_name(Name),
@@ -108,7 +127,17 @@ init_per_testcase(Name, C0) ->
     C2.
 
 -spec end_per_testcase(test_case_name(), config()) -> _.
+end_per_testcase(Name, C) when
+    Name =:= limit_hold_currency_error orelse
+        Name =:= limit_hold_operation_error orelse
+        Name =:= limit_hold_paytool_error
+->
+    meck:unload(ff_limiter),
+    do_end_per_testcase(Name, C);
 end_per_testcase(Name, C) ->
+    do_end_per_testcase(Name, C).
+
+do_end_per_testcase(Name, C) ->
     case Name of
         Name when
             Name =:= provider_retry orelse
@@ -170,6 +199,47 @@ limit_overflow(C) ->
     ok = timer:sleep(500),
     Withdrawal = get_withdrawal(WithdrawalID),
     ?assertEqual(PreviousAmount, ff_limiter_helper:get_limit_amount(?LIMIT_TURNOVER_NUM_PAYTOOL_ID2, Withdrawal, C)).
+
+-spec limit_hold_currency_error(config()) -> test_return().
+limit_hold_currency_error(C) ->
+    ok = meck:expect(ff_limiter, hold_withdrawal_limits, fun(_TurnoverLimits, _Route, _Withdrawal, _Iter) ->
+        erlang:error(#limiter_InvalidOperationCurrency{currency = <<"RUB">>, expected_currency = <<"KEK">>})
+    end),
+    limit_hold_error(C).
+
+-spec limit_hold_operation_error(config()) -> test_return().
+limit_hold_operation_error(C) ->
+    ok = meck:expect(ff_limiter, hold_withdrawal_limits, fun(_TurnoverLimits, _Route, _Withdrawal, _Iter) ->
+        erlang:error(#limiter_OperationContextNotSupported{
+            context_type = {withdrawal_processing, #limiter_config_LimitContextTypeWithdrawalProcessing{}}
+        })
+    end),
+    limit_hold_error(C).
+
+-spec limit_hold_paytool_error(config()) -> test_return().
+limit_hold_paytool_error(C) ->
+    ok = meck:expect(ff_limiter, hold_withdrawal_limits, fun(_TurnoverLimits, _Route, _Withdrawal, _Iter) ->
+        erlang:error(#limiter_PaymentToolNotSupported{payment_tool = <<"unsupported paytool">>})
+    end),
+    limit_hold_error(C).
+
+limit_hold_error(C) ->
+    Cash = {800800, <<"RUB">>},
+    #{
+        wallet_id := WalletID,
+        destination_id := DestinationID
+    } = prepare_standard_environment(Cash, C),
+    WithdrawalID = generate_id(),
+    WithdrawalParams = #{
+        id => WithdrawalID,
+        destination_id => DestinationID,
+        wallet_id => WalletID,
+        body => Cash,
+        external_id => WithdrawalID
+    },
+    ok = ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new()),
+    Result = await_final_withdrawal_status(WithdrawalID),
+    ?assertMatch({failed, #{code := <<"no_route_found">>}}, Result).
 
 -spec choose_provider_without_limit_overflow(config()) -> test_return().
 choose_provider_without_limit_overflow(C) ->

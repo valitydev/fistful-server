@@ -788,6 +788,9 @@ process_routing(Withdrawal) ->
         {error, route_not_found} ->
             Events = process_transfer_fail(route_not_found, Withdrawal),
             {continue, Events};
+        {error, {limiter_hold_error, _LimiterError} = Reason} ->
+            Events = process_transfer_fail(Reason, Withdrawal),
+            {continue, Events};
         {error, {inconsistent_quote_route, _Data} = Reason} ->
             Events = process_transfer_fail(Reason, Withdrawal),
             {continue, Events}
@@ -1714,6 +1717,10 @@ process_route_change(Withdrawal, Reason) ->
             case do_process_routing(Withdrawal) of
                 {ok, Routes} ->
                     do_process_route_change(Routes, Withdrawal, Reason);
+                {error, {limiter_hold_error, _LimiterError}} ->
+                    %% Businesswise it is similar to `route_not_found` reason
+                    Events = process_transfer_fail(Reason, Withdrawal),
+                    {continue, Events};
                 {error, route_not_found} ->
                     %% No more routes, return last error
                     Events = process_transfer_fail(Reason, Withdrawal),
@@ -1844,6 +1851,14 @@ build_failure(limit_check, Withdrawal) ->
                 }
             }
     end;
+build_failure({limiter_hold_error, LimiterError}, _Withdrawal) ->
+    #{
+        code => <<"no_route_found">>,
+        sub => #{
+            code => <<"limter_hold_error">>,
+            reason => genlib:format(LimiterError)
+        }
+    };
 build_failure(route_not_found, _Withdrawal) ->
     #{
         code => <<"no_route_found">>
