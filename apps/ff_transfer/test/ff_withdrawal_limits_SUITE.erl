@@ -202,26 +202,43 @@ limit_overflow(C) ->
 
 -spec limit_hold_currency_error(config()) -> test_return().
 limit_hold_currency_error(C) ->
-    ok = meck:expect(ff_limiter, hold_withdrawal_limits, fun(_TurnoverLimits, _Route, _Withdrawal, _Iter) ->
-        erlang:error(#limiter_InvalidOperationCurrency{currency = <<"RUB">>, expected_currency = <<"KEK">>})
-    end),
+    ok = meck:expect(
+        ff_limiter,
+        hold_withdrawal_limits,
+        mk_hold_withdrawal_limits_w_error(
+            #limiter_InvalidOperationCurrency{currency = <<"RUB">>, expected_currency = <<"KEK">>}
+        )
+    ),
     limit_hold_error(C).
 
 -spec limit_hold_operation_error(config()) -> test_return().
 limit_hold_operation_error(C) ->
-    ok = meck:expect(ff_limiter, hold_withdrawal_limits, fun(_TurnoverLimits, _Route, _Withdrawal, _Iter) ->
-        erlang:error(#limiter_OperationContextNotSupported{
-            context_type = {withdrawal_processing, #limiter_config_LimitContextTypeWithdrawalProcessing{}}
-        })
-    end),
+    ok = meck:expect(
+        ff_limiter,
+        hold_withdrawal_limits,
+        mk_hold_withdrawal_limits_w_error(
+            #limiter_OperationContextNotSupported{
+                context_type = {withdrawal_processing, #limiter_config_LimitContextTypeWithdrawalProcessing{}}
+            }
+        )
+    ),
     limit_hold_error(C).
 
 -spec limit_hold_paytool_error(config()) -> test_return().
 limit_hold_paytool_error(C) ->
-    ok = meck:expect(ff_limiter, hold_withdrawal_limits, fun(_TurnoverLimits, _Route, _Withdrawal, _Iter) ->
-        erlang:error(#limiter_PaymentToolNotSupported{payment_tool = <<"unsupported paytool">>})
-    end),
+    ok = meck:expect(
+        ff_limiter,
+        hold_withdrawal_limits,
+        mk_hold_withdrawal_limits_w_error(
+            #limiter_PaymentToolNotSupported{payment_tool = <<"unsupported paytool">>}
+        )
+    ),
     limit_hold_error(C).
+
+mk_hold_withdrawal_limits_w_error(Error) ->
+    fun(_TurnoverLimits, _Route, _Withdrawal, _Iter) ->
+        apply(fun erlang:error/1, [Error])
+    end.
 
 limit_hold_error(C) ->
     Cash = {800800, <<"RUB">>},

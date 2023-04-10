@@ -22,6 +22,12 @@
 -type context() :: limproto_limiter_thrift:'LimitContext'().
 -type clock() :: limproto_limiter_thrift:'Clock'().
 
+-type hold_error() ::
+    {limit_hold_error,
+        limproto_limiter_thrift:'InvalidOperationCurrency'()
+        | limproto_limiter_thrift:'OperationContextNotSupported'()
+        | limproto_limiter_thrift:'PaymentToolNotSupported'()}.
+
 -export([get_turnover_limits/1]).
 -export([check_limits/3]).
 -export([marshal_withdrawal/1]).
@@ -29,6 +35,8 @@
 -export([hold_withdrawal_limits/4]).
 -export([commit_withdrawal_limits/4]).
 -export([rollback_withdrawal_limits/4]).
+
+-export_type([hold_error/0]).
 
 -spec get_turnover_limits(turnover_selector() | undefined) -> [turnover_limit()].
 get_turnover_limits(undefined) ->
@@ -65,7 +73,7 @@ check_limits_(T, {Limits, Errors}, Context) ->
             {Limits, [{LimitID, LimitAmount, UpperBoundary} | Errors]}
     end.
 
--spec hold_withdrawal_limits([turnover_limit()], route(), withdrawal(), pos_integer()) -> ok.
+-spec hold_withdrawal_limits([turnover_limit()], route(), withdrawal(), pos_integer()) -> ok | no_return().
 hold_withdrawal_limits(TurnoverLimits, Route, Withdrawal, Iter) ->
     LimitChanges = gen_limit_changes(TurnoverLimits, Route, Withdrawal, Iter),
     Context = gen_limit_context(Route, Withdrawal),
@@ -83,7 +91,7 @@ rollback_withdrawal_limits(TurnoverLimits, Route, Withdrawal, Iter) ->
     Context = gen_limit_context(Route, Withdrawal),
     rollback(LimitChanges, get_latest_clock(), Context).
 
--spec hold([limit_change()], clock(), context()) -> ok.
+-spec hold([limit_change()], clock(), context()) -> ok | no_return().
 hold(LimitChanges, Clock, Context) ->
     lists:foreach(
         fun(LimitChange) ->
@@ -204,11 +212,15 @@ get(LimitID, Version, Clock, Context) ->
             error({invalid_request, Errors})
     end.
 
--spec call_hold(limit_change(), clock(), context()) -> clock().
+-spec call_hold(limit_change(), clock(), context()) -> clock() | no_return().
 call_hold(LimitChange, Clock, Context) ->
     Args = {LimitChange, Clock, Context},
-    {ok, ClockUpdated} = call('Hold', Args),
-    ClockUpdated.
+    case call('Hold', Args) of
+        {ok, ClockUpdated} ->
+            ClockUpdated;
+        {exception, Exception} ->
+            error(Exception)
+    end.
 
 -spec call_commit(limit_change(), clock(), context()) -> clock().
 call_commit(LimitChange, Clock, Context) ->
@@ -225,9 +237,4 @@ call_rollback(LimitChange, Clock, Context) ->
 call(Func, Args) ->
     Service = {limproto_limiter_thrift, 'Limiter'},
     Request = {Service, Func, Args},
-    case ff_woody_client:call(limiter, Request) of
-        {ok, _} = Result ->
-            Result;
-        {exception, Exception} ->
-            error(Exception)
-    end.
+    ff_woody_client:call(limiter, Request).

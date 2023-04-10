@@ -318,6 +318,7 @@
     limit_check
     | route_not_found
     | {inconsistent_quote_route, {provider_id, provider_id()} | {terminal_id, terminal_id()}}
+    | ff_limiter:hold_error()
     | session.
 
 -type session_processing_status() :: undefined | pending | succeeded | failed.
@@ -788,7 +789,7 @@ process_routing(Withdrawal) ->
         {error, route_not_found} ->
             Events = process_transfer_fail(route_not_found, Withdrawal),
             {continue, Events};
-        {error, {limiter_hold_error, _LimiterError} = Reason} ->
+        {error, {limit_hold_error, _LimitError} = Reason} ->
             Events = process_transfer_fail(Reason, Withdrawal),
             {continue, Events};
         {error, {inconsistent_quote_route, _Data} = Reason} ->
@@ -802,7 +803,7 @@ process_rollback_routing(Withdrawal) ->
     {undefined, []}.
 
 -spec do_process_routing(withdrawal_state()) -> {ok, [route()]} | {error, Reason} when
-    Reason :: route_not_found | attempt_limit_exceeded | InconsistentQuote,
+    Reason :: route_not_found | attempt_limit_exceeded | InconsistentQuote | ff_limiter:hold_error(),
     InconsistentQuote :: {inconsistent_quote_route, {provider_id, provider_id()} | {terminal_id, terminal_id()}}.
 do_process_routing(Withdrawal) ->
     do(fun() ->
@@ -1717,7 +1718,7 @@ process_route_change(Withdrawal, Reason) ->
             case do_process_routing(Withdrawal) of
                 {ok, Routes} ->
                     do_process_route_change(Routes, Withdrawal, Reason);
-                {error, {limiter_hold_error, _LimiterError}} ->
+                {error, {limit_hold_error, _LimiterError}} ->
                     %% Businesswise it is similar to `route_not_found` reason
                     Events = process_transfer_fail(Reason, Withdrawal),
                     {continue, Events};
@@ -1851,7 +1852,7 @@ build_failure(limit_check, Withdrawal) ->
                 }
             }
     end;
-build_failure({limiter_hold_error, LimiterError}, _Withdrawal) ->
+build_failure({limit_hold_error, LimiterError}, _Withdrawal) ->
     #{
         code => <<"no_route_found">>,
         sub => #{

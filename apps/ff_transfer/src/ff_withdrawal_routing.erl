@@ -391,12 +391,12 @@ validate_turnover_limits({value, TurnoverLimits}, _VS, Route, #{withdrawal := Wi
                 {error, {terms_violation, Error}}
         end
     catch
-        error:(#limiter_InvalidOperationCurrency{} = LimiterError) ->
-            {error, {limiter_hold_error, LimiterError}};
-        error:(#limiter_OperationContextNotSupported{} = LimiterError) ->
-            {error, {limiter_hold_error, LimiterError}};
-        error:(#limiter_PaymentToolNotSupported{} = LimiterError) ->
-            {error, {limiter_hold_error, LimiterError}}
+        error:(#limiter_InvalidOperationCurrency{} = LimitError) ->
+            {error, {limit_hold_error, LimitError}};
+        error:(#limiter_OperationContextNotSupported{} = LimitError) ->
+            {error, {limit_hold_error, LimitError}};
+        error:(#limiter_PaymentToolNotSupported{} = LimitError) ->
+            {error, {limit_hold_error, LimitError}}
     end;
 validate_turnover_limits(NotReducedSelector, _VS, _Route, _RoutingContext) ->
     {error, {misconfiguration, {'Could not reduce selector to a value', NotReducedSelector}}}.
