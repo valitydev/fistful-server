@@ -22,12 +22,6 @@
 -type context() :: limproto_limiter_thrift:'LimitContext'().
 -type clock() :: limproto_limiter_thrift:'Clock'().
 
--type hold_error() ::
-    {limit_hold_error,
-        limproto_limiter_thrift:'InvalidOperationCurrency'()
-        | limproto_limiter_thrift:'OperationContextNotSupported'()
-        | limproto_limiter_thrift:'PaymentToolNotSupported'()}.
-
 -export([get_turnover_limits/1]).
 -export([check_limits/3]).
 -export([marshal_withdrawal/1]).
@@ -35,8 +29,6 @@
 -export([hold_withdrawal_limits/4]).
 -export([commit_withdrawal_limits/4]).
 -export([rollback_withdrawal_limits/4]).
-
--export_type([hold_error/0]).
 
 -spec get_turnover_limits(turnover_selector() | undefined) -> [turnover_limit()].
 get_turnover_limits(undefined) ->
