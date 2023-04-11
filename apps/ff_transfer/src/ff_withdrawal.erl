@@ -1856,7 +1856,7 @@ build_failure({limit_hold_error, LimiterError}, _Withdrawal) ->
     #{
         code => <<"no_route_found">>,
         sub => #{
-            code => <<"limter_hold_error">>,
+            code => <<"limit_hold_error">>,
             reason => genlib:format(LimiterError)
         }
     };
