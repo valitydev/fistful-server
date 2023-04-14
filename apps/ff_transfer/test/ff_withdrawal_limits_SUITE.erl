@@ -252,7 +252,7 @@ limit_hold_error_two_routes_failure(C) ->
     Result = await_final_withdrawal_status(WithdrawalID),
     ?assertMatch({failed, #{code := <<"no_route_found">>}}, Result).
 
--define(limiter_request(Func, TerminalRef), {
+-define(limiterRequest(Func, TerminalRef), {
     {limproto_limiter_thrift, 'Limiter'},
     Func,
     {_LimitChange, _Clock, #limiter_LimitContext{
@@ -263,7 +263,7 @@ limit_hold_error_two_routes_failure(C) ->
 }).
 mock_limiter_trm_hold(ExpectTerminalRef, ReturnFunc) ->
     ok = meck:expect(ff_woody_client, call, fun
-        (limiter, {_, _, Args} = ?limiter_request('Hold', TerminalRef)) when TerminalRef =:= ExpectTerminalRef ->
+        (limiter, {_, _, Args} = ?limiterRequest('Hold', TerminalRef)) when TerminalRef =:= ExpectTerminalRef ->
             apply(ReturnFunc, tuple_to_list(Args));
         (Service, Request) ->
             meck:passthrough([Service, Request])
@@ -271,7 +271,7 @@ mock_limiter_trm_hold(ExpectTerminalRef, ReturnFunc) ->
 
 mock_limiter_trm_call(ExpectTerminalRef, ReturnFunc) ->
     ok = meck:expect(ff_woody_client, call, fun
-        (limiter, {_, _, Args} = ?limiter_request(_Func, TerminalRef)) when TerminalRef =:= ExpectTerminalRef ->
+        (limiter, {_, _, Args} = ?limiterRequest(_Func, TerminalRef)) when TerminalRef =:= ExpectTerminalRef ->
             apply(ReturnFunc, tuple_to_list(Args));
         (Service, Request) ->
             meck:passthrough([Service, Request])
