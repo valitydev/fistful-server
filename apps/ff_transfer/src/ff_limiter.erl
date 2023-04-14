@@ -85,12 +85,19 @@ rollback_withdrawal_limits(TurnoverLimits, Route, Withdrawal, Iter) ->
 
 -spec hold([limit_change()], clock(), context()) -> ok | no_return().
 hold(LimitChanges, Clock, Context) ->
-    lists:foreach(
-        fun(LimitChange) ->
-            call_hold(LimitChange, Clock, Context)
-        end,
-        LimitChanges
-    ).
+    transact_hold(LimitChanges, Clock, Context, []).
+
+transact_hold([], _Clock, _Context, _Held) ->
+    ok;
+transact_hold([LimitChange | LimitChanges], Clock, Context, Held) ->
+    try
+        _ClockUpdated = call_hold(LimitChange, Clock, Context),
+        transact_hold(LimitChanges, Clock, Context, [LimitChange | Held])
+    catch
+        Class:Reason:Stacktrace ->
+            rollback(Held, Clock, Context),
+            erlang:raise(Class, Reason, Stacktrace)
+    end.
 
 -spec commit([limit_change()], clock(), context()) -> ok.
 commit(LimitChanges, Clock, Context) ->
@@ -223,8 +230,13 @@ call_commit(LimitChange, Clock, Context) ->
 -spec call_rollback(limit_change(), clock(), context()) -> clock().
 call_rollback(LimitChange, Clock, Context) ->
     Args = {LimitChange, Clock, Context},
-    {ok, ClockUpdated} = call('Rollback', Args),
-    ClockUpdated.
+    case call('Rollback', Args) of
+        {ok, ClockUpdated} -> ClockUpdated;
+        %% Always ignore business exceptions on rollback and compatibility return latest clock
+        {exception, #limiter_InvalidOperationCurrency{}} -> {latest, #limiter_LatestClock{}};
+        {exception, #limiter_OperationContextNotSupported{}} -> {latest, #limiter_LatestClock{}};
+        {exception, #limiter_PaymentToolNotSupported{}} -> {latest, #limiter_LatestClock{}}
+    end.
 
 call(Func, Args) ->
     Service = {limproto_limiter_thrift, 'Limiter'},
