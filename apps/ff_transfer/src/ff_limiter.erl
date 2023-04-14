@@ -85,19 +85,12 @@ rollback_withdrawal_limits(TurnoverLimits, Route, Withdrawal, Iter) ->
 
 -spec hold([limit_change()], clock(), context()) -> ok | no_return().
 hold(LimitChanges, Clock, Context) ->
-    transact_hold(LimitChanges, Clock, Context, []).
-
-transact_hold([], _Clock, _Context, _Held) ->
-    ok;
-transact_hold([LimitChange | LimitChanges], Clock, Context, Held) ->
-    try
-        _ClockUpdated = call_hold(LimitChange, Clock, Context),
-        transact_hold(LimitChanges, Clock, Context, [LimitChange | Held])
-    catch
-        Class:Reason:Stacktrace ->
-            rollback(Held, Clock, Context),
-            erlang:raise(Class, Reason, Stacktrace)
-    end.
+    lists:foreach(
+        fun(LimitChange) ->
+            call_hold(LimitChange, Clock, Context)
+        end,
+        LimitChanges
+    ).
 
 -spec commit([limit_change()], clock(), context()) -> ok.
 commit(LimitChanges, Clock, Context) ->
