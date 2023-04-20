@@ -1852,7 +1852,7 @@ build_failure({route_not_found, []}, _Withdrawal) ->
 build_failure({route_not_found, RejectedRoutes}, _Withdrawal) ->
     #{
         code => <<"no_route_found">>,
-        reason => genlib:format(RejectedRoutes)
+        reason => genlib:format({rejected_routes, RejectedRoutes})
     };
 build_failure({inconsistent_quote_route, {Type, FoundID}}, Withdrawal) ->
     Details =
