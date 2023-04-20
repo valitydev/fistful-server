@@ -32,8 +32,8 @@ handle_function_('GetQuote', {MarshaledParams}, _Opts) ->
         {ok, Quote} ->
             Response = ff_withdrawal_codec:marshal(quote, Quote),
             {ok, Response};
-        %% FIXME Missing clause for routing error
-        %%       {error, {route, {route_not_found, RejectedRoutes}}} -> ...
+        %% TODO TD-582: Missing clause for routing error?
+        %%      {error, {route, {route_not_found, RejectedRoutes}}} -> ...
         {error, {wallet, notfound}} ->
             woody_error:raise(business, #fistful_WalletNotFound{});
         {error, {destination, notfound}} ->
