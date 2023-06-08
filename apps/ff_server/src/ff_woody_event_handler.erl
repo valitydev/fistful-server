@@ -59,7 +59,7 @@ filter_secrets_from_opts_test_() ->
     [
         ?_assertEqual(
             #{
-                args => {?ARG1, {nl, {msgpack_Nil}}, #{}},
+                args => {?ARG1, {nl, {msgpack_nil}}, #{}},
                 role => client,
                 service => 'Adapter'
             },
@@ -67,7 +67,7 @@ filter_secrets_from_opts_test_() ->
                 #{
                     args => {
                         ?ARG1,
-                        {nl, {msgpack_Nil}},
+                        {nl, {msgpack_nil}},
                         #{<<"api-key">> => <<"secret">>, <<"secret-key">> => <<"secret">>}
                     },
                     role => client,
