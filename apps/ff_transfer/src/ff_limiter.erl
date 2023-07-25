@@ -96,7 +96,8 @@ hold(LimitChanges, Clock, Context) ->
 commit(LimitChanges, Clock, Context) ->
     lists:foreach(
         fun(LimitChange) ->
-            call_commit(LimitChange, Clock, Context)
+            _Clock = call_commit(LimitChange, Clock, Context),
+            ok = log_limit_change(LimitChange, Context)
         end,
         LimitChanges
     ).
@@ -235,3 +236,18 @@ call(Func, Args) ->
     Service = {limproto_limiter_thrift, 'Limiter'},
     Request = {Service, Func, Args},
     ff_woody_client:call(limiter, Request).
+
+log_limit_change(
+    #limiter_LimitChange{id = LimitConfigID},
+    #limiter_LimitContext{withdrawal_processing = #context_withdrawal_Context{withdrawal = Wthd}}
+) ->
+    #context_withdrawal_Withdrawal{
+        wallet_id = WalletID,
+        route = #base_Route{provider = Provider, terminal = Terminal}
+    } = Wthd,
+    ok = logger:log(notice, "Limit change commited", [], #{
+        limit_config_id => LimitConfigID,
+        terminal_id => Terminal#domain_TerminalRef.id,
+        provider_id => Provider#domain_ProviderRef.id,
+        wallet_id => WalletID
+    }).

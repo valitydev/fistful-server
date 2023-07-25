@@ -757,11 +757,6 @@ do_process_transfer(p_transfer_prepare, Withdrawal) ->
     {continue, [{p_transfer, Ev} || Ev <- Events]};
 do_process_transfer(p_transfer_commit, Withdrawal) ->
     ok = commit_routes_limits([route(Withdrawal)], Withdrawal),
-    %% TODO Log commited limits description with context params:
-    %% - limit config id
-    %% - terminal id
-    %% - provider id
-    %% - wallet id
     Tr = ff_withdrawal_route_attempt_utils:get_current_p_transfer(attempts(Withdrawal)),
     {ok, Events} = ff_postings_transfer:commit(Tr),
     ok = ff_postings_transfer:log_balance_by_transfer(Tr, [sender]),
