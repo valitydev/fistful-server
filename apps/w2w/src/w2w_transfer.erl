@@ -410,6 +410,7 @@ do_process_transfer(p_transfer_prepare, W2WTransferState) ->
     {continue, Events};
 do_process_transfer(p_transfer_commit, W2WTransferState) ->
     {ok, Events} = ff_pipeline:with(p_transfer, W2WTransferState, fun ff_postings_transfer:commit/1),
+    ok = ff_postings_transfer:log_balance(W2WTransferState, [sender, receiver]),
     {continue, Events};
 do_process_transfer(p_transfer_cancel, W2WTransferState) ->
     {ok, Events} = ff_pipeline:with(p_transfer, W2WTransferState, fun ff_postings_transfer:cancel/1),
