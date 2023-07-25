@@ -91,5 +91,5 @@ storage:
     type: memory
 
 logging:
-  out_type: stdout
-  level: info
+    out_type: stdout
+    level: info
