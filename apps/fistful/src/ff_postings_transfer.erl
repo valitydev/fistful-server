@@ -27,11 +27,6 @@
     status => status()
 }.
 
--type transfer_bearer() :: #{
-    p_transfer => transfer(),
-    _ := _
-}.
-
 -type event() ::
     {created, transfer()}
     | {status_changed, status()}.
@@ -54,11 +49,6 @@
 
 -export([apply_event/2]).
 -export([maybe_migrate/2]).
-
-%% Logging and alerting
-
--export([log_balance/2]).
--export([log_balance_by_transfer/2]).
 
 %% Pipeline
 
@@ -191,62 +181,6 @@ apply_event({created, Transfer}, undefined) ->
     Transfer;
 apply_event({status_changed, S}, Transfer) ->
     Transfer#{status => S}.
-
-%%
-
--spec log_balance(transfer_bearer(), list(sender | receiver)) -> ok.
-log_balance(#{p_transfer := Transfer}, Roles) when is_map(Transfer) ->
-    log_balance_by_transfer(Transfer, Roles);
-log_balance(_TransferBearer, _Roles) ->
-    ok.
-
--spec log_balance_by_transfer(transfer(), list(sender | receiver)) -> ok.
-%% @doc Logs balance of affected accounts of transfer's cash flow postings
-log_balance_by_transfer(Transfer, Roles) ->
-    #{postings := Postings} = final_cash_flow(Transfer),
-    lists:foreach(fun log_account_balance/1, collect_accounts(Postings, Roles)).
-
-log_account_balance(Account) ->
-    {ok, Balance} = ff_accounting:balance(Account),
-    {Format, Args, Metadata} = mk_balance_log(Account, Balance),
-    logger:log(notice, Format, Args, Metadata).
-
-mk_balance_log(Account, _Balance = {Amounts, Currency}) ->
-    AccountID = ff_account:id(Account),
-    Amount = ff_indef:current(Amounts),
-    %% TODO Add metadata scope for alerting purposes?
-    Metadata = #{
-        wallet => #{
-            id => AccountID,
-            balance => #{
-                amount => Amount,
-                currency => Currency
-            }
-        }
-    },
-    {"Wallet balance", [], Metadata}.
-
-collect_accounts(Postings, Roles) ->
-    AccountsMap = lists:foldl(
-        fun(Posting, Accounts) ->
-            maps:merge(Accounts, extract_posting_wallet_accounts(Posting, Roles))
-        end,
-        #{},
-        Postings
-    ),
-    maps:values(AccountsMap).
-
-extract_posting_wallet_accounts(Posting, Roles) ->
-    lists:foldl(
-        fun
-            ({_Role, #{account := Account = #{id := ID}, type := {wallet, _}}}, Accounts) ->
-                maps:put(ID, Account, Accounts);
-            (_, Accounts) ->
-                Accounts
-        end,
-        #{},
-        maps:to_list(maps:with(Roles, Posting))
-    ).
 
 %%
 

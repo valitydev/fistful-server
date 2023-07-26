@@ -381,7 +381,7 @@ do_process_transfer(p_transfer_prepare, Revert) ->
     {continue, Events};
 do_process_transfer(p_transfer_commit, Revert) ->
     {ok, Events} = ff_pipeline:with(p_transfer, Revert, fun ff_postings_transfer:commit/1),
-    ok = ff_postings_transfer:log_balance(Revert, [sender]),
+    ok = ff_wallet:maybe_log_balance(wallet_id(Revert), maps:get(p_transfer, Revert)),
     {continue, Events};
 do_process_transfer(p_transfer_cancel, Revert) ->
     {ok, Events} = ff_pipeline:with(p_transfer, Revert, fun ff_postings_transfer:cancel/1),

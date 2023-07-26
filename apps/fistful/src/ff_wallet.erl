@@ -82,6 +82,7 @@
 -export([close/1]).
 -export([get_account_balance/1]).
 -export([check_creation/1]).
+-export([maybe_log_balance/2]).
 
 -export([apply_event/2]).
 
@@ -225,3 +226,31 @@ get_account_balance(Wallet) ->
         expected_max => ff_indef:expmax(Amounts)
     },
     {ok, AccountBalance}.
+
+-spec maybe_log_balance(id(), ff_postings_transfer:transfer()) -> ok.
+maybe_log_balance(WalletID, Transfer) ->
+    FinalCashFlow = ff_postings_transfer:final_cash_flow(Transfer),
+    case ff_cash_flow:find_account(WalletID, FinalCashFlow) of
+        undefined -> ok;
+        WalletAccount -> log_balance(WalletAccount)
+    end.
+
+log_balance(Account) ->
+    {ok, Balance} = ff_accounting:balance(Account),
+    {Format, Args, Metadata} = mk_balance_log(Account, Balance),
+    logger:log(notice, Format, Args, Metadata).
+
+mk_balance_log(Account, _Balance = {Amounts, Currency}) ->
+    AccountID = ff_account:id(Account),
+    Amount = ff_indef:current(Amounts),
+    %% TODO Add metadata scope for alerting purposes?
+    Metadata = #{
+        wallet => #{
+            id => AccountID,
+            balance => #{
+                amount => Amount,
+                currency => Currency
+            }
+        }
+    },
+    {"Wallet balance", [], Metadata}.
