@@ -249,7 +249,7 @@ do_process_transfer(p_transfer_commit, Adjustment) ->
     Transfer = maps:get(p_transfer, Adjustment),
     FinalCashFlow = ff_postings_transfer:final_cash_flow(Transfer),
     WalletIDs = [ff_account:id(Account) || Account <- ff_cash_flow:gather_used_accounts(FinalCashFlow)],
-    _ = [ff_wallet:maybe_log_balance(WalletID, Transfer) || WalletID <- WalletIDs],
+    _ = [ff_wallet:maybe_log_balance(WalletID, FinalCashFlow) || WalletID <- WalletIDs],
     {continue, Events};
 do_process_transfer(finish, Adjustment) ->
     process_transfer_finish(Adjustment).

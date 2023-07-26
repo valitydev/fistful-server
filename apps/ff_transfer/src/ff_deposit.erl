@@ -516,7 +516,8 @@ do_process_transfer(p_transfer_prepare, Deposit) ->
     {continue, Events};
 do_process_transfer(p_transfer_commit, Deposit) ->
     {ok, Events} = ff_pipeline:with(p_transfer, Deposit, fun ff_postings_transfer:commit/1),
-    ok = ff_wallet:maybe_log_balance(wallet_id(Deposit), maps:get(p_transfer, Deposit)),
+    FinalCashFlow = ff_postings_transfer:final_cash_flow(maps:get(p_transfer, Deposit)),
+    ok = ff_wallet:maybe_log_balance(wallet_id(Deposit), FinalCashFlow),
     {continue, Events};
 do_process_transfer(p_transfer_cancel, Deposit) ->
     {ok, Events} = ff_pipeline:with(p_transfer, Deposit, fun ff_postings_transfer:cancel/1),

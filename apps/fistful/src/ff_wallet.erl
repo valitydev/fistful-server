@@ -227,30 +227,22 @@ get_account_balance(Wallet) ->
     },
     {ok, AccountBalance}.
 
--spec maybe_log_balance(id(), ff_postings_transfer:transfer()) -> ok.
-maybe_log_balance(WalletID, Transfer) ->
-    FinalCashFlow = ff_postings_transfer:final_cash_flow(Transfer),
+-spec maybe_log_balance(id(), ff_cash_flow:final_cash_flow()) -> ok.
+maybe_log_balance(WalletID, FinalCashFlow) ->
     case ff_cash_flow:find_account(WalletID, FinalCashFlow) of
         undefined -> ok;
-        WalletAccount -> log_balance(WalletAccount)
+        Account -> log_balance(WalletID, Account)
     end.
 
-log_balance(Account) ->
-    {ok, Balance} = ff_accounting:balance(Account),
-    {Format, Args, Metadata} = mk_balance_log(Account, Balance),
-    logger:log(notice, Format, Args, Metadata).
-
-mk_balance_log(Account, _Balance = {Amounts, Currency}) ->
-    AccountID = ff_account:id(Account),
-    Amount = ff_indef:current(Amounts),
+log_balance(WalletID, Account) ->
+    {ok, {Amounts, Currency}} = ff_accounting:balance(Account),
     %% TODO Add metadata scope for alerting purposes?
-    Metadata = #{
+    logger:log(notice, "Wallet balance", [], #{
         wallet => #{
-            id => AccountID,
+            id => WalletID,
             balance => #{
-                amount => Amount,
+                amount => ff_indef:current(Amounts),
                 currency => Currency
             }
         }
-    },
-    {"Wallet balance", [], Metadata}.
+    }).

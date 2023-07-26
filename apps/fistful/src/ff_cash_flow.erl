@@ -136,10 +136,8 @@ gather_used_accounts(#{postings := Postings}) ->
 find_account(AccountID, FinalCashFlow) ->
     Accounts = gather_used_accounts(FinalCashFlow),
     case lists:filter(fun(A) -> ff_account:id(A) =:= AccountID end, Accounts) of
-        [WalletAccount | _] ->
-            WalletAccount;
-        _Else ->
-            undefined
+        [Account | _] -> Account;
+        _Else -> undefined
     end.
 
 -spec finalize(cash_flow_plan(), account_mapping(), constant_mapping()) ->
