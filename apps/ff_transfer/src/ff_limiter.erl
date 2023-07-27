@@ -76,7 +76,7 @@ commit_withdrawal_limits(TurnoverLimits, Route, Withdrawal, Iter) ->
     LimitChanges = gen_limit_changes(TurnoverLimits, Route, Withdrawal, Iter),
     Context = gen_limit_context(Route, Withdrawal),
     ok = commit(LimitChanges, get_latest_clock(), Context),
-    ok = log_limit_changes(LimitChanges, TurnoverLimits, Context).
+    ok = log_limit_changes(TurnoverLimits, Context).
 
 -spec rollback_withdrawal_limits([turnover_limit()], route(), withdrawal(), pos_integer()) -> ok.
 rollback_withdrawal_limits(TurnoverLimits, Route, Withdrawal, Iter) ->
@@ -237,29 +237,15 @@ call(Func, Args) ->
     Request = {Service, Func, Args},
     ff_woody_client:call(limiter, Request).
 
-log_limit_changes(LimitChanges, TurnoverLimits, Context) ->
-    Boundaries = get_turnover_boundaries(TurnoverLimits),
+log_limit_changes(TurnoverLimits, Context) ->
     Attrs = mk_limit_log_attributes(Context),
     lists:foreach(
-        fun(#limiter_LimitChange{id = ID}) ->
+        fun(#domain_TurnoverLimit{id = ID, upper_boundary = UpperBoundary}) ->
             ok = logger:log(notice, "Limit change commited", [], #{
-                limit => Attrs#{
-                    config_id => ID,
-                    boundary => maps:get(ID, Boundaries, undefined)
-                }
+                limit => Attrs#{config_id => ID, boundary => UpperBoundary}
             })
         end,
-        LimitChanges
-    ).
-
-get_turnover_boundaries(TurnoverLimits) ->
-    maps:from_list(
-        lists:map(
-            fun(#domain_TurnoverLimit{id = ID, upper_boundary = UpperBoundary}) ->
-                {ID, UpperBoundary}
-            end,
-            TurnoverLimits
-        )
+        TurnoverLimits
     ).
 
 mk_limit_log_attributes(#limiter_LimitContext{
