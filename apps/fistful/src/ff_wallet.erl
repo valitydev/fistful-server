@@ -236,7 +236,6 @@ maybe_log_balance(WalletID, FinalCashFlow) ->
 
 log_balance(WalletID, Account) ->
     {ok, {Amounts, Currency}} = ff_accounting:balance(Account),
-    %% TODO Add metadata scope for alerting purposes?
     logger:log(notice, "Wallet balance", [], #{
         wallet => #{
             id => WalletID,
