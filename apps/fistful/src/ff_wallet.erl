@@ -83,6 +83,7 @@
 -export([get_account_balance/1]).
 -export([check_creation/1]).
 -export([maybe_log_balance/2]).
+-export([log_balance/1]).
 
 -export([apply_event/2]).
 
@@ -229,16 +230,16 @@ get_account_balance(Wallet) ->
 
 -spec maybe_log_balance(id(), ff_cash_flow:final_cash_flow()) -> ok.
 maybe_log_balance(WalletID, FinalCashFlow) ->
-    case ff_cash_flow:find_account(WalletID, FinalCashFlow) of
-        undefined -> ok;
-        Account -> log_balance(WalletID, Account)
-    end.
+    log_balance(ff_cash_flow:find_account(WalletID, FinalCashFlow)).
 
-log_balance(WalletID, Account) ->
-    {ok, {Amounts, Currency}} = ff_accounting:balance(Account),
+-spec log_balance(ff_account:account() | undefined) -> ok.
+log_balance(undefined) ->
+    ok;
+log_balance(WalletAccount = #{id := ID}) ->
+    {ok, {Amounts, Currency}} = ff_accounting:balance(WalletAccount),
     logger:log(notice, "Wallet balance", [], #{
         wallet => #{
-            id => WalletID,
+            id => ID,
             balance => #{
                 amount => ff_indef:current(Amounts),
                 currency => Currency
