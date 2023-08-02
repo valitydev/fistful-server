@@ -516,7 +516,7 @@ do_process_transfer(p_transfer_prepare, Deposit) ->
     {continue, Events};
 do_process_transfer(p_transfer_commit, Deposit) ->
     {ok, Events} = ff_pipeline:with(p_transfer, Deposit, fun ff_postings_transfer:commit/1),
-    ok = log_wallet_balance(Deposit),
+    ok = ff_wallet:log_balance(wallet_id(Deposit)),
     {continue, Events};
 do_process_transfer(p_transfer_cancel, Deposit) ->
     {ok, Events} = ff_pipeline:with(p_transfer, Deposit, fun ff_postings_transfer:cancel/1),
@@ -613,23 +613,16 @@ make_final_cash_flow(WalletID, SourceID, Body) ->
 
 -spec handle_child_result(process_result(), deposit_state()) -> process_result().
 handle_child_result({undefined, Events} = Result, Deposit) ->
-    ok = ff_adjustment_utils:foreach_adjustment_success(Events, fun() ->
-        log_wallet_balance(Deposit)
-    end),
     NextDeposit = lists:foldl(fun(E, Acc) -> apply_event(E, Acc) end, Deposit, Events),
     case is_active(NextDeposit) of
         true ->
             {continue, Events};
         false ->
+            ok = ff_wallet:log_balance(wallet_id(Deposit)),
             Result
     end;
 handle_child_result({_OtherAction, _Events} = Result, _Deposit) ->
     Result.
-
-log_wallet_balance(Deposit = #{p_transfer := Transfer}) ->
-    FinalCashFlow = ff_postings_transfer:final_cash_flow(Transfer),
-    WalletAccount = ff_cash_flow:find_account(wallet_id(Deposit), FinalCashFlow),
-    ff_wallet:log_balance(WalletAccount).
 
 %% Internal getters and setters
 

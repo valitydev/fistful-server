@@ -503,27 +503,20 @@ make_final_cash_flow(W2WTransferState) ->
 
 -spec handle_child_result(process_result(), w2w_transfer_state()) -> process_result().
 handle_child_result({undefined, Events} = Result, W2WTransferState) ->
-    ok = ff_adjustment_utils:foreach_adjustment_success(Events, fun() ->
-        log_wallet_balance(W2WTransferState)
-    end),
     NextW2WTransfer = lists:foldl(fun(E, Acc) -> apply_event(E, Acc) end, W2WTransferState, Events),
     case is_active(NextW2WTransfer) of
         true ->
             {continue, Events};
         false ->
+            ok = log_wallet_balance(W2WTransferState),
             Result
     end;
 handle_child_result({_OtherAction, _Events} = Result, _W2WTransfer) ->
     Result.
 
-log_wallet_balance(W2WTransferState = #{p_transfer := Transfer}) ->
-    FinalCashFlow = ff_postings_transfer:final_cash_flow(Transfer),
-    WalletAccounts = [
-        ff_cash_flow:find_account(wallet_to_id(W2WTransferState), FinalCashFlow),
-        ff_cash_flow:find_account(wallet_from_id(W2WTransferState), FinalCashFlow)
-    ],
-    _ = [ff_wallet:log_balance(WalletAccount) || WalletAccount <- WalletAccounts],
-    ok.
+log_wallet_balance(W2WTransferState) ->
+    ok = ff_wallet:log_balance(wallet_to_id(W2WTransferState)),
+    ok = ff_wallet:log_balance(wallet_from_id(W2WTransferState)).
 
 %% Internal getters and setters
 
