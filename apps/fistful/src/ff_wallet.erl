@@ -82,7 +82,6 @@
 -export([close/1]).
 -export([get_account_balance/1]).
 -export([check_creation/1]).
--export([maybe_log_balance/2]).
 -export([log_balance/1]).
 
 -export([apply_event/2]).
@@ -227,10 +226,6 @@ get_account_balance(Wallet) ->
         expected_max => ff_indef:expmax(Amounts)
     },
     {ok, AccountBalance}.
-
--spec maybe_log_balance(id(), ff_cash_flow:final_cash_flow()) -> ok.
-maybe_log_balance(WalletID, FinalCashFlow) ->
-    log_balance(ff_cash_flow:find_account(WalletID, FinalCashFlow)).
 
 -spec log_balance(ff_account:account() | undefined) -> ok.
 log_balance(undefined) ->

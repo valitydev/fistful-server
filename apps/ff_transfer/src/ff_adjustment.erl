@@ -246,14 +246,9 @@ do_process_transfer(p_transfer_prepare, Adjustment) ->
     {continue, Events};
 do_process_transfer(p_transfer_commit, Adjustment) ->
     {ok, Events} = ff_pipeline:with(p_transfer, Adjustment, fun ff_postings_transfer:commit/1),
-    _ = [ff_wallet:log_balance(WalletAccount) || WalletAccount <- collect_accounts(Adjustment)],
     {continue, Events};
 do_process_transfer(finish, Adjustment) ->
     process_transfer_finish(Adjustment).
-
-collect_accounts(_Adjustment = #{p_transfer := Transfer}) ->
-    FinalCashFlow = ff_postings_transfer:final_cash_flow(Transfer),
-    ff_cash_flow:gather_used_accounts(FinalCashFlow).
 
 -spec create_p_transfer(adjustment()) -> process_result().
 create_p_transfer(Adjustment) ->

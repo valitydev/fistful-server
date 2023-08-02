@@ -759,8 +759,7 @@ do_process_transfer(p_transfer_commit, Withdrawal) ->
     ok = commit_routes_limits([route(Withdrawal)], Withdrawal),
     Tr = ff_withdrawal_route_attempt_utils:get_current_p_transfer(attempts(Withdrawal)),
     {ok, Events} = ff_postings_transfer:commit(Tr),
-    FinalCashFlow = ff_postings_transfer:final_cash_flow(Tr),
-    ok = ff_wallet:maybe_log_balance(wallet_id(Withdrawal), FinalCashFlow),
+    ok = log_wallet_balance(Withdrawal),
     {continue, [{p_transfer, Ev} || Ev <- Events]};
 do_process_transfer(p_transfer_cancel, Withdrawal) ->
     ok = rollback_routes_limits([route(Withdrawal)], Withdrawal),
@@ -1020,6 +1019,9 @@ process_transfer_fail(FailType, Withdrawal) ->
 
 -spec handle_child_result(process_result(), withdrawal_state()) -> process_result().
 handle_child_result({undefined, Events} = Result, Withdrawal) ->
+    ok = ff_adjustment_utils:foreach_adjustment_success(Events, fun() ->
+        log_wallet_balance(Withdrawal)
+    end),
     NextWithdrawal = lists:foldl(fun(E, Acc) -> apply_event(E, Acc) end, Withdrawal, Events),
     case is_active(NextWithdrawal) of
         true ->
@@ -1029,6 +1031,12 @@ handle_child_result({undefined, Events} = Result, Withdrawal) ->
     end;
 handle_child_result({_OtherAction, _Events} = Result, _Withdrawal) ->
     Result.
+
+log_wallet_balance(Withdrawal) ->
+    Transfer = ff_withdrawal_route_attempt_utils:get_current_p_transfer(attempts(Withdrawal)),
+    FinalCashFlow = ff_postings_transfer:final_cash_flow(Transfer),
+    WalletAccount = ff_cash_flow:find_account(wallet_id(Withdrawal), FinalCashFlow),
+    ff_wallet:log_balance(WalletAccount).
 
 -spec is_childs_active(withdrawal_state()) -> boolean().
 is_childs_active(Withdrawal) ->

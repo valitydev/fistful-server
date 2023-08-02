@@ -410,9 +410,7 @@ do_process_transfer(p_transfer_prepare, W2WTransferState) ->
     {continue, Events};
 do_process_transfer(p_transfer_commit, W2WTransferState) ->
     {ok, Events} = ff_pipeline:with(p_transfer, W2WTransferState, fun ff_postings_transfer:commit/1),
-    FinalCashFlow = ff_postings_transfer:final_cash_flow(maps:get(p_transfer, W2WTransferState)),
-    WalletIDs = [wallet_to_id(W2WTransferState), wallet_from_id(W2WTransferState)],
-    _ = [ff_wallet:maybe_log_balance(WalletID, FinalCashFlow) || WalletID <- WalletIDs],
+    ok = log_wallet_balance(W2WTransferState),
     {continue, Events};
 do_process_transfer(p_transfer_cancel, W2WTransferState) ->
     {ok, Events} = ff_pipeline:with(p_transfer, W2WTransferState, fun ff_postings_transfer:cancel/1),
@@ -505,6 +503,9 @@ make_final_cash_flow(W2WTransferState) ->
 
 -spec handle_child_result(process_result(), w2w_transfer_state()) -> process_result().
 handle_child_result({undefined, Events} = Result, W2WTransferState) ->
+    ok = ff_adjustment_utils:foreach_adjustment_success(Events, fun() ->
+        log_wallet_balance(W2WTransferState)
+    end),
     NextW2WTransfer = lists:foldl(fun(E, Acc) -> apply_event(E, Acc) end, W2WTransferState, Events),
     case is_active(NextW2WTransfer) of
         true ->
@@ -514,6 +515,15 @@ handle_child_result({undefined, Events} = Result, W2WTransferState) ->
     end;
 handle_child_result({_OtherAction, _Events} = Result, _W2WTransfer) ->
     Result.
+
+log_wallet_balance(W2WTransferState = #{p_transfer := Transfer}) ->
+    FinalCashFlow = ff_postings_transfer:final_cash_flow(Transfer),
+    WalletAccounts = [
+        ff_cash_flow:find_account(wallet_to_id(W2WTransferState), FinalCashFlow),
+        ff_cash_flow:find_account(wallet_from_id(W2WTransferState), FinalCashFlow)
+    ],
+    _ = [ff_wallet:log_balance(WalletAccount) || WalletAccount <- WalletAccounts],
+    ok.
 
 %% Internal getters and setters
 

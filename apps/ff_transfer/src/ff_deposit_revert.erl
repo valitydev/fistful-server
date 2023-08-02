@@ -381,8 +381,7 @@ do_process_transfer(p_transfer_prepare, Revert) ->
     {continue, Events};
 do_process_transfer(p_transfer_commit, Revert) ->
     {ok, Events} = ff_pipeline:with(p_transfer, Revert, fun ff_postings_transfer:commit/1),
-    FinalCashFlow = ff_postings_transfer:final_cash_flow(maps:get(p_transfer, Revert)),
-    ok = ff_wallet:maybe_log_balance(wallet_id(Revert), FinalCashFlow),
+    ok = log_wallet_balance(Revert),
     {continue, Events};
 do_process_transfer(p_transfer_cancel, Revert) ->
     {ok, Events} = ff_pipeline:with(p_transfer, Revert, fun ff_postings_transfer:cancel/1),
@@ -395,6 +394,11 @@ do_process_transfer(finish, Revert) ->
     process_transfer_finish(Revert);
 do_process_transfer(adjustment, Revert) ->
     process_adjustment(Revert).
+
+log_wallet_balance(Revert = #{p_transfer := Transfer}) ->
+    FinalCashFlow = ff_postings_transfer:final_cash_flow(Transfer),
+    WalletAccount = ff_cash_flow:find_account(wallet_id(Revert), FinalCashFlow),
+    ff_wallet:log_balance(WalletAccount).
 
 -spec create_p_transfer(revert()) -> process_result().
 create_p_transfer(Revert) ->

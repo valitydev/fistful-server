@@ -24,6 +24,8 @@
     changes := changes()
 }.
 
+-type maybe_mixed_wrapped_events() :: [term() | wrapped_event() | ff_deposit_revert_utils:wrapped_event()].
+
 -type unknown_adjustment_error() :: {unknown_adjustment, id()}.
 
 -export_type([index/0]).
@@ -52,6 +54,7 @@
 -export([maybe_migrate/1]).
 -export([get_by_id/2]).
 -export([process_adjustments/1]).
+-export([foreach_adjustment_success/2]).
 
 %% Internal types
 
@@ -235,3 +238,16 @@ is_succeeded_status_change({status_changed, succeeded}) ->
     true;
 is_succeeded_status_change(_Other) ->
     false.
+
+-define(EVENT_ADJUSTMENT_SUCCEEDED, {adjustment, #{payload := {status_changed, succeeded}}}).
+
+-spec foreach_adjustment_success([maybe_mixed_wrapped_events()], fun(() -> ok)) -> ok.
+foreach_adjustment_success(Events, Func) ->
+    lists:foreach(
+        fun
+            (?EVENT_ADJUSTMENT_SUCCEEDED) -> Func();
+            ({revert, #{payload := ?EVENT_ADJUSTMENT_SUCCEEDED}}) -> Func();
+            (_Event) -> ok
+        end,
+        Events
+    ).
