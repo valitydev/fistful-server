@@ -197,7 +197,7 @@
 
 %%
 
--export([process_session_finished/3]).
+-export([finalize_session/3]).
 
 %% Accessors
 
@@ -568,9 +568,9 @@ format_activity(Activity) ->
 
 %%
 
--spec process_session_finished(session_id(), session_result(), withdrawal_state()) ->
+-spec finalize_session(session_id(), session_result(), withdrawal_state()) ->
     {ok, process_result()} | {error, session_not_found | old_session | result_mismatch}.
-process_session_finished(SessionID, SessionResult, Withdrawal) ->
+finalize_session(SessionID, SessionResult, Withdrawal) ->
     case get_session_by_id(SessionID, Withdrawal) of
         #{id := SessionID, result := SessionResult} ->
             {ok, {undefined, []}};

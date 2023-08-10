@@ -194,7 +194,7 @@ process_repair(Scenario, Machine, _Args, _Opts) ->
 -spec process_notification(notify_args(), machine(), handler_args(), handler_opts()) -> result() | no_return().
 process_notification({session_finished, SessionID, SessionResult}, Machine, _HandlerArgs, _Opts) ->
     St = ff_machine:collapse(ff_withdrawal, Machine),
-    case ff_withdrawal:process_session_finished(SessionID, SessionResult, withdrawal(St)) of
+    case ff_withdrawal:finalize_session(SessionID, SessionResult, withdrawal(St)) of
         {ok, Result} ->
             process_result(Result, St);
         {error, Reason} ->
