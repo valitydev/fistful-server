@@ -4,3 +4,5 @@
 
 +K true
 +A 10
+
+-kernel inetrc '"config/erl_inetrc"'
