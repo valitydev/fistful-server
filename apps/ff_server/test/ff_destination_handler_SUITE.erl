@@ -119,7 +119,7 @@ create_digital_wallet_destination_ok(C) ->
                 id = <<"f195298af836f41d072cb390ee62bee8">>,
                 token = <<"a30e277c07400c9940628828949efd48">>,
                 payment_service = #'fistful_base_PaymentServiceRef'{id = <<"webmoney">>},
-                account_number = <<"account_number_create_digital_wallet_destination_ok">>
+                account_name = <<"account_name_create_digital_wallet_destination_ok">>
             }
         }},
     create_destination_ok(Resource, C).
