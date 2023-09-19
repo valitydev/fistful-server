@@ -326,13 +326,11 @@ do_validate_terms(CombinedTerms, PartyVarset, Route, _RoutingContext) ->
             %% payout_methods = PayoutMethodsSelector,
             cash_limit = CashLimitSelector
         } = CombinedTerms,
-        ct:log("do_validate_terms: ~p~nRoute: ~p", [CombinedTerms, Route]),
         valid = unwrap(validate_selectors_defined(CombinedTerms)),
         valid = unwrap(validate_allow(global_allow, GAllow)),
         valid = unwrap(validate_allow(allow, Allow)),
         valid = unwrap(validate_currencies(CurrenciesSelector, PartyVarset)),
-        valid = unwrap(validate_cash_limit(CashLimitSelector, PartyVarset)),
-        ct:log("do_validate_terms succeeded: ~p", [Route])
+        valid = unwrap(validate_cash_limit(CashLimitSelector, PartyVarset))
     end).
 
 -spec validate_selectors_defined(withdrawal_provision_terms()) ->
