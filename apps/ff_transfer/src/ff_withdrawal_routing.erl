@@ -315,7 +315,7 @@ do_validate_limits(CombinedTerms, PartyVarset, Route, RoutingContext) ->
 -spec do_validate_terms(withdrawal_provision_terms(), party_varset(), route(), routing_context()) ->
     {ok, valid}
     | {error, Error :: term()}.
-do_validate_terms(CombinedTerms, PartyVarset, Route, _RoutingContext) ->
+do_validate_terms(CombinedTerms, PartyVarset, _Route, _RoutingContext) ->
     do(fun() ->
         #domain_WithdrawalProvisionTerms{
             allow = Allow,
