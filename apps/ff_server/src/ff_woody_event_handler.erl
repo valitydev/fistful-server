@@ -12,7 +12,6 @@
     Opts :: woody:options().
 handle_event(Event, RpcID, RawMeta, Opts) ->
     FilteredMeta = filter_meta(RawMeta),
-    ok = woody_event_handler_otel:handle_event(Event, RpcID, FilteredMeta, Opts),
     scoper_woody_event_handler:handle_event(Event, RpcID, FilteredMeta, Opts).
 
 filter_meta(RawMeta) ->
