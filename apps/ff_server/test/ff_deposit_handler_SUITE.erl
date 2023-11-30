@@ -30,6 +30,7 @@
 -export([create_source_notfound_test/1]).
 -export([create_wallet_notfound_test/1]).
 -export([create_ok_test/1]).
+-export([create_negative_ok_test/1]).
 -export([unknown_test/1]).
 -export([get_context_test/1]).
 -export([get_events_test/1]).
@@ -37,6 +38,7 @@
 -export([create_adjustment_unavailable_status_error_test/1]).
 -export([create_adjustment_already_has_status_error_test/1]).
 -export([create_revert_ok_test/1]).
+-export([create_negative_revert_ok_test/1]).
 -export([create_revert_inconsistent_revert_currency_error_test/1]).
 -export([create_revert_insufficient_deposit_amount_error_test/1]).
 -export([create_revert_invalid_revert_amount_error_test/1]).
@@ -68,6 +70,7 @@ groups() ->
             create_source_notfound_test,
             create_wallet_notfound_test,
             create_ok_test,
+            create_negative_ok_test,
             unknown_test,
             get_context_test,
             get_events_test,
@@ -75,6 +78,7 @@ groups() ->
             create_adjustment_unavailable_status_error_test,
             create_adjustment_already_has_status_error_test,
             create_revert_ok_test,
+            create_negative_revert_ok_test,
             create_revert_inconsistent_revert_currency_error_test,
             create_revert_insufficient_deposit_amount_error_test,
             create_revert_invalid_revert_amount_error_test,
@@ -238,6 +242,46 @@ create_ok_test(C) ->
         ff_codec:unmarshal(timestamp_ms, DepositState#deposit_DepositState.created_at)
     ).
 
+-spec create_negative_ok_test(config()) -> test_return().
+create_negative_ok_test(C) ->
+    Body = make_cash({-100, <<"RUB">>}),
+    #{
+        wallet_id := WalletID,
+        source_id := SourceID
+    } = prepare_standard_environment(Body, C),
+    DepositID = generate_id(),
+    ExternalID = generate_id(),
+    Context = #{<<"NS">> => #{generate_id() => generate_id()}},
+    Metadata = ff_entity_context_codec:marshal(#{<<"metadata">> => #{<<"some key">> => <<"some data">>}}),
+    Params = #deposit_DepositParams{
+        id = DepositID,
+        body = Body,
+        source_id = SourceID,
+        wallet_id = WalletID,
+        metadata = Metadata,
+        external_id = ExternalID
+    },
+    {ok, DepositState} = call_deposit('Create', {Params, ff_entity_context_codec:marshal(Context)}),
+    Expected = get_deposit(DepositID),
+    ?assertEqual(DepositID, DepositState#deposit_DepositState.id),
+    ?assertEqual(WalletID, DepositState#deposit_DepositState.wallet_id),
+    ?assertEqual(SourceID, DepositState#deposit_DepositState.source_id),
+    ?assertEqual(ExternalID, DepositState#deposit_DepositState.external_id),
+    ?assertEqual(Body, DepositState#deposit_DepositState.body),
+    ?assertEqual(Metadata, DepositState#deposit_DepositState.metadata),
+    ?assertEqual(
+        ff_deposit:domain_revision(Expected),
+        DepositState#deposit_DepositState.domain_revision
+    ),
+    ?assertEqual(
+        ff_deposit:party_revision(Expected),
+        DepositState#deposit_DepositState.party_revision
+    ),
+    ?assertEqual(
+        ff_deposit:created_at(Expected),
+        ff_codec:unmarshal(timestamp_ms, DepositState#deposit_DepositState.created_at)
+    ).
+
 -spec unknown_test(config()) -> test_return().
 unknown_test(_C) ->
     DepositID = <<"unknown_deposit">>,
@@ -359,6 +403,56 @@ create_revert_ok_test(C) ->
 
     ?assertEqual(RevertID, RevertState#deposit_revert_RevertState.id),
     ?assertEqual(ExternalID, RevertState#deposit_revert_RevertState.external_id),
+    ?assertEqual(Body, RevertState#deposit_revert_RevertState.body),
+    ?assertEqual(Reason, RevertState#deposit_revert_RevertState.reason),
+    ?assertEqual(
+        ff_deposit_revert:created_at(Expected),
+        ff_codec:unmarshal(timestamp_ms, RevertState#deposit_revert_RevertState.created_at)
+    ),
+    ?assertEqual(
+        ff_deposit_revert:domain_revision(Expected),
+        RevertState#deposit_revert_RevertState.domain_revision
+    ),
+    ?assertEqual(
+        ff_deposit_revert:party_revision(Expected),
+        RevertState#deposit_revert_RevertState.party_revision
+    ).
+
+-spec create_negative_revert_ok_test(config()) -> test_return().
+create_negative_revert_ok_test(C) ->
+    #{
+        wallet_id := WalletID,
+        source_id := SourceID
+    } = prepare_standard_environment_with_deposit(make_cash({10000, <<"RUB">>}), C),
+    DepositID = generate_id(),
+    ExternalID0 = generate_id(),
+    Context = #{<<"NS">> => #{generate_id() => generate_id()}},
+    EncodedContext = ff_entity_context_codec:marshal(Context),
+    Body = make_cash({-5000, <<"RUB">>}),
+    DepositParams = #deposit_DepositParams{
+        id = DepositID,
+        wallet_id = WalletID,
+        source_id = SourceID,
+        body = Body,
+        external_id = ExternalID0
+    },
+    {ok, _DepositState} = call_deposit('Create', {DepositParams, EncodedContext}),
+    succeeded = await_final_deposit_status(DepositID),
+    RevertID = generate_id(),
+    ExternalID1 = generate_id(),
+    Reason = generate_id(),
+    RevertParams = #deposit_revert_RevertParams{
+        id = RevertID,
+        body = Body,
+        external_id = ExternalID1,
+        reason = Reason
+    },
+    {ok, RevertState} = call_deposit('CreateRevert', {DepositID, RevertParams}),
+    succeeded = await_final_revert_status(DepositID, RevertID),
+    Expected = get_revert(DepositID, RevertID),
+
+    ?assertEqual(RevertID, RevertState#deposit_revert_RevertState.id),
+    ?assertEqual(ExternalID1, RevertState#deposit_revert_RevertState.external_id),
     ?assertEqual(Body, RevertState#deposit_revert_RevertState.body),
     ?assertEqual(Reason, RevertState#deposit_revert_RevertState.reason),
     ?assertEqual(
