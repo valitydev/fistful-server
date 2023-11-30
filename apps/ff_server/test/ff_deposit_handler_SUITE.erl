@@ -35,6 +35,7 @@
 -export([get_context_test/1]).
 -export([get_events_test/1]).
 -export([create_adjustment_ok_test/1]).
+-export([create_negative_adjustment_ok_test/1]).
 -export([create_adjustment_unavailable_status_error_test/1]).
 -export([create_adjustment_already_has_status_error_test/1]).
 -export([create_revert_ok_test/1]).
@@ -75,6 +76,7 @@ groups() ->
             get_context_test,
             get_events_test,
             create_adjustment_ok_test,
+            create_negative_adjustment_ok_test,
             create_adjustment_unavailable_status_error_test,
             create_adjustment_already_has_status_error_test,
             create_revert_ok_test,
@@ -244,31 +246,20 @@ create_ok_test(C) ->
 
 -spec create_negative_ok_test(config()) -> test_return().
 create_negative_ok_test(C) ->
-    Body = make_cash({-100, <<"RUB">>}),
+    EnvBody = make_cash({100, <<"RUB">>}),
     #{
         wallet_id := WalletID,
         source_id := SourceID
-    } = prepare_standard_environment(Body, C),
-    DepositID = generate_id(),
-    ExternalID = generate_id(),
-    Context = #{<<"NS">> => #{generate_id() => generate_id()}},
-    Metadata = ff_entity_context_codec:marshal(#{<<"metadata">> => #{<<"some key">> => <<"some data">>}}),
-    Params = #deposit_DepositParams{
-        id = DepositID,
-        body = Body,
-        source_id = SourceID,
-        wallet_id = WalletID,
-        metadata = Metadata,
-        external_id = ExternalID
-    },
-    {ok, DepositState} = call_deposit('Create', {Params, ff_entity_context_codec:marshal(Context)}),
+    } = prepare_standard_environment(EnvBody, C),
+    _ = process_deposit(WalletID, SourceID, EnvBody),
+    Body = make_cash({-100, <<"RUB">>}),
+    {DepositState, DepositID, ExternalID, _} = process_deposit(WalletID, SourceID, Body),
     Expected = get_deposit(DepositID),
     ?assertEqual(DepositID, DepositState#deposit_DepositState.id),
     ?assertEqual(WalletID, DepositState#deposit_DepositState.wallet_id),
     ?assertEqual(SourceID, DepositState#deposit_DepositState.source_id),
     ?assertEqual(ExternalID, DepositState#deposit_DepositState.external_id),
     ?assertEqual(Body, DepositState#deposit_DepositState.body),
-    ?assertEqual(Metadata, DepositState#deposit_DepositState.metadata),
     ?assertEqual(
         ff_deposit:domain_revision(Expected),
         DepositState#deposit_DepositState.domain_revision
@@ -315,6 +306,45 @@ create_adjustment_ok_test(C) ->
     #{
         deposit_id := DepositID
     } = prepare_standard_environment_with_deposit(C),
+    AdjustmentID = generate_id(),
+    ExternalID = generate_id(),
+    Params = #deposit_adj_AdjustmentParams{
+        id = AdjustmentID,
+        change =
+            {change_status, #deposit_adj_ChangeStatusRequest{
+                new_status = {failed, #deposit_status_Failed{failure = #'fistful_base_Failure'{code = <<"Ooops">>}}}
+            }},
+        external_id = ExternalID
+    },
+    {ok, AdjustmentState} = call_deposit('CreateAdjustment', {DepositID, Params}),
+    ExpectedAdjustment = get_adjustment(DepositID, AdjustmentID),
+
+    ?assertEqual(AdjustmentID, AdjustmentState#deposit_adj_AdjustmentState.id),
+    ?assertEqual(ExternalID, AdjustmentState#deposit_adj_AdjustmentState.external_id),
+    ?assertEqual(
+        ff_adjustment:created_at(ExpectedAdjustment),
+        ff_codec:unmarshal(timestamp_ms, AdjustmentState#deposit_adj_AdjustmentState.created_at)
+    ),
+    ?assertEqual(
+        ff_adjustment:domain_revision(ExpectedAdjustment),
+        AdjustmentState#deposit_adj_AdjustmentState.domain_revision
+    ),
+    ?assertEqual(
+        ff_adjustment:party_revision(ExpectedAdjustment),
+        AdjustmentState#deposit_adj_AdjustmentState.party_revision
+    ),
+    ?assertEqual(
+        ff_deposit_adjustment_codec:marshal(changes_plan, ff_adjustment:changes_plan(ExpectedAdjustment)),
+        AdjustmentState#deposit_adj_AdjustmentState.changes_plan
+    ).
+
+-spec create_negative_adjustment_ok_test(config()) -> test_return().
+create_negative_adjustment_ok_test(C) ->
+    #{
+        wallet_id := WalletID,
+        source_id := SourceID
+    } = prepare_standard_environment_with_deposit(C),
+    {_, DepositID, _, _} = process_deposit(WalletID, SourceID, make_cash({-50, <<"RUB">>})),
     AdjustmentID = generate_id(),
     ExternalID = generate_id(),
     Params = #deposit_adj_AdjustmentParams{
@@ -424,20 +454,8 @@ create_negative_revert_ok_test(C) ->
         wallet_id := WalletID,
         source_id := SourceID
     } = prepare_standard_environment_with_deposit(make_cash({10000, <<"RUB">>}), C),
-    DepositID = generate_id(),
-    ExternalID0 = generate_id(),
-    Context = #{<<"NS">> => #{generate_id() => generate_id()}},
-    EncodedContext = ff_entity_context_codec:marshal(Context),
     Body = make_cash({-5000, <<"RUB">>}),
-    DepositParams = #deposit_DepositParams{
-        id = DepositID,
-        wallet_id = WalletID,
-        source_id = SourceID,
-        body = Body,
-        external_id = ExternalID0
-    },
-    {ok, _DepositState} = call_deposit('Create', {DepositParams, EncodedContext}),
-    succeeded = await_final_deposit_status(DepositID),
+    {_, DepositID, _, _} = process_deposit(WalletID, SourceID, Body),
     RevertID = generate_id(),
     ExternalID1 = generate_id(),
     Reason = generate_id(),
@@ -680,19 +698,7 @@ prepare_standard_environment_with_deposit(Body, C) ->
         wallet_id := WalletID,
         source_id := SourceID
     } = Env = prepare_standard_environment(Body, C),
-    DepositID = generate_id(),
-    ExternalID = generate_id(),
-    Context = #{<<"NS">> => #{generate_id() => generate_id()}},
-    EncodedContext = ff_entity_context_codec:marshal(Context),
-    Params = #deposit_DepositParams{
-        id = DepositID,
-        wallet_id = WalletID,
-        source_id = SourceID,
-        body = Body,
-        external_id = ExternalID
-    },
-    {ok, _DepositState} = call_deposit('Create', {Params, EncodedContext}),
-    succeeded = await_final_deposit_status(DepositID),
+    {_, DepositID, ExternalID, Context} = process_deposit(WalletID, SourceID, Body),
     Env#{
         deposit_id => DepositID,
         external_id => ExternalID,
@@ -724,6 +730,22 @@ prepare_standard_environment_with_revert(Body, C) ->
         revert_external_id => RevertID,
         reason => Reason
     }.
+
+process_deposit(WalletID, SourceID, Body) ->
+    DepositID = generate_id(),
+    ExternalID = generate_id(),
+    Context = #{<<"NS">> => #{generate_id() => generate_id()}},
+    EncodedContext = ff_entity_context_codec:marshal(Context),
+    Params = #deposit_DepositParams{
+        id = DepositID,
+        wallet_id = WalletID,
+        source_id = SourceID,
+        body = Body,
+        external_id = ExternalID
+    },
+    {ok, DepositState} = call_deposit('Create', {Params, EncodedContext}),
+    succeeded = await_final_deposit_status(DepositID),
+    {DepositState, DepositID, ExternalID, Context}.
 
 get_deposit(DepositID) ->
     {ok, Machine} = ff_deposit_machine:get(DepositID),
