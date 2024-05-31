@@ -9,6 +9,7 @@
 -module(ff_destination).
 
 -type id() :: binary().
+-type token() :: binary().
 -type name() :: binary().
 -type account() :: ff_account:account().
 -type identity() :: ff_identity:id().
@@ -50,7 +51,13 @@
     currency := ff_currency:id(),
     resource := resource_params(),
     external_id => id(),
-    metadata => metadata()
+    metadata => metadata(),
+    auth_data => auth_data()
+}.
+
+-type auth_data() :: #{
+    sender := token(),
+    receiver := token()
 }.
 
 -type event() ::
@@ -90,6 +97,7 @@
 -export([external_id/1]).
 -export([created_at/1]).
 -export([metadata/1]).
+-export([auth_data/1]).
 
 %% API
 
@@ -160,6 +168,12 @@ created_at(_Destination) ->
 metadata(#{metadata := Metadata}) ->
     Metadata;
 metadata(_Destination) ->
+    undefined.
+
+-spec auth_data(destination_state()) -> auth_data() | undefined.
+auth_data(#{auth_data := AuthData}) ->
+    AuthData;
+auth_data(_Destination) ->
     undefined.
 
 %% API
