@@ -31,7 +31,8 @@
     name := name(),
     created_at => timestamp(),
     external_id => id(),
-    metadata => metadata()
+    metadata => metadata(),
+    auth_data => auth_data()
 }.
 
 -type destination_state() :: #{
@@ -41,7 +42,8 @@
     status => status(),
     created_at => timestamp(),
     external_id => id(),
-    metadata => metadata()
+    metadata => metadata(),
+    auth_data => auth_data()
 }.
 
 -type params() :: #{
@@ -207,6 +209,7 @@ create(Params) ->
                     resource => Resource,
                     external_id => maps:get(external_id, Params, undefined),
                     metadata => maps:get(metadata, Params, undefined),
+                    auth_data => maps:get(auth_data, Params, undefined),
                     created_at => CreatedAt
                 })}
         ] ++

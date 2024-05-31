@@ -201,6 +201,7 @@ create_destination_ok(AuthData, Resource, C) ->
     ExternalId = Dst#destination_DestinationState.external_id,
     Metadata = Dst#destination_DestinationState.metadata,
     Ctx = Dst#destination_DestinationState.context,
+    AuthData = Dst#destination_DestinationState.auth_data,
 
     Account = Dst#destination_DestinationState.account,
     IdentityID = Account#account_Account.identity,

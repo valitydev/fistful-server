@@ -133,7 +133,8 @@ unmarshal(destination, Dest) ->
         name => unmarshal(string, Dest#destination_Destination.name),
         created_at => maybe_unmarshal(timestamp_ms, Dest#destination_Destination.created_at),
         external_id => maybe_unmarshal(id, Dest#destination_Destination.external_id),
-        metadata => maybe_unmarshal(ctx, Dest#destination_Destination.metadata)
+        metadata => maybe_unmarshal(ctx, Dest#destination_Destination.metadata),
+        auth_data => maybe_unmarshal(auth_data, Dest#destination_Destination.auth_data)
     });
 unmarshal(status, {authorized, #destination_Authorized{}}) ->
     authorized;
