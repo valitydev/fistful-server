@@ -24,7 +24,8 @@
     adjustments => adjustments_index(),
     status => status(),
     metadata => metadata(),
-    external_id => id()
+    external_id => id(),
+    validation => withdrawal_validation()
 }.
 
 -opaque withdrawal() :: #{
@@ -55,6 +56,22 @@
     pending
     | succeeded
     | {failed, failure()}.
+
+-type withdrawal_validation() :: #{
+    sender => validation_result(),
+    receiver => validation_result()
+}.
+
+-type validation_result() ::
+    {personal, personal_data_validation()}.
+
+-type personal_data_validation() :: #{
+    validation_id := binary(),
+    token := binary(),
+    validation_status := validation_status()
+}.
+
+-type validation_status() :: valid | invalid.
 
 -type event() ::
     {created, withdrawal()}
@@ -217,6 +234,7 @@
 -export([metadata/1]).
 -export([params/1]).
 -export([activity/1]).
+-export([validation/1]).
 
 %% API
 
@@ -300,6 +318,7 @@
     routing
     | p_transfer_start
     | p_transfer_prepare
+    | validating
     | session_starting
     | session_sleeping
     | p_transfer_commit
@@ -315,6 +334,7 @@
     limit_check
     | ff_withdrawal_routing:route_not_found()
     | {inconsistent_quote_route, {provider_id, provider_id()} | {terminal_id, terminal_id()}}
+    | {validation_personal_data, sender | receiver}
     | session.
 
 -type session_processing_status() :: undefined | pending | succeeded | failed.
@@ -394,6 +414,12 @@ params(#{params := V}) ->
 -spec activity(withdrawal_state()) -> activity().
 activity(Withdrawal) ->
     deduce_activity(Withdrawal).
+
+-spec validation(withdrawal_state()) -> withdrawal_validation() | undefined.
+validation(#{validation := WithdrawalValidation}) ->
+    WithdrawalValidation;
+validation(_) ->
+    undefined.
 
 %% API
 
@@ -697,6 +723,7 @@ deduce_activity(Withdrawal) ->
     Params = #{
         route => route_selection_status(Withdrawal),
         p_transfer => p_transfer_status(Withdrawal),
+        validation => withdrawal_validation_status(Withdrawal),
         session => get_current_session_status(Withdrawal),
         status => status(Withdrawal),
         limit_check => limit_check_processing_status(Withdrawal),
@@ -719,6 +746,8 @@ do_pending_activity(#{p_transfer := created}) ->
     p_transfer_prepare;
 do_pending_activity(#{p_transfer := prepared, limit_check := unknown}) ->
     limit_check;
+do_pending_activity(#{p_transfer := prepared, limit_check := ok, validation := undefined}) ->
+    validating;
 do_pending_activity(#{p_transfer := prepared, limit_check := ok, session := undefined}) ->
     session_starting;
 do_pending_activity(#{p_transfer := prepared, limit_check := failed}) ->
@@ -764,6 +793,8 @@ do_process_transfer(p_transfer_cancel, Withdrawal) ->
     {continue, [{p_transfer, Ev} || Ev <- Events]};
 do_process_transfer(limit_check, Withdrawal) ->
     process_limit_check(Withdrawal);
+do_process_transfer(validating, Withdrawal) ->
+    process_withdrawal_validation(Withdrawal);
 do_process_transfer(session_starting, Withdrawal) ->
     process_session_creation(Withdrawal);
 do_process_transfer(session_sleeping, Withdrawal) ->
@@ -931,6 +962,25 @@ process_p_transfer_creation(Withdrawal) ->
     PTransferID = construct_p_transfer_id(Withdrawal),
     {ok, PostingsTransferEvents} = ff_postings_transfer:create(PTransferID, FinalCashFlow),
     {continue, [{p_transfer, Ev} || Ev <- PostingsTransferEvents]}.
+
+-spec process_withdrawal_validation(withdrawal_state()) -> process_result().
+process_withdrawal_validation(Withdrawal) ->
+    DestinationID = destination_id(Withdrawal),
+    {ok, Destination} = get_destination(DestinationID),
+    #{
+        auth_data := #{
+            sender := SenderToken,
+            receiver := ReceiverToken
+        }
+    } = Destination,
+    SenderValidationPDResult = unwrap(ff_validator:validate_personal_data(SenderToken)),
+    ReceiverValidationPDResult = unwrap(ff_validator:validate_personal_data(ReceiverToken)),
+    Events = [
+        {validation, {sender, {personal, SenderValidationPDResult}}},
+        {validation, {receiver, {personal, ReceiverValidationPDResult}}}
+    ],
+    MaybeFailEvent = maybe_fail_validation(Events, Withdrawal),
+    {continue, Events ++ MaybeFailEvent}.
 
 -spec process_session_creation(withdrawal_state()) -> process_result().
 process_session_creation(Withdrawal) ->
@@ -1366,6 +1416,28 @@ quote_domain_revision(undefined) ->
     undefined;
 quote_domain_revision(Quote) ->
     maps:get(domain_revision, Quote, undefined).
+
+%% Validation
+-spec withdrawal_validation_status(withdrawal_state()) -> validated | skipped | undefined.
+withdrawal_validation_status(#{validation := _Validation}) ->
+    validated;
+withdrawal_validation_status(#{params := #{destination_id := DestinationID}}) ->
+    case get_destination(DestinationID) of
+        {ok, #{auth_data := _AuthData}} ->
+            undefined;
+        _ ->
+            skipped
+    end.
+
+maybe_fail_validation([], _Withdrawal) ->
+    [];
+maybe_fail_validation(
+    [{validation, {Part, {personal, #{validation_status := invalid}}}} | _Tail],
+    Withdrawal
+) when Part =:= sender; Part =:= receiver ->
+    process_transfer_fail({validation_personal_data, Part}, Withdrawal);
+maybe_fail_validation([_Valid | Tail], Withdrawal) ->
+    maybe_fail_validation(Tail, Withdrawal).
 
 %% Session management
 
@@ -1872,6 +1944,11 @@ build_failure({inconsistent_quote_route, {Type, FoundID}}, Withdrawal) ->
         code => <<"unknown">>,
         reason => genlib:format(Details)
     };
+build_failure({validation_personal_data, Part}, _Withdrawal) ->
+    #{
+        code => <<"invalid_personal_data">>,
+        reason => genlib:format(Part)
+    };
 build_failure(session, Withdrawal) ->
     Result = get_session_result(Withdrawal),
     {failed, Failure} = Result,
@@ -1922,6 +1999,10 @@ apply_event_({route_changed, Route}, T) ->
         route => Route,
         attempts => R
     };
+apply_event_({validation, {Part, ValidationResult}}, T) ->
+    Validates = maps:get(validation, T, #{}),
+    PartValidations = maps:get(Part, Validates, []),
+    T#{validation => Validates#{Part => [ValidationResult | PartValidations]}};
 apply_event_({adjustment, _Ev} = Event, T) ->
     apply_adjustment_event(Event, T).
 
