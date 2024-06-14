@@ -79,6 +79,7 @@
     | {route_changed, route()}
     | {p_transfer, ff_postings_transfer:event()}
     | {limit_check, limit_check_details()}
+    | {validation, {sender | receiver, validation_result()}}
     | {session_started, session_id()}
     | {session_finished, {session_id(), session_result()}}
     | {status_changed, status()}
