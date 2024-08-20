@@ -25,6 +25,8 @@
 
 -export([init/1]).
 
+-define(PROGRESSOR_BACKEND, true).
+
 % 30 seconds
 -define(DEFAULT_HANDLING_TIMEOUT, 30000).
 
@@ -66,18 +68,11 @@ init([]) ->
     EventHandlerOpts = genlib_app:env(?MODULE, scoper_event_handler_options, #{}),
     RouteOpts = RouteOptsEnv#{event_handler => {ff_woody_event_handler, EventHandlerOpts}},
 
-    % TODO
-    %  - Make it palatable
-    {Backends, MachineHandlers, ModernizerHandlers} = lists:unzip3([
-        contruct_backend_childspec('ff/identity', ff_identity_machine, PartyClient),
-        contruct_backend_childspec('ff/wallet_v2', ff_wallet_machine, PartyClient),
-        contruct_backend_childspec('ff/source_v1', ff_source_machine, PartyClient),
-        contruct_backend_childspec('ff/destination_v2', ff_destination_machine, PartyClient),
-        contruct_backend_childspec('ff/deposit_v1', ff_deposit_machine, PartyClient),
-        contruct_backend_childspec('ff/withdrawal_v2', ff_withdrawal_machine, PartyClient),
-        contruct_backend_childspec('ff/withdrawal/session_v2', ff_withdrawal_session_machine, PartyClient),
-        contruct_backend_childspec('ff/w2w_transfer_v1', w2w_transfer_machine, PartyClient)
-    ]),
+    %% NOTE See 'sys.config'
+    %% TODO Refactor after namespaces params moved from progressor'
+    %% application env.
+    {Backends, MachineHandlers, ModernizerHandlers} =
+        lists:unzip3([contruct_backend_childspec(N, H, S, PartyClient) || {N, H, S} <- get_namespaces_params()]),
     ok = application:set_env(fistful, backends, maps:from_list(Backends)),
 
     Services =
@@ -113,6 +108,7 @@ init([]) ->
                 additional_routes =>
                     get_prometheus_routes() ++
                     machinery_mg_backend:get_routes(MachineHandlers, RouteOpts) ++
+                    %% TODO Modernizer
                     machinery_modernizer_mg_backend:get_routes(ModernizerHandlers, RouteOpts) ++
                     [erl_health_handle:get_route(enable_health_logging(HealthCheck))]
             }
@@ -137,20 +133,61 @@ get_handler(Service, Handler, WrapperOpts) ->
     {Path, ServiceSpec} = ff_services:get_service_spec(Service),
     {Path, {ServiceSpec, wrap_handler(Handler, WrapperOpts)}}.
 
-contruct_backend_childspec(NS, Handler, PartyClient) ->
-    Schema = get_namespace_schema(NS),
+-define(PROCESSOR_OPT_PATTERN(NS, Handler, Schema), #{
+    processor := #{
+        client := machinery_prg_backend,
+        options := #{
+            namespace := NS,
+            handler := {fistful, #{handler := Handler, party_client := _}},
+            schema := Schema
+        }
+    }
+}).
+
+get_namespaces_params() ->
+    Namespaces = maps:to_list(application:get_env(progressor, namespaces)),
+    lists:map(
+        fun({_, ?PROCESSOR_OPT_PATTERN(NS, Handler, Schema)}) ->
+            {NS, Handler, Schema}
+        end,
+        Namespaces
+    ).
+
+contruct_backend_childspec(NS, Handler, Schema, PartyClient) ->
     {
-        construct_machinery_backend_spec(NS, Schema),
+        construct_machinery_backend_spec(NS, Handler, Schema, PartyClient),
         construct_machinery_handler_spec(NS, Handler, Schema, PartyClient),
         construct_machinery_modernizer_spec(NS, Schema)
     }.
 
-construct_machinery_backend_spec(NS, Schema) ->
+-ifdef(PROGRESSOR_BACKEND).
+construct_machinery_backend_spec(NS, Handler, Schema, PartyClient) ->
+    %% TODO Maybe support composite/chained backend for BC
+    %% NOTE This repeats progressor' sys.config entries and cth'
+    %% application start.
+    {NS,
+        {machinery_prg_backend, #{
+            namespace => NS,
+            handler => {fistful, #{handler => Handler, party_client => PartyClient}},
+            schema => Schema
+        }}}.
+-else.
+construct_machinery_backend_spec(NS, _Handler, Schema, _PartyClient) ->
+    %% NOTE Legacy MG backend
     {NS,
         {machinery_mg_backend, #{
             schema => Schema,
             client => get_service_client(automaton)
         }}}.
+
+get_service_client(ServiceID) ->
+    case genlib_app:env(fistful, services, #{}) of
+        #{ServiceID := V} ->
+            ff_woody_client:new(V);
+        #{} ->
+            error({unknown_service, ServiceID})
+    end.
+-endif.
 
 construct_machinery_handler_spec(NS, Handler, Schema, PartyClient) ->
     {{fistful, #{handler => Handler, party_client => PartyClient}}, #{
@@ -163,31 +200,6 @@ construct_machinery_modernizer_spec(NS, Schema) ->
         path => ff_string:join(["/v1/modernizer/", NS]),
         backend_config => #{schema => Schema}
     }.
-
-get_service_client(ServiceID) ->
-    case genlib_app:env(fistful, services, #{}) of
-        #{ServiceID := V} ->
-            ff_woody_client:new(V);
-        #{} ->
-            error({unknown_service, ServiceID})
-    end.
-
-get_namespace_schema('ff/identity') ->
-    ff_identity_machinery_schema;
-get_namespace_schema('ff/wallet_v2') ->
-    ff_wallet_machinery_schema;
-get_namespace_schema('ff/source_v1') ->
-    ff_source_machinery_schema;
-get_namespace_schema('ff/destination_v2') ->
-    ff_destination_machinery_schema;
-get_namespace_schema('ff/deposit_v1') ->
-    ff_deposit_machinery_schema;
-get_namespace_schema('ff/withdrawal_v2') ->
-    ff_withdrawal_machinery_schema;
-get_namespace_schema('ff/withdrawal/session_v2') ->
-    ff_withdrawal_session_machinery_schema;
-get_namespace_schema('ff/w2w_transfer_v1') ->
-    ff_w2w_transfer_machinery_schema.
 
 wrap_handler(Handler, WrapperOpts) ->
     FullOpts = maps:merge(#{handler => Handler}, WrapperOpts),
