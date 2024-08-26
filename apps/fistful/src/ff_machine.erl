@@ -157,6 +157,7 @@ collapse_(Mod, #{history := History, aux_state := #{ctx := Ctx}}) ->
     collapse_history(Mod, History, #{ctx => Ctx}).
 
 collapse_history(Mod, History, St0) ->
+    %% ct:print("~p HISTORY: ~p~n", [Mod, [{ID, B} || {ID, _, {ev, _, B}} <- History]]),
     lists:foldl(fun(Ev, St) -> merge_event(Mod, Ev, St) end, St0, History).
 
 -spec migrate_history(module(), history(), migrate_params()) -> history().

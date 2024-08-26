@@ -1062,6 +1062,7 @@ handle_adjustment_status_change(#{new_status := Status}) ->
 -spec save_adjustable_info(event(), deposit_state()) -> deposit_state().
 save_adjustable_info({p_transfer, {status_changed, committed}}, Deposit) ->
     CashFlow = ff_postings_transfer:final_cash_flow(p_transfer(Deposit)),
+    %% ct:print("DEPOSIT CASHFLOW ~p~n", [CashFlow]),
     update_adjusment_index(fun ff_adjustment_utils:set_cash_flow/2, CashFlow, Deposit);
 save_adjustable_info(_Ev, Deposit) ->
     Deposit.

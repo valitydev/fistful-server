@@ -122,10 +122,11 @@ end_per_group(_, _) ->
 init_per_testcase(Name, C) ->
     C1 = ct_helper:makeup_cfg([ct_helper:test_case_name(Name), ct_helper:woody_ctx()], C),
     ok = ct_helper:set_context(C1),
-    C1.
+    ct_helper:trace_testcase(?MODULE, Name, C1).
 
 -spec end_per_testcase(test_case_name(), config()) -> _.
-end_per_testcase(_Name, _C) ->
+end_per_testcase(_Name, C) ->
+    ok = ct_helper:end_trace(C),
     ok = ct_helper:unset_context().
 
 %% Tests
@@ -630,6 +631,7 @@ create_revert_adjustment_already_has_status_error_test(C) ->
     },
     ?assertEqual({exception, ExpectedError}, Result).
 
+%% rebar3 ct -v --suite=apps/ff_server/test/ff_deposit_handler_SUITE.erl --group=default --case=deposit_state_content_test
 -spec deposit_state_content_test(config()) -> test_return().
 deposit_state_content_test(C) ->
     #{
@@ -643,7 +645,9 @@ deposit_state_content_test(C) ->
                 new_status = {failed, #deposit_status_Failed{failure = #'fistful_base_Failure'{code = <<"Ooops">>}}}
             }}
     },
-    {ok, _} = call_deposit('CreateAdjustment', {DepositID, AdjustmentParams}),
+    {ok, _Adj} = call_deposit('CreateAdjustment', {DepositID, AdjustmentParams}),
+    %% ct:print("~p~n", [Adj]),
+
     RevertAdjustmentParams = #deposit_revert_adj_AdjustmentParams{
         id = generate_id(),
         change =
@@ -652,11 +656,13 @@ deposit_state_content_test(C) ->
                     {failed, #deposit_revert_status_Failed{failure = #'fistful_base_Failure'{code = <<"Ooops">>}}}
             }}
     },
-    {ok, _} = call_deposit('CreateRevertAdjustment', {DepositID, RevertID, RevertAdjustmentParams}),
+    {ok, _Resp} = call_deposit('CreateRevertAdjustment', {DepositID, RevertID, RevertAdjustmentParams}),
+    %% ct:print("~p~n", [Resp]),
 
     {ok, DepositState} = call_deposit('Get', {DepositID, #'fistful_base_EventRange'{}}),
     ?assertMatch([_], DepositState#deposit_DepositState.reverts),
     ?assertMatch([_], DepositState#deposit_DepositState.adjustments),
+    %% ct:print("~p~n", [DepositState#deposit_DepositState.effective_final_cash_flow]),
     ?assertNotEqual(
         #cashflow_FinalCashFlow{postings = []},
         DepositState#deposit_DepositState.effective_final_cash_flow
@@ -664,7 +670,9 @@ deposit_state_content_test(C) ->
     ?assertNotEqual(undefined, DepositState#deposit_DepositState.status),
 
     [RevertState] = DepositState#deposit_DepositState.reverts,
-    ?assertMatch([_], RevertState#deposit_revert_RevertState.adjustments).
+    ?assertMatch([_], RevertState#deposit_revert_RevertState.adjustments),
+    timer:sleep(10_000),
+    ok.
 
 %% Utils
 

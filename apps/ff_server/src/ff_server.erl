@@ -145,12 +145,12 @@ get_handler(Service, Handler, WrapperOpts) ->
 }).
 
 get_namespaces_params() ->
-    Namespaces = maps:to_list(application:get_env(progressor, namespaces)),
+    {ok, Namespaces} = application:get_env(progressor, namespaces),
     lists:map(
         fun({_, ?PROCESSOR_OPT_PATTERN(NS, Handler, Schema)}) ->
             {NS, Handler, Schema}
         end,
-        Namespaces
+        maps:to_list(Namespaces)
     ).
 
 contruct_backend_childspec(NS, Handler, Schema, PartyClient) ->
