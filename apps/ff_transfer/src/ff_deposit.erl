@@ -809,6 +809,8 @@ validate_wallet_limits(Terms, Wallet) ->
     | {error, start_revert_error()}.
 validate_revert_start(Params, Deposit) ->
     do(fun() ->
+        valid = unwrap(validate_no_pending_adjustment(Deposit)),
+        valid = unwrap(validate_deposit_finish(Deposit)),
         valid = unwrap(validate_deposit_success(Deposit)),
         valid = unwrap(validate_revert_body(Params, Deposit))
     end).

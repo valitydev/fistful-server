@@ -1,0 +1,287 @@
+ff_deposit HISTORY: [{1,
+                      {created,
+                       #{body => {100,<<"RUB">>},
+                         created_at => 1724662236969,domain_revision => 8,
+                         external_id => <<"1ziGp96iI4X">>,
+                         id => <<"1ziGp96iI4W">>,
+                         params =>
+                          #{source_id => <<"1ziGp4Od3E8">>,
+                            wallet_id => <<"d9bAS4IcLfBuhultUCIk7eFNRRX">>},
+                         party_revision => 1,transfer_type => deposit,
+                         version => 3}}},
+                     {2,{status_changed,pending}},
+                     {3,
+                      {p_transfer,
+                       {created,
+                        #{final_cash_flow =>
+                           #{postings =>
+                              [#{receiver =>
+                                  #{account =>
+                                     #{accounter_account_id => 87,
+                                       currency => <<"RUB">>,
+                                       id => <<"d9bAS4IcLfBuhultUCIk7eFNRRX">>,
+                                       identity =>
+                                        <<"QD2IrTdDEOsyCRDV5rBssU63gQK">>},
+                                    type => {wallet,receiver_settlement}},
+                                 sender =>
+                                  #{account =>
+                                     #{accounter_account_id => 88,
+                                       currency => <<"RUB">>,
+                                       id => <<"1ziGp4Od3E8">>,
+                                       identity =>
+                                        <<"QD2IrTdDEOsyCRDV5rBssU63gQK">>},
+                                    type => {wallet,sender_source}},
+                                 volume => {100,<<"RUB">>}}]},
+                          id => <<"ff/deposit/1ziGp96iI4W">>}}}},
+                     {4,{p_transfer,{status_changed,created}}},
+                     {5,{p_transfer,{status_changed,prepared}}},
+                     {6,{limit_check,{wallet_receiver,ok}}},
+                     {7,{p_transfer,{status_changed,committed}}},
+                     {8,{status_changed,succeeded}},
+                     {9,
+                      {revert,
+                       #{id => <<"1ziGpDt3Vrs">>,
+                         payload =>
+                          {created,
+                           #{body => {100,<<"RUB">>},
+                             created_at => 1724662238017,domain_revision => 8,
+                             external_id => <<"1ziGpDt3Vrt">>,
+                             id => <<"1ziGpDt3Vrs">>,party_revision => 1,
+                             reason => <<"1ziGpDt3Vru">>,
+                             source_id => <<"1ziGp4Od3E8">>,status => pending,
+                             wallet_id =>
+                              <<"d9bAS4IcLfBuhultUCIk7eFNRRX">>}}}}},
+                     {10,
+                      {revert,
+                       #{id => <<"1ziGpDt3Vrs">>,
+                         payload =>
+                          {p_transfer,
+                           {created,
+                            #{final_cash_flow =>
+                               #{postings =>
+                                  [#{receiver =>
+                                      #{account =>
+                                         #{accounter_account_id => 88,
+                                           currency => <<"RUB">>,
+                                           id => <<"1ziGp4Od3E8">>,
+                                           identity =>
+                                            <<"QD2IrTdDEOsyCRDV5rBssU63gQK">>},
+                                        type => {wallet,sender_source}},
+                                     sender =>
+                                      #{account =>
+                                         #{accounter_account_id => 87,
+                                           currency => <<"RUB">>,
+                                           id =>
+                                            <<"d9bAS4IcLfBuhultUCIk7eFNRRX">>,
+                                           identity =>
+                                            <<"QD2IrTdDEOsyCRDV5rBssU63gQK">>},
+                                        type => {wallet,receiver_settlement}},
+                                     volume => {100,<<"RUB">>}}]},
+                              id => <<"ff/deposit_revert/1ziGpDt3Vrs">>}}}}}},
+                     {11,
+                      {revert,
+                       #{id => <<"1ziGpDt3Vrs">>,
+                         payload => {p_transfer,{status_changed,created}}}}},
+                     {12,
+                      {revert,
+                       #{id => <<"1ziGpDt3Vrs">>,
+                         payload => {p_transfer,{status_changed,prepared}}}}},
+                     {13,
+                      {revert,
+                       #{id => <<"1ziGpDt3Vrs">>,
+                         payload => {limit_check,{wallet_receiver,ok}}}}},
+                     {14,
+                      {revert,
+                       #{id => <<"1ziGpDt3Vrs">>,
+                         payload => {p_transfer,{status_changed,committed}}}}},
+                     {15,
+                      {revert,
+                       #{id => <<"1ziGpDt3Vrs">>,
+                         payload => {status_changed,succeeded}}}},
+                     {16,
+                      {adjustment,
+                       #{id => <<"1ziGpIb8kiG">>,
+                         payload =>
+                          {created,
+                           #{changes_plan =>
+                              #{new_cash_flow =>
+                                 #{new_cash_flow => #{postings => []},
+                                   old_cash_flow_inverted =>
+                                    #{postings =>
+                                       [#{receiver =>
+                                           #{account =>
+                                              #{accounter_account_id => 88,
+                                                currency => <<"RUB">>,
+                                                id => <<"1ziGp4Od3E8">>,
+                                                identity =>
+                                                 <<"QD2IrTdDEOsyCRDV5rBssU63gQK">>},
+                                             type => {wallet,sender_source}},
+                                          sender =>
+                                           #{account =>
+                                              #{accounter_account_id => 87,
+                                                currency => <<"RUB">>,
+                                                id =>
+                                                 <<"d9bAS4IcLfBuhultUCIk7eFNRRX">>,
+                                                identity =>
+                                                 <<"QD2IrTdDEOsyCRDV5rBssU63gQK">>},
+                                             type =>
+                                              {wallet,receiver_settlement}},
+                                          volume => {100,<<"RUB">>}}]}},
+                                new_status =>
+                                 #{new_status =>
+                                    {failed,#{code => <<"Ooops">>}}}},
+                             created_at => 1724662239044,domain_revision => 8,
+                             external_id => undefined,id => <<"1ziGpIb8kiG">>,
+                             operation_timestamp => 1724662236969,
+                             party_revision => 1,status => pending}}}}},
+                     {17,
+                      {revert,
+                       #{id => <<"1ziGpDt3Vrs">>,
+                         payload =>
+                          {adjustment,
+                           #{id => <<"1ziGpIfOjfE">>,
+                             payload =>
+                              {created,
+                               #{changes_plan =>
+                                  #{new_cash_flow =>
+                                     #{new_cash_flow => #{postings => []},
+                                       old_cash_flow_inverted =>
+                                        #{postings =>
+                                           [#{receiver =>
+                                               #{account =>
+                                                  #{accounter_account_id => 87,
+                                                    currency => <<"RUB">>,
+                                                    id =>
+                                                     <<"d9bAS4IcLfBuhultUCIk7eFNRRX">>,
+                                                    identity =>
+                                                     <<"QD2IrTdDEOsyCRDV5rBssU63gQK">>},
+                                                 type =>
+                                                  {wallet,
+                                                   receiver_settlement}},
+                                              sender =>
+                                               #{account =>
+                                                  #{accounter_account_id => 88,
+                                                    currency => <<"RUB">>,
+                                                    id => <<"1ziGp4Od3E8">>,
+                                                    identity =>
+                                                     <<"QD2IrTdDEOsyCRDV5rBssU63gQK">>},
+                                                 type =>
+                                                  {wallet,sender_source}},
+                                              volume => {100,<<"RUB">>}}]}},
+                                    new_status =>
+                                     #{new_status =>
+                                        {failed,#{code => <<"Ooops">>}}}},
+                                 created_at => 1724662239055,
+                                 domain_revision => 8,
+                                 external_id => undefined,
+                                 id => <<"1ziGpIfOjfE">>,
+                                 operation_timestamp => 1724662238017,
+                                 party_revision => 1,status => pending}}}}}}},
+                     {18,
+                      {revert,
+                       #{id => <<"1ziGpDt3Vrs">>,
+                         payload =>
+                          {adjustment,
+                           #{id => <<"1ziGpIfOjfE">>,
+                             payload =>
+                              {p_transfer,
+                               {created,
+                                #{final_cash_flow =>
+                                   #{postings =>
+                                      [#{receiver =>
+                                          #{account =>
+                                             #{accounter_account_id => 87,
+                                               currency => <<"RUB">>,
+                                               id =>
+                                                <<"d9bAS4IcLfBuhultUCIk7eFNRRX">>,
+                                               identity =>
+                                                <<"QD2IrTdDEOsyCRDV5rBssU63gQK">>},
+                                            type =>
+                                             {wallet,receiver_settlement}},
+                                         sender =>
+                                          #{account =>
+                                             #{accounter_account_id => 88,
+                                               currency => <<"RUB">>,
+                                               id => <<"1ziGp4Od3E8">>,
+                                               identity =>
+                                                <<"QD2IrTdDEOsyCRDV5rBssU63gQK">>},
+                                            type => {wallet,sender_source}},
+                                         volume => {100,<<"RUB">>}}]},
+                                  id =>
+                                   <<"ff/adjustment/1ziGpIfOjfE">>}}}}}}}},
+                     {19,
+                      {revert,
+                       #{id => <<"1ziGpDt3Vrs">>,
+                         payload =>
+                          {adjustment,
+                           #{id => <<"1ziGpIfOjfE">>,
+                             payload =>
+                              {p_transfer,{status_changed,created}}}}}}},
+                     {20,
+                      {revert,
+                       #{id => <<"1ziGpDt3Vrs">>,
+                         payload =>
+                          {adjustment,
+                           #{id => <<"1ziGpIfOjfE">>,
+                             payload =>
+                              {p_transfer,{status_changed,prepared}}}}}}},
+                     {21,
+                      {revert,
+                       #{id => <<"1ziGpDt3Vrs">>,
+                         payload =>
+                          {adjustment,
+                           #{id => <<"1ziGpIfOjfE">>,
+                             payload =>
+                              {p_transfer,{status_changed,committed}}}}}}},
+                     {22,
+                      {revert,
+                       #{id => <<"1ziGpDt3Vrs">>,
+                         payload =>
+                          {adjustment,
+                           #{id => <<"1ziGpIfOjfE">>,
+                             payload => {status_changed,succeeded}}}}}},
+                     {23,
+                      {revert,
+                       #{id => <<"1ziGpDt3Vrs">>,
+                         payload =>
+                          {status_changed,{failed,#{code => <<"Ooops">>}}}}}},
+                     {24,
+                      {adjustment,
+                       #{id => <<"1ziGpIb8kiG">>,
+                         payload =>
+                          {p_transfer,
+                           {created,
+                            #{final_cash_flow =>
+                               #{postings =>
+                                  [#{receiver =>
+                                      #{account =>
+                                         #{accounter_account_id => 88,
+                                           currency => <<"RUB">>,
+                                           id => <<"1ziGp4Od3E8">>,
+                                           identity =>
+                                            <<"QD2IrTdDEOsyCRDV5rBssU63gQK">>},
+                                        type => {wallet,sender_source}},
+                                     sender =>
+                                      #{account =>
+                                         #{accounter_account_id => 87,
+                                           currency => <<"RUB">>,
+                                           id =>
+                                            <<"d9bAS4IcLfBuhultUCIk7eFNRRX">>,
+                                           identity =>
+                                            <<"QD2IrTdDEOsyCRDV5rBssU63gQK">>},
+                                        type => {wallet,receiver_settlement}},
+                                     volume => {100,<<"RUB">>}}]},
+                              id => <<"ff/adjustment/1ziGpIb8kiG">>}}}}}},
+                     {25,
+                      {adjustment,
+                       #{id => <<"1ziGpIb8kiG">>,
+                         payload => {p_transfer,{status_changed,created}}}}},
+                     {26,
+                      {adjustment,
+                       #{id => <<"1ziGpIb8kiG">>,
+                         payload => {p_transfer,{status_changed,prepared}}}}},
+                     {27,
+                      {adjustment,
+                       #{id => <<"1ziGpIb8kiG">>,
+                         payload =>
+                          {p_transfer,{status_changed,committed}}}}}]
