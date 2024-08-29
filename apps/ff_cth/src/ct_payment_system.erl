@@ -422,7 +422,6 @@ domain_config_add_version(Options) ->
         wallet = #domain_WalletProvisionTerms{
             withdrawals = #domain_WithdrawalProvisionTerms{
                 currencies = {value, ?ordset([?cur(<<"RUB">>)])},
-                payout_methods = {value, ?ordset([])},
                 cash_limit =
                     {value,
                         ?cashrng(
@@ -460,7 +459,6 @@ domain_config(Options) ->
         wallet = #domain_WalletProvisionTerms{
             withdrawals = #domain_WithdrawalProvisionTerms{
                 currencies = {value, ?ordset([?cur(<<"RUB">>)])},
-                payout_methods = {value, ?ordset([])},
                 cash_limit =
                     {value,
                         ?cashrng(
@@ -493,7 +491,6 @@ domain_config(Options) ->
         wallet = #domain_WalletProvisionTerms{
             withdrawals = #domain_WithdrawalProvisionTerms{
                 currencies = {value, ?ordset([?cur(<<"RUB">>)])},
-                payout_methods = {value, ?ordset([])},
                 cash_limit =
                     {value,
                         ?cashrng(
@@ -1036,7 +1033,6 @@ domain_config(Options) ->
                 wallet = #domain_WalletProvisionTerms{
                     withdrawals = #domain_WithdrawalProvisionTerms{
                         currencies = {value, ?ordset([?cur(<<"BTC">>)])},
-                        payout_methods = {value, ?ordset([])},
                         cash_limit =
                             {value,
                                 ?cashrng(
