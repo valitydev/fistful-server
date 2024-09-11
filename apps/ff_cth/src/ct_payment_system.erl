@@ -270,7 +270,7 @@ epg_pools() ->
     #{
         default_pool => #{
             database => default_db,
-            size => 10
+            size => 30
         }
     }.
 
