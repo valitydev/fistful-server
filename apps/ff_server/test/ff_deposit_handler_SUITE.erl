@@ -631,7 +631,6 @@ create_revert_adjustment_already_has_status_error_test(C) ->
     },
     ?assertEqual({exception, ExpectedError}, Result).
 
-%% rebar3 ct -v --suite=apps/ff_server/test/ff_deposit_handler_SUITE.erl --group=default --case=deposit_state_content_test
 -spec deposit_state_content_test(config()) -> test_return().
 deposit_state_content_test(C) ->
     #{
