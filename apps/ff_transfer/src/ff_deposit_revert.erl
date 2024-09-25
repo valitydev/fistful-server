@@ -681,7 +681,6 @@ handle_adjustment_status_change(#{new_status := Status}) ->
 -spec save_adjustable_info(event(), revert()) -> revert().
 save_adjustable_info({p_transfer, {status_changed, committed}}, Revert) ->
     CashFlow = ff_postings_transfer:final_cash_flow(p_transfer(Revert)),
-    %% ct:print("REVERT CASHFLOW: ~p~n", [CashFlow]),
     update_adjusment_index(fun ff_adjustment_utils:set_cash_flow/2, CashFlow, Revert);
 save_adjustable_info(_Ev, Revert) ->
     Revert.

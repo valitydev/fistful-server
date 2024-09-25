@@ -235,7 +235,6 @@ do_start_revert_adjustment(RevertID, Params, Machine) ->
     St = ff_machine:collapse(ff_deposit, Machine),
     case ff_deposit:start_revert_adjustment(RevertID, Params, deposit(St)) of
         {ok, Result} ->
-            %% ct:print("~p~n", [Result]),
             {ok, process_result(Result)};
         {error, _Reason} = Error ->
             {Error, #{}}
