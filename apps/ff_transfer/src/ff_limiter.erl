@@ -405,11 +405,8 @@ mk_limit_log_attributes(#limiter_LimitContext{
         }
     }.
 
-call_w_request(Function, LimitRequest, Context) ->
-    Service = {limproto_limiter_thrift, 'Limiter'},
-    Args = {LimitRequest, Context},
-    Request = {Service, Function, Args},
-    case ff_woody_client:call(limiter, Request) of
+call_w_request(Function, Request, Context) ->
+    case call(Function, {Request, Context}) of
         {exception, #limiter_LimitNotFound{}} ->
             error(not_found);
         {exception, #base_InvalidRequest{errors = Errors}} ->
