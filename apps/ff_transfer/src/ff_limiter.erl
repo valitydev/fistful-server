@@ -43,8 +43,11 @@ get_turnover_limits(Ambiguous) ->
     {ok, [limit()]}
     | {error, {overflow, [{limit_id(), limit_amount(), turnover_limit_upper_boundary()}]}}.
 check_limits(TurnoverLimits, Withdrawal, Route, Iter) ->
+    Clock = get_latest_clock(),
     Context = gen_limit_context(Route, Withdrawal),
-    LimitValues = collect_limit_values(Context, TurnoverLimits, make_operation_segments(Withdrawal, Route, Iter)),
+    LimitValues = collect_limit_values(
+        Clock, Context, TurnoverLimits, make_operation_segments(Withdrawal, Route, Iter)
+    ),
     case lists:foldl(fun(LimitValue, Acc) -> check_limits_(LimitValue, Acc) end, {[], []}, LimitValues) of
         {Limits, ErrorList} when length(ErrorList) =:= 0 ->
             {ok, Limits};
@@ -63,13 +66,12 @@ make_operation_segments(Withdrawal, _Route = #{terminal_id := TerminalID, provid
         end
     ].
 
-collect_limit_values(Context, TurnoverLimits, OperationIdSegments) ->
+collect_limit_values(Clock, Context, TurnoverLimits, OperationIdSegments) ->
     {LegacyTurnoverLimits, BatchTurnoverLimits} = split_turnover_limits_by_available_limiter_api(TurnoverLimits),
-    get_legacy_limit_values(Context, LegacyTurnoverLimits) ++
+    get_legacy_limit_values(Clock, Context, LegacyTurnoverLimits) ++
         get_batch_limit_values(Context, BatchTurnoverLimits, OperationIdSegments).
 
-get_legacy_limit_values(Context, TurnoverLimits) ->
-    Clock = get_latest_clock(),
+get_legacy_limit_values(Clock, Context, TurnoverLimits) ->
     lists:foldl(
         fun(TurnoverLimit, Acc) ->
             #domain_TurnoverLimit{id = LimitID, domain_revision = DomainRevision, upper_boundary = UpperBoundary} =
@@ -99,7 +101,7 @@ get_batch_limit_values(Context, TurnoverLimits, OperationIdSegments) ->
                 limit => Limit
             }
         end,
-        get_values(LimitRequest, Context)
+        get_batch(LimitRequest, Context)
     ).
 
 check_limits_(#{id := LimitID, boundary := UpperBoundary, limit := Limit}, {Limits, Errors}) ->
@@ -126,7 +128,8 @@ batch_hold_limits(_Context, [], _OperationIdSegments) ->
     ok;
 batch_hold_limits(Context, TurnoverLimits, OperationIdSegments) ->
     {LimitRequest, _} = prepare_limit_request(TurnoverLimits, OperationIdSegments),
-    hold_batch(LimitRequest, Context).
+    _ = hold_batch(LimitRequest, Context),
+    ok.
 
 -spec commit_withdrawal_limits([turnover_limit()], withdrawal(), route(), pos_integer()) -> ok.
 commit_withdrawal_limits(TurnoverLimits, Withdrawal, Route, Iter) ->
@@ -136,19 +139,19 @@ commit_withdrawal_limits(TurnoverLimits, Withdrawal, Route, Iter) ->
     ok = legacy_commit_withdrawal_limits(Context, LegacyTurnoverLimits, Withdrawal, Route, Iter),
     OperationIdSegments = make_operation_segments(Withdrawal, Route, Iter),
     ok = batch_commit_limits(Context, BatchTurnoverLimits, OperationIdSegments),
-    ok = log_limit_changes(TurnoverLimits, Clock, Context).
+    ok = log_limit_changes(TurnoverLimits, Clock, Context, Withdrawal, Route, Iter).
 
 legacy_commit_withdrawal_limits(Context, TurnoverLimits, Withdrawal, Route, Iter) ->
     LimitChanges = gen_limit_changes(TurnoverLimits, Route, Withdrawal, Iter),
     Clock = get_latest_clock(),
-    ok = commit(LimitChanges, Clock, Context),
-    ok = log_limit_changes(TurnoverLimits, Clock, Context).
+    ok = commit(LimitChanges, Clock, Context).
 
 batch_commit_limits(_Context, [], _OperationIdSegments) ->
     ok;
 batch_commit_limits(Context, TurnoverLimits, OperationIdSegments) ->
     {LimitRequest, _} = prepare_limit_request(TurnoverLimits, OperationIdSegments),
-    commit_batch(LimitRequest, Context).
+    _ = commit_batch(LimitRequest, Context),
+    ok.
 
 -spec rollback_withdrawal_limits([turnover_limit()], withdrawal(), route(), pos_integer()) -> ok.
 rollback_withdrawal_limits(TurnoverLimits, Withdrawal, Route, Iter) ->
@@ -336,15 +339,10 @@ call_rollback(LimitChange, Clock, Context) ->
         {exception, #limiter_PaymentToolNotSupported{}} -> {latest, #limiter_LatestClock{}}
     end.
 
--spec get_values(request(), context()) -> [limit()] | no_return().
-get_values(Request, Context) ->
-    {ok, Limits} = call_w_request('GetValues', Request, Context),
+-spec get_batch(request(), context()) -> [limit()] | no_return().
+get_batch(Request, Context) ->
+    {ok, Limits} = call_w_request('GetBatch', Request, Context),
     Limits.
-
-%% -spec get_batch(request(), context()) -> [limit()] | no_return().
-%% get_batch(Request, Context) ->
-%%     {ok, Limits} = call_w_request('GetBatch', Request, Context),
-%%     Limits.
 
 -spec hold_batch(request(), context()) -> [limit()] | no_return().
 hold_batch(Request, Context) ->
@@ -366,16 +364,18 @@ call(Func, Args) ->
     Request = {Service, Func, Args},
     ff_woody_client:call(limiter, Request).
 
-log_limit_changes(TurnoverLimits, Clock, Context) ->
+log_limit_changes(TurnoverLimits, Clock, Context, Withdrawal, Route, Iter) ->
+    LimitValues = collect_limit_values(
+        Clock, Context, TurnoverLimits, make_operation_segments(Withdrawal, Route, Iter)
+    ),
     Attrs = mk_limit_log_attributes(Context),
     lists:foreach(
-        fun(#domain_TurnoverLimit{id = ID, upper_boundary = UpperBoundary, domain_revision = DomainRevision}) ->
-            #limiter_Limit{amount = LimitAmount} = get(ID, DomainRevision, Clock, Context),
+        fun(#{id := ID, boundary := UpperBoundary, limit := #limiter_Limit{amount = LimitAmount}}) ->
             ok = logger:log(notice, "Limit change commited", [], #{
                 limit => Attrs#{config_id => ID, boundary => UpperBoundary, amount => LimitAmount}
             })
         end,
-        TurnoverLimits
+        LimitValues
     ).
 
 mk_limit_log_attributes(#limiter_LimitContext{
