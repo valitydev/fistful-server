@@ -111,7 +111,7 @@ services:
       retries: 20
 
   liminator-db:
-    image: docker.io/library/postgres:13.10
+    image: docker.io/library/postgres:17.2
     environment:
       - POSTGRES_DB=liminator
       - POSTGRES_USER=vality
@@ -146,7 +146,7 @@ services:
       retries: 10
 
   shumway-db:
-    image: docker.io/library/postgres:13.10
+    image: docker.io/library/postgres:17.2
     ports:
       - "5432"
     environment:
