@@ -3,7 +3,6 @@
 -behaviour(ff_codec).
 
 -include_lib("fistful_proto/include/fistful_wthd_session_thrift.hrl").
--include_lib("fistful_proto/include/fistful_fistful_base_thrift.hrl").
 
 -export([marshal_state/3]).
 
@@ -67,11 +66,11 @@ marshal(session_finished_status, {failed, Failure}) ->
     {failed, #wthd_session_SessionFinishedFailed{failure = marshal(failure, Failure)}};
 marshal(
     withdrawal,
-    Params = #{
+    #{
         id := WithdrawalID,
         resource := Resource,
         cash := Cash
-    }
+    } = Params
 ) ->
     SenderIdentity = maps:get(sender, Params, undefined),
     ReceiverIdentity = maps:get(receiver, Params, undefined),
@@ -86,7 +85,7 @@ marshal(
         session_id = maybe_marshal(id, SessionID),
         quote = maybe_marshal(quote, Quote)
     };
-marshal(identity, Identity = #{id := ID}) ->
+marshal(identity, #{id := ID} = Identity) ->
     #wthd_session_Identity{
         identity_id = marshal(id, ID),
         effective_challenge = maybe_marshal(challenge, maps:get(effective_challenge, Identity, undefined))
