@@ -220,7 +220,9 @@ sender_receiver_limit_success(C) ->
         body => Cash,
         external_id => WithdrawalID
     },
-    PreviousAmount = get_limit_amount(Cash, WalletID, DestinationID, ?LIMIT_TURNOVER_NUM_SENDER_ID1, MarshaledAuthData, C),
+    PreviousAmount = get_limit_amount(
+        Cash, WalletID, DestinationID, ?LIMIT_TURNOVER_NUM_SENDER_ID1, MarshaledAuthData, C
+    ),
     ok = ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new()),
     ?assertEqual(succeeded, await_final_withdrawal_status(WithdrawalID)),
     Withdrawal = get_withdrawal(WithdrawalID),
