@@ -201,7 +201,7 @@ sender_receiver_limit_success(C) ->
         (Service, Request) ->
             meck:passthrough([Service, Request])
     end),
-    Cash = {_Amount, Currency} = {800800, <<"RUB">>},
+    Cash = {_Amount, Currency} = {3002000, <<"RUB">>},
     #{
         wallet_id := WalletID,
         identity_id := IdentityID
@@ -210,6 +210,7 @@ sender_receiver_limit_success(C) ->
         sender => <<"SenderToken">>,
         receiver => <<"ReceiverToken">>
     },
+    MarshaledAuthData = ff_adapter_withdrawal_codec:maybe_marshal(auth_data, AuthData),
     DestinationID = create_destination(IdentityID, Currency, AuthData, C),
     WithdrawalID = generate_id(),
     WithdrawalParams = #{
@@ -219,7 +220,7 @@ sender_receiver_limit_success(C) ->
         body => Cash,
         external_id => WithdrawalID
     },
-    PreviousAmount = get_limit_amount(Cash, WalletID, DestinationID, ?LIMIT_TURNOVER_NUM_SENDER_ID1, C),
+    PreviousAmount = get_limit_amount(Cash, WalletID, DestinationID, ?LIMIT_TURNOVER_NUM_SENDER_ID1, MarshaledAuthData, C),
     ok = ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new()),
     ?assertEqual(succeeded, await_final_withdrawal_status(WithdrawalID)),
     Withdrawal = get_withdrawal(WithdrawalID),
@@ -549,7 +550,7 @@ set_retryable_errors(PartyID, ErrorList) ->
         }
     }).
 
-get_limit_withdrawal(Cash, WalletID, DestinationID) ->
+get_limit_withdrawal(Cash, WalletID, DestinationID, AuthData) ->
     {ok, WalletMachine} = ff_wallet_machine:get(WalletID),
     Wallet = ff_wallet_machine:wallet(WalletMachine),
     WalletAccount = ff_wallet:account(Wallet),
@@ -563,11 +564,14 @@ get_limit_withdrawal(Cash, WalletID, DestinationID) ->
         sender = ff_adapter_withdrawal_codec:marshal(identity, #{
             id => ff_identity:id(SenderIdentity),
             owner_id => ff_identity:party(SenderIdentity)
-        })
+        }),
+        auth_data = AuthData
     }.
 
 get_limit_amount(Cash, WalletID, DestinationID, LimitID, C) ->
-    Withdrawal = get_limit_withdrawal(Cash, WalletID, DestinationID),
+    get_limit_amount(Cash, WalletID, DestinationID, LimitID, undefined, C).
+get_limit_amount(Cash, WalletID, DestinationID, LimitID, AuthData, C) ->
+    Withdrawal = get_limit_withdrawal(Cash, WalletID, DestinationID, AuthData),
     ff_limiter_helper:get_limit_amount(LimitID, ct_helper:cfg('$limits_domain_revision', C), Withdrawal, C).
 
 get_destination_resource(DestinationID) ->
