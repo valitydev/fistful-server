@@ -7,6 +7,7 @@
 -include_lib("damsel/include/dmsl_msgpack_thrift.hrl").
 
 -export([marshal/2]).
+-export([maybe_marshal/2]).
 -export([unmarshal/2]).
 -export([marshal_msgpack/1]).
 -export([unmarshal_msgpack/1]).
@@ -395,7 +396,7 @@ unmarshal(transaction_info, TransactionInfo) ->
     ff_dmsl_codec:unmarshal(transaction_info, TransactionInfo).
 
 %%
-
+-spec maybe_marshal(type_name(), decoded_value() | undefined) -> encoded_value() | undefined.
 maybe_marshal(_Type, undefined) ->
     undefined;
 maybe_marshal(Type, Value) ->
