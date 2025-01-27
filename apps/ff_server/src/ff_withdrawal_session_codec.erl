@@ -28,7 +28,8 @@ marshal_event({EventID, {ev, Timestamp, Change}}) ->
     #wthd_session_Event{
         sequence = ff_codec:marshal(event_id, EventID),
         occured_at = ff_codec:marshal(timestamp, Timestamp),
-        changes = marshal({list, change}, Change)
+        %% NOTE Each emitted session event contains single change
+        changes = [marshal(change, Change)]
     }.
 
 -spec marshal(ff_codec:type_name(), ff_codec:decoded_value()) -> ff_codec:encoded_value().
