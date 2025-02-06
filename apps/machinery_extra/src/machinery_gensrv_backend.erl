@@ -39,6 +39,7 @@
 -export([repair/5]).
 -export([get/4]).
 -export([notify/5]).
+-export([remove/3]).
 
 %% Gen Server
 
@@ -128,6 +129,10 @@ report_notfound(NS, ID) ->
 -spec notify(namespace(), id(), range(), args(_), backend_opts()) -> no_return().
 notify(_NS, _ID, _Range, _Args, _Opts) ->
     erlang:error({not_implemented, notify}).
+
+-spec remove(namespace(), id(), backend_opts()) -> no_return().
+remove(_Namespace, _ID, _Opts) ->
+    erlang:error({not_implemented, remove}).
 
 %% Gen Server + Supervisor
 

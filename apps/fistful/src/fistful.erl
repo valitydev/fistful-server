@@ -22,6 +22,7 @@
 -export([call/5]).
 -export([repair/5]).
 -export([notify/5]).
+-export([remove/3]).
 
 -export([init/4]).
 -export([process_timeout/3]).
@@ -64,6 +65,10 @@ repair(NS, ID, Range, Args, Backend) ->
 -spec notify(namespace(), id(), range(), args(_), machinery:backend(_)) -> ok | {error, notfound}.
 notify(NS, ID, Range, Args, Backend) ->
     machinery:notify(NS, ID, Range, Args, set_backend_context(Backend)).
+
+-spec remove(namespace(), id(), machinery:backend(_)) -> ok | {error, notfound}.
+remove(NS, ID, Backend) ->
+    machinery:remove(NS, ID, set_backend_context(Backend)).
 
 %%
 
