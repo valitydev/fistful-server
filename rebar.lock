@@ -41,7 +41,7 @@
   0},
  {<<"fistful_proto">>,
   {git,"https://github.com/valitydev/fistful-proto.git",
-       {ref,"1c2861893e55d7323e25cd3c5b6d90b2cb5abb9a"}},
+       {ref,"54f1d580854d38429f56ce8cc14bac307eeb4ec7"}},
   0},
  {<<"genlib">>,
   {git,"https://github.com/valitydev/genlib.git",
