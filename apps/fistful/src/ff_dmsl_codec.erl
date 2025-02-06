@@ -256,7 +256,7 @@ marshal(three_ds_verification, V) when
         V =:= authentication_could_not_be_performed
 ->
     V;
-marshal(failure, V = #{code := Code}) ->
+marshal(failure, #{code := Code} = V) ->
     #domain_Failure{
         code = marshal(string, Code),
         reason = maybe_marshal(string, maps:get(reason, V, undefined)),
