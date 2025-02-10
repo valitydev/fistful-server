@@ -59,7 +59,7 @@
   0},
  {<<"genlib">>,
   {git,"https://github.com/valitydev/genlib.git",
-       {ref,"f6074551d6586998e91a97ea20acb47241254ff3"}},
+       {ref,"d2324089afbbd9630e85fac554620f1de0b33dfe"}},
   0},
  {<<"gproc">>,{pkg,<<"gproc">>,<<"0.9.0">>},1},
  {<<"grpcbox">>,{pkg,<<"grpcbox">>,<<"0.16.0">>},1},
@@ -115,7 +115,7 @@
  {<<"ranch">>,{pkg,<<"ranch">>,<<"1.8.0">>},2},
  {<<"scoper">>,
   {git,"https://github.com/valitydev/scoper.git",
-       {ref,"55a2a32ee25e22fa35f583a18eaf38b2b743429b"}},
+       {ref,"0e7aa01e9632daa39727edd62d4656ee715b4569"}},
   0},
  {<<"snowflake">>,
   {git,"https://github.com/valitydev/snowflake.git",
@@ -124,7 +124,7 @@
  {<<"ssl_verify_fun">>,{pkg,<<"ssl_verify_fun">>,<<"1.1.7">>},2},
  {<<"thrift">>,
   {git,"https://github.com/valitydev/thrift_erlang.git",
-       {ref,"c280ff266ae1c1906fb0dcee8320bb8d8a4a3c75"}},
+       {ref,"3a60e5dc5bbd709495024f26e100b041c3547fd9"}},
   0},
  {<<"tls_certificate_check">>,
   {pkg,<<"tls_certificate_check">>,<<"1.19.0">>},
@@ -140,7 +140,7 @@
   0},
  {<<"woody">>,
   {git,"https://github.com/valitydev/woody_erlang.git",
-       {ref,"072825ee7179825a4078feb0649df71303c74157"}},
+       {ref,"cc983a9423325ba1d6a509775eb6ff7ace721539"}},
   0}]}.
 [
 {pkg_hash,[
