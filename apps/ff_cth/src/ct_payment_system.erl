@@ -83,6 +83,7 @@ start_processing_apps(Options) ->
         dmt_client,
         party_client,
         {fistful, [
+            {machinery_backend, hybrid},
             {services, services(Options)},
             {providers, identity_provider_config(Options)}
         ]},

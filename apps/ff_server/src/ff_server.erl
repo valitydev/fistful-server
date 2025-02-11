@@ -25,8 +25,6 @@
 
 -export([init/1]).
 
--define(PROGRESSOR_BACKEND, true).
-
 % 30 seconds
 -define(DEFAULT_HANDLING_TIMEOUT, 30000).
 
@@ -73,7 +71,10 @@ init([]) ->
     %% TODO Refactor after namespaces params moved from progressor'
     %% application env.
     {Backends, MachineHandlers, ModernizerHandlers} =
-        lists:unzip3([contruct_backend_childspec(N, H, S, PartyClient) || {N, H, S} <- get_namespaces_params()]),
+        lists:unzip3([
+            contruct_backend_childspec(B, N, H, S, PartyClient)
+         || {B, N, H, S} <- get_namespaces_params(genlib_app:env(fistful, machinery_backend))
+        ]),
     ok = application:set_env(fistful, backends, maps:from_list(Backends)),
 
     Services =
@@ -109,7 +110,6 @@ init([]) ->
                 additional_routes =>
                     get_prometheus_routes() ++
                     machinery_mg_backend:get_routes(MachineHandlers, RouteOpts) ++
-                    %% TODO Modernizer
                     machinery_modernizer_mg_backend:get_routes(ModernizerHandlers, RouteOpts) ++
                     [erl_health_handle:get_route(enable_health_logging(HealthCheck))]
             }
@@ -145,36 +145,56 @@ get_handler(Service, Handler, WrapperOpts) ->
     }
 }).
 
-get_namespaces_params() ->
+-spec get_namespaces_params(BackendMode) ->
+    [{BackendMode, machinery:namespace(), MachineryImpl :: module(), Schema :: module()}]
+when
+    BackendMode :: machinegun | progressor | hybrid.
+get_namespaces_params(machinegun = BackendMode) ->
+    [
+        {BackendMode, 'ff/identity', ff_identity_machine, ff_identity_machinery_schema},
+        {BackendMode, 'ff/wallet_v2', ff_wallet_machine, ff_wallet_machinery_schema},
+        {BackendMode, 'ff/source_v1', ff_source_machine, ff_source_machinery_schema},
+        {BackendMode, 'ff/destination_v2', ff_destination_machine, ff_destination_machinery_schema},
+        {BackendMode, 'ff/deposit_v1', ff_deposit_machine, ff_deposit_machinery_schema},
+        {BackendMode, 'ff/withdrawal_v2', ff_withdrawal_machine, ff_withdrawal_machinery_schema},
+        {BackendMode, 'ff/withdrawal/session_v2', ff_withdrawal_session_machine,
+            ff_withdrawal_session_machinery_schema},
+        {BackendMode, 'ff/w2w_transfer_v1', w2w_transfer_machine, ff_w2w_transfer_machinery_schema}
+    ];
+get_namespaces_params(BackendMode) when BackendMode == progressor orelse BackendMode == hybrid ->
     {ok, Namespaces} = application:get_env(progressor, namespaces),
     lists:map(
         fun({_, ?PROCESSOR_OPT_PATTERN(NS, Handler, Schema)}) ->
-            {NS, Handler, Schema}
+            {BackendMode, NS, Handler, Schema}
         end,
         maps:to_list(Namespaces)
-    ).
+    );
+get_namespaces_params(UnknownBackendMode) ->
+    erlang:error({unknown_backend_mode, UnknownBackendMode}).
 
-contruct_backend_childspec(NS, Handler, Schema, PartyClient) ->
+contruct_backend_childspec(BackendMode, NS, Handler, Schema, PartyClient) ->
     {
-        construct_machinery_backend_spec(NS, Handler, Schema, PartyClient),
+        construct_machinery_backend_spec(BackendMode, NS, Handler, Schema, PartyClient),
         construct_machinery_handler_spec(NS, Handler, Schema, PartyClient),
         construct_machinery_modernizer_spec(NS, Schema)
     }.
 
--ifdef(PROGRESSOR_BACKEND).
-construct_machinery_backend_spec(NS, Handler, Schema, PartyClient) ->
-    %% TODO Maybe support composite/chained backend for BC
-    %% NOTE This repeats progressor' sys.config entries and cth'
-    %% application start.
+construct_machinery_backend_spec(hybrid, NS, Handler, Schema, PartyClient) ->
+    {_, Primary} = construct_machinery_backend_spec(progressor, NS, Handler, Schema, PartyClient),
+    {_, Fallback} = construct_machinery_backend_spec(machinegun, NS, Handler, Schema, PartyClient),
+    {NS,
+        {machinery_hybrid_backend, #{
+            primary_backend => Primary,
+            fallback_backend => Fallback
+        }}};
+construct_machinery_backend_spec(progressor, NS, Handler, Schema, PartyClient) ->
     {NS,
         {machinery_prg_backend, #{
             namespace => NS,
             handler => {fistful, #{handler => Handler, party_client => PartyClient}},
             schema => Schema
-        }}}.
--else.
-construct_machinery_backend_spec(NS, _Handler, Schema, _PartyClient) ->
-    %% NOTE Legacy MG backend
+        }}};
+construct_machinery_backend_spec(machinegun, NS, _Handler, Schema, _PartyClient) ->
     {NS,
         {machinery_mg_backend, #{
             schema => Schema,
@@ -186,9 +206,8 @@ get_service_client(ServiceID) ->
         #{ServiceID := V} ->
             ff_woody_client:new(V);
         #{} ->
-            error({unknown_service, ServiceID})
+            erlang:error({unknown_service, ServiceID})
     end.
--endif.
 
 construct_machinery_handler_spec(NS, Handler, Schema, PartyClient) ->
     {{fistful, #{handler => Handler, party_client => PartyClient}}, #{
