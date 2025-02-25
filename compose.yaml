@@ -146,7 +146,7 @@ services:
       retries: 10
 
   shumway-db:
-    image: docker.io/library/postgres:13.10
+    image: docker.io/library/postgres:13.20
     ports:
       - "5432"
     environment:
