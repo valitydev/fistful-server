@@ -37,7 +37,6 @@ marshal(revert, Revert) ->
         body = marshal(cash, ff_deposit_revert:body(Revert)),
         created_at = marshal(timestamp_ms, ff_deposit_revert:created_at(Revert)),
         domain_revision = marshal(domain_revision, ff_deposit_revert:domain_revision(Revert)),
-        party_revision = marshal(party_revision, ff_deposit_revert:party_revision(Revert)),
         reason = maybe_marshal(string, ff_deposit_revert:reason(Revert)),
         external_id = maybe_marshal(id, ff_deposit_revert:external_id(Revert))
     };
@@ -59,7 +58,6 @@ marshal(revert_state, Revert) ->
         body = marshal(cash, ff_deposit_revert:negative_body(Revert)),
         created_at = marshal(timestamp_ms, ff_deposit_revert:created_at(Revert)),
         domain_revision = marshal(domain_revision, ff_deposit_revert:domain_revision(Revert)),
-        party_revision = marshal(party_revision, ff_deposit_revert:party_revision(Revert)),
         reason = maybe_marshal(string, ff_deposit_revert:reason(Revert)),
         external_id = maybe_marshal(id, ff_deposit_revert:external_id(Revert)),
         effective_final_cash_flow = ff_cash_flow_codec:marshal(final_cash_flow, CashFlow),
@@ -99,7 +97,6 @@ unmarshal(revert, Revert) ->
         body => unmarshal(cash, Revert#deposit_revert_Revert.body),
         created_at => unmarshal(timestamp_ms, Revert#deposit_revert_Revert.created_at),
         domain_revision => unmarshal(domain_revision, Revert#deposit_revert_Revert.domain_revision),
-        party_revision => unmarshal(party_revision, Revert#deposit_revert_Revert.party_revision),
         reason => maybe_unmarshal(string, Revert#deposit_revert_Revert.reason),
         external_id => maybe_unmarshal(id, Revert#deposit_revert_Revert.external_id)
     });
@@ -143,7 +140,6 @@ revert_symmetry_test() ->
         source_id = genlib:unique(),
         wallet_id = genlib:unique(),
         domain_revision = 1,
-        party_revision = 2,
         created_at = <<"2000-01-01T00:00:00Z">>,
         external_id = undefined,
         reason = <<"why not">>,
@@ -183,7 +179,6 @@ change_adjustment_symmetry_test() ->
                         },
                         created_at = <<"2000-01-01T00:00:00Z">>,
                         domain_revision = 123,
-                        party_revision = 321,
                         operation_timestamp = <<"2000-01-01T00:00:00Z">>,
                         external_id = genlib:unique()
                     }

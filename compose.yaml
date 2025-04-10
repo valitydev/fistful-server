@@ -28,7 +28,7 @@ services:
     command: /sbin/init
 
   dominant:
-    image: ghcr.io/valitydev/dominant:sha-c0ebc36
+    image: ghcr.io/valitydev/dominant:sha-d675862-epic-party_here
     command: /opt/dominant/bin/dominant foreground
     depends_on:
       machinegun:
@@ -52,7 +52,7 @@ services:
       retries: 10
 
   limiter:
-    image: ghcr.io/valitydev/limiter:sha-2271094
+    image: ghcr.io/valitydev/limiter:sha-35b9b4e-epic-party_here
     command: /opt/limiter/bin/limiter foreground
     depends_on:
       machinegun:
@@ -118,7 +118,7 @@ services:
       - POSTGRES_PASSWORD=postgres
 
   party-management:
-    image: ghcr.io/valitydev/party-management:sha-9af7d71
+    image:     image: ghcr.io/valitydev/party-management:sha-474e55f-epic-party_here
     command: /opt/party-management/bin/party-management foreground
     depends_on:
       machinegun:

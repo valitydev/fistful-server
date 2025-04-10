@@ -70,7 +70,6 @@ marshal_withdrawal_state(WithdrawalState, Context) ->
         route = maybe_marshal(route, ff_withdrawal:route(WithdrawalState)),
         external_id = maybe_marshal(id, ff_withdrawal:external_id(WithdrawalState)),
         domain_revision = maybe_marshal(domain_revision, DomainRevision),
-        party_revision = maybe_marshal(party_revision, ff_withdrawal:party_revision(WithdrawalState)),
         created_at = maybe_marshal(timestamp_ms, ff_withdrawal:created_at(WithdrawalState)),
         status = maybe_marshal(status, ff_withdrawal:status(WithdrawalState)),
         sessions = [marshal(session_state, S) || S <- Sessions],
@@ -142,7 +141,6 @@ marshal(withdrawal, Withdrawal) ->
         route = maybe_marshal(route, ff_withdrawal:route(Withdrawal)),
         external_id = maybe_marshal(id, ff_withdrawal:external_id(Withdrawal)),
         domain_revision = maybe_marshal(domain_revision, ff_withdrawal:domain_revision(Withdrawal)),
-        party_revision = maybe_marshal(party_revision, ff_withdrawal:party_revision(Withdrawal)),
         created_at = maybe_marshal(timestamp_ms, ff_withdrawal:created_at(Withdrawal)),
         metadata = maybe_marshal(ctx, ff_withdrawal:metadata(Withdrawal)),
         quote = maybe_marshal(quote_state, ff_withdrawal:quote(Withdrawal))
@@ -200,7 +198,6 @@ marshal(quote, Quote) ->
         quote_data = maybe_marshal(msgpack, genlib_map:get(quote_data, Quote)),
         route = maybe_marshal(route, genlib_map:get(route, Quote)),
         resource = maybe_marshal(resource_descriptor, genlib_map:get(resource_descriptor, Quote)),
-        party_revision = maybe_marshal(party_revision, genlib_map:get(party_revision, Quote)),
         domain_revision = maybe_marshal(domain_revision, genlib_map:get(domain_revision, Quote)),
         operation_timestamp = maybe_marshal(timestamp_ms, genlib_map:get(operation_timestamp, Quote))
     };
@@ -271,7 +268,6 @@ unmarshal(withdrawal, #wthd_Withdrawal{} = Withdrawal) ->
         route => maybe_unmarshal(route, Withdrawal#wthd_Withdrawal.route),
         external_id => maybe_unmarshal(id, Withdrawal#wthd_Withdrawal.external_id),
         domain_revision => maybe_unmarshal(domain_revision, Withdrawal#wthd_Withdrawal.domain_revision),
-        party_revision => maybe_unmarshal(party_revision, Withdrawal#wthd_Withdrawal.party_revision),
         created_at => maybe_unmarshal(timestamp_ms, Withdrawal#wthd_Withdrawal.created_at),
         transfer_type => withdrawal,
         metadata => maybe_unmarshal(ctx, Withdrawal#wthd_Withdrawal.metadata)
@@ -325,7 +321,6 @@ unmarshal(quote, Quote) ->
         resource_descriptor => maybe_unmarshal(resource_descriptor, Quote#wthd_Quote.resource),
         quote_data => maybe_unmarshal(msgpack, Quote#wthd_Quote.quote_data),
         domain_revision => maybe_unmarshal(domain_revision, Quote#wthd_Quote.domain_revision),
-        party_revision => maybe_unmarshal(party_revision, Quote#wthd_Quote.party_revision),
         operation_timestamp => maybe_unmarshal(timestamp_ms, Quote#wthd_Quote.operation_timestamp)
     });
 unmarshal(ctx, Ctx) ->
@@ -375,7 +370,6 @@ withdrawal_symmetry_test() ->
             provider_id_legacy = <<"mocketbank">>
         },
         domain_revision = 1,
-        party_revision = 3,
         created_at = <<"2099-01-01T00:00:00.123Z">>
     },
     ?assertEqual(In, marshal(withdrawal, unmarshal(withdrawal, In))).
@@ -441,7 +435,6 @@ quote_symmetry_test() ->
         resource =
             {bank_card, #'fistful_base_ResourceDescriptorBankCard'{bin_data_id = {arr, [{bin, genlib:unique()}]}}},
         domain_revision = 1,
-        party_revision = 2,
         operation_timestamp = <<"2020-01-01T01:00:00Z">>
     },
     ?assertEqual(In, marshal(quote, unmarshal(quote, In))).

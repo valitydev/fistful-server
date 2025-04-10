@@ -204,14 +204,14 @@ sender_receiver_limit_success(C) ->
     Cash = {_Amount, Currency} = {3002000, <<"RUB">>},
     #{
         wallet_id := WalletID,
-        identity_id := IdentityID
+        party_id := PartyID
     } = prepare_standard_environment(Cash, C),
     AuthData = #{
         sender => <<"SenderToken">>,
         receiver => <<"ReceiverToken">>
     },
     MarshaledAuthData = ff_adapter_withdrawal_codec:maybe_marshal(auth_data, AuthData),
-    DestinationID = create_destination(IdentityID, Currency, AuthData, C),
+    DestinationID = create_destination(PartyID, Currency, AuthData, C),
     WithdrawalID = generate_id(),
     WithdrawalParams = #{
         id => WithdrawalID,
@@ -584,13 +584,11 @@ get_destination_resource(DestinationID) ->
 
 prepare_standard_environment({_Amount, Currency} = WithdrawalCash, C) ->
     PartyID = ct_helper:cfg('$party', C),
-    IdentityID = create_person_identity(PartyID, C),
-    WalletID = create_wallet(IdentityID, <<"My wallet">>, Currency, C),
+    WalletID = create_wallet(PartyID, <<"My wallet">>, Currency, C),
     ok = await_wallet_balance({0, Currency}, WalletID),
-    DestinationID = create_destination(IdentityID, Currency, C),
+    DestinationID = create_destination(PartyID, Currency, C),
     ok = set_wallet_balance(WithdrawalCash, WalletID),
     #{
-        identity_id => IdentityID,
         party_id => PartyID,
         wallet_id => WalletID,
         destination_id => DestinationID
@@ -633,30 +631,11 @@ await_withdrawal_activity(Activity, WithdrawalID) ->
 
 create_party(_C) ->
     ID = genlib:bsuuid(),
-    _ = ff_party:create(ID),
+    _ = ct_domain:create_party(ID),
     ID.
 
-create_person_identity(Party, C) ->
-    create_identity(Party, <<"good-one">>, C).
-
-create_identity(Party, ProviderID, C) ->
-    create_identity(Party, <<"Identity Name">>, ProviderID, C).
-
-create_identity(Party, Name, ProviderID, _C) ->
-    ID = genlib:unique(),
-    ok = ff_identity_machine:create(
-        #{id => ID, name => Name, party => Party, provider => ProviderID},
-        #{<<"com.valitydev.wapi">> => #{<<"name">> => Name}}
-    ),
-    ID.
-
-create_wallet(IdentityID, Name, Currency, _C) ->
-    ID = genlib:unique(),
-    ok = ff_wallet_machine:create(
-        #{id => ID, identity => IdentityID, name => Name, currency => Currency},
-        ff_entity_context:new()
-    ),
-    ID.
+create_wallet(PartyID, Currency, TermsRef, PaymentInstRef) ->
+    ct_domain:create_wallet(PartyID, Currency, TermsRef, PaymentInstRef).
 
 await_wallet_balance({Amount, Currency}, ID) ->
     Balance = {Amount, {{inclusive, Amount}, {inclusive, Amount}}, Currency},

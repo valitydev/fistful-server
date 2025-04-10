@@ -789,7 +789,7 @@ set_wallet_balance({Amount, Currency}, ID) ->
     TransactionID = generate_id(),
     {ok, Machine} = ff_wallet_machine:get(ID),
     Account = ff_wallet:account(ff_wallet_machine:wallet(Machine)),
-    AccounterID = ff_account:accounter_account_id(Account),
+    AccounterID = ff_account:account_id(Account),
     {CurrentAmount, _, Currency} = get_account_balance(Account),
     {ok, AnotherAccounterID} = ct_helper:create_account(Currency),
     Postings = [{AnotherAccounterID, AccounterID, {Amount - CurrentAmount, Currency}}],

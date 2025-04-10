@@ -24,7 +24,6 @@ marshal_deposit_state(DepositState, Context) ->
         source_id = marshal(id, ff_deposit:source_id(DepositState)),
         external_id = maybe_marshal(id, ff_deposit:external_id(DepositState)),
         domain_revision = maybe_marshal(domain_revision, ff_deposit:domain_revision(DepositState)),
-        party_revision = maybe_marshal(party_revision, ff_deposit:party_revision(DepositState)),
         created_at = maybe_marshal(timestamp_ms, ff_deposit:created_at(DepositState)),
         effective_final_cash_flow = ff_cash_flow_codec:marshal(final_cash_flow, CashFlow),
         reverts = [ff_deposit_revert_codec:marshal(revert_state, R) || R <- Reverts],
@@ -77,7 +76,6 @@ marshal(deposit, Deposit) ->
         source_id = marshal(id, ff_deposit:source_id(Deposit)),
         external_id = maybe_marshal(id, ff_deposit:external_id(Deposit)),
         domain_revision = maybe_marshal(domain_revision, ff_deposit:domain_revision(Deposit)),
-        party_revision = maybe_marshal(party_revision, ff_deposit:party_revision(Deposit)),
         created_at = maybe_marshal(timestamp_ms, ff_deposit:created_at(Deposit)),
         metadata = maybe_marshal(ctx, ff_deposit:metadata(Deposit)),
         description = maybe_marshal(string, ff_deposit:description(Deposit))
@@ -144,7 +142,6 @@ unmarshal(deposit, Deposit) ->
             source_id => unmarshal(id, Deposit#deposit_Deposit.source_id)
         }),
         external_id => maybe_unmarshal(id, Deposit#deposit_Deposit.external_id),
-        party_revision => maybe_unmarshal(party_revision, Deposit#deposit_Deposit.party_revision),
         domain_revision => maybe_unmarshal(domain_revision, Deposit#deposit_Deposit.domain_revision),
         created_at => maybe_unmarshal(timestamp_ms, Deposit#deposit_Deposit.created_at),
         metadata => maybe_unmarshal(ctx, Deposit#deposit_Deposit.metadata),
@@ -198,7 +195,6 @@ deposit_symmetry_test() ->
         status = {pending, #deposit_status_Pending{}},
         id = genlib:unique(),
         domain_revision = 24500062,
-        party_revision = 140028,
         created_at = <<"2025-01-01T00:00:00.001Z">>
     },
     ?assertEqual(Encoded, marshal(deposit, unmarshal(deposit, Encoded))).
@@ -231,7 +227,6 @@ deposit_timestamped_change_codec_test() ->
         body => {123, <<"RUB">>},
         created_at => ff_time:now(),
         domain_revision => 123,
-        party_revision => 321,
         params => #{
             wallet_id => genlib:unique(),
             source_id => genlib:unique()
@@ -256,7 +251,6 @@ deposit_change_revert_codec_test() ->
                 body => {123, <<"RUB">>},
                 created_at => ff_time:now(),
                 domain_revision => 123,
-                party_revision => 321,
                 external_id => genlib:unique(),
                 wallet_id => genlib:unique(),
                 source_id => genlib:unique()
@@ -288,7 +282,6 @@ deposit_change_adjustment_codec_test() ->
                 },
                 created_at => ff_time:now(),
                 domain_revision => 123,
-                party_revision => 321,
                 operation_timestamp => ff_time:now(),
                 external_id => genlib:unique()
             }}

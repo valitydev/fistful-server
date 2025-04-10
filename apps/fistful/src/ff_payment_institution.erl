@@ -6,9 +6,11 @@
 
 -type domain_revision() :: ff_domain_config:revision().
 -type party_varset() :: ff_varset:varset().
+-type realm() :: test | live.
 
 -type payment_institution() :: #{
     id := id(),
+    realm := realm(),
     system_accounts := dmsl_domain_thrift:'SystemAccountSetSelector'(),
     identity := binary(),
     withdrawal_routing_rules := dmsl_domain_thrift:'RoutingRules'(),
@@ -27,13 +29,16 @@
 }.
 
 -export_type([id/0]).
+-export_type([realm/0]).
 -export_type([payinst_ref/0]).
 -export_type([payment_institution/0]).
 
 -export([id/1]).
+-export([realm/1]).
 
 -export([ref/1]).
 -export([get/3]).
+-export([get_realm/2]).
 -export([system_accounts/2]).
 -export([payment_system/1]).
 
@@ -47,20 +52,34 @@
 id(#{id := ID}) ->
     ID.
 
+-spec realm(payment_institution()) -> realm().
+realm(#{realm := V}) ->
+    V.
+
 %%
 
 -spec ref(id()) -> payinst_ref().
 ref(ID) ->
     #domain_PaymentInstitutionRef{id = ID}.
 
--spec get(id(), party_varset(), domain_revision()) ->
+-spec get(id() | payinst_ref(), party_varset(), domain_revision()) ->
     {ok, payment_institution()}
     | {error, payinst_not_found}.
-get(PaymentInstitutionID, VS, DomainRevision) ->
+get(#domain_PaymentInstitutionRef{id = ID} = Ref, VS, DomainRevision) ->
     do(fun() ->
-        PaymentInstitutionRef = ref(PaymentInstitutionID),
-        PaymentInstitution = unwrap(ff_party:compute_payment_institution(PaymentInstitutionRef, VS, DomainRevision)),
-        decode(PaymentInstitutionID, PaymentInstitution)
+        PaymentInstitution = unwrap(ff_party:compute_payment_institution(Ref, VS, DomainRevision)),
+        decode(ID, PaymentInstitution)
+    end);
+get(PaymentInstitutionID, VS, DomainRevision) ->
+    get(ref(PaymentInstitutionID), VS, DomainRevision).
+
+-spec get_realm(payinst_ref(), domain_revision()) ->
+    {ok, payment_institution()}
+    | {error, notfound}.
+get_realm(Ref, DomainRevision) ->
+    do(fun() ->
+        #domain_PaymentInstitution{realm = Realm} = unwrap(ff_domain_config:object(DomainRevision, {payment_institution, Ref})),
+        Realm
     end).
 
 get_selector_value(Name, Selector) ->

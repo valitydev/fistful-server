@@ -16,7 +16,6 @@
         ff_validator,
         fistful,
         ff_transfer,
-        w2w,
         thrift,
         ff_claim
     ]},

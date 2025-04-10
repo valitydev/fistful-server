@@ -257,7 +257,7 @@ await(Expect, Compute, Retry0) ->
     end.
 
 -spec create_account(dmsl_accounter_thrift:'PlanID'()) ->
-    {ok, ff_account:accounter_account_id()}
+    {ok, ff_account:account_id()}
     | {error, {exception, any()}}.
 create_account(CurrencyCode) ->
     Description = <<"ff_test">>,

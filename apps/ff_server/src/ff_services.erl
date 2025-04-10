@@ -41,10 +41,8 @@ get_service(withdrawal_session_management) ->
     {fistful_wthd_session_thrift, 'Management'};
 get_service(deposit_management) ->
     {fistful_deposit_thrift, 'Management'};
-get_service(w2w_transfer_repairer) ->
-    {fistful_w2w_transfer_thrift, 'Repairer'};
-get_service(w2w_transfer_management) ->
-    {fistful_w2w_transfer_thrift, 'Management'};
+get_service(party_config) ->
+    {dmsl_payproc_thrift, 'PartyConfigManagement'};
 get_service(ff_claim_committer) ->
     {dmsl_claimmgmt_thrift, 'ClaimCommitter'}.
 
@@ -79,9 +77,5 @@ get_service_path(withdrawal_session_management) ->
     "/v1/withdrawal_session";
 get_service_path(deposit_management) ->
     "/v1/deposit";
-get_service_path(w2w_transfer_repairer) ->
-    "/v1/repair/w2w_transfer";
-get_service_path(w2w_transfer_management) ->
-    "/v1/w2w_transfer";
 get_service_path(ff_claim_committer) ->
     "/v1/claim_committer".

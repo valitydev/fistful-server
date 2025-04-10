@@ -184,22 +184,14 @@ create_crunch_identity(PayInstIID, ProviderIID, ProviderID) ->
 
 create_company_account() ->
     PartyID = create_party(),
-    IdentityID = create_identity(PartyID, <<"good-one">>),
     {ok, Currency} = ff_currency:get(<<"RUB">>),
-    {ok, IdentityMachine} = ff_identity_machine:get(IdentityID),
-    Identity = ff_identity_machine:identity(IdentityMachine),
-    {ok, [{created, Account}]} = ff_account:create(PartyID, Identity, Currency),
+    {ok, [{created, Account}]} = ff_account:create(PartyID, live, Currency),
     Account.
 
 create_party() ->
     ID = genlib:bsuuid(),
     _ = ff_party:create(ID),
     ID.
-
-create_identity(PartyID, ProviderID) ->
-    ID = genlib:unique(),
-    Name = <<"Test Identity">>,
-    create_identity(ID, Name, PartyID, ProviderID).
 
 create_identity(ID, Name, PartyID, ProviderID) ->
     ok = ff_identity_machine:create(
@@ -1507,100 +1499,6 @@ default_termset(Options) ->
                                         ?share(10, 100, operation_amount)
                                     )
                                 ]}
-                        }
-                    ]}
-            },
-            w2w = #domain_W2WServiceTerms{
-                currencies = {value, ?ordset([?cur(<<"RUB">>), ?cur(<<"USD">>)])},
-                allow = {constant, true},
-                cash_limit =
-                    {decisions, [
-                        #domain_CashLimitDecision{
-                            if_ = {condition, {currency_is, ?cur(<<"RUB">>)}},
-                            then_ =
-                                {value,
-                                    ?cashrng(
-                                        {inclusive, ?cash(0, <<"RUB">>)},
-                                        {exclusive, ?cash(10000001, <<"RUB">>)}
-                                    )}
-                        },
-                        #domain_CashLimitDecision{
-                            if_ = {condition, {currency_is, ?cur(<<"EUR">>)}},
-                            then_ =
-                                {value,
-                                    ?cashrng(
-                                        {inclusive, ?cash(0, <<"EUR">>)},
-                                        {exclusive, ?cash(10000001, <<"EUR">>)}
-                                    )}
-                        },
-                        #domain_CashLimitDecision{
-                            if_ = {condition, {currency_is, ?cur(<<"USD">>)}},
-                            then_ =
-                                {value,
-                                    ?cashrng(
-                                        {inclusive, ?cash(0, <<"USD">>)},
-                                        {exclusive, ?cash(10000001, <<"USD">>)}
-                                    )}
-                        }
-                    ]},
-                cash_flow =
-                    {decisions, [
-                        #domain_CashFlowDecision{
-                            if_ = {condition, {currency_is, ?cur(<<"RUB">>)}},
-                            then_ =
-                                {value, [
-                                    ?cfpost(
-                                        {wallet, sender_settlement},
-                                        {wallet, receiver_settlement},
-                                        ?share(1, 1, operation_amount)
-                                    )
-                                ]}
-                        },
-                        #domain_CashFlowDecision{
-                            if_ = {condition, {currency_is, ?cur(<<"USD">>)}},
-                            then_ =
-                                {value, [
-                                    ?cfpost(
-                                        {wallet, sender_settlement},
-                                        {wallet, receiver_settlement},
-                                        ?share(1, 1, operation_amount)
-                                    )
-                                ]}
-                        },
-                        #domain_CashFlowDecision{
-                            if_ = {condition, {currency_is, ?cur(<<"EUR">>)}},
-                            then_ =
-                                {value, [
-                                    ?cfpost(
-                                        {wallet, sender_settlement},
-                                        {wallet, receiver_settlement},
-                                        ?share(1, 1, operation_amount)
-                                    )
-                                ]}
-                        }
-                    ]},
-                fees =
-                    {decisions, [
-                        #domain_FeeDecision{
-                            if_ = {condition, {currency_is, ?cur(<<"RUB">>)}},
-                            then_ =
-                                {value, #domain_Fees{
-                                    fees = #{surplus => ?share(1, 1, operation_amount)}
-                                }}
-                        },
-                        #domain_FeeDecision{
-                            if_ = {condition, {currency_is, ?cur(<<"USD">>)}},
-                            then_ =
-                                {value, #domain_Fees{
-                                    fees = #{surplus => ?share(1, 1, operation_amount)}
-                                }}
-                        },
-                        #domain_FeeDecision{
-                            if_ = {condition, {currency_is, ?cur(<<"EUR">>)}},
-                            then_ =
-                                {value, #domain_Fees{
-                                    fees = #{surplus => ?share(1, 1, operation_amount)}
-                                }}
                         }
                     ]}
             }

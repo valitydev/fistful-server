@@ -4,6 +4,8 @@
 
 -module(ff_deposit).
 
+-include_lib("damsel/include/dmsl_domain_thrift.hrl").
+
 -type id() :: binary().
 -type description() :: binary().
 
@@ -15,7 +17,6 @@
     body := body(),
     is_negative := is_negative(),
     params := transfer_params(),
-    party_revision => party_revision(),
     domain_revision => domain_revision(),
     created_at => ff_time:timestamp_ms(),
     p_transfer => p_transfer(),
@@ -34,7 +35,6 @@
     transfer_type := deposit,
     body := body(),
     params := transfer_params(),
-    party_revision => party_revision(),
     domain_revision => domain_revision(),
     created_at => ff_time:timestamp_ms(),
     metadata => metadata(),
@@ -46,7 +46,8 @@
     id := id(),
     body := ff_accounting:body(),
     source_id := ff_source:id(),
-    wallet_id := ff_wallet:id(),
+    party_id := party_id(),
+    wallet_id := wallet_id(),
     external_id => external_id(),
     description => description()
 }.
@@ -151,13 +152,13 @@
 
 -export([wallet_id/1]).
 -export([source_id/1]).
+-export([party_id/1]).
 -export([id/1]).
 -export([body/1]).
 -export([negative_body/1]).
 -export([is_negative/1]).
 -export([status/1]).
 -export([external_id/1]).
--export([party_revision/1]).
 -export([domain_revision/1]).
 -export([created_at/1]).
 -export([metadata/1]).
@@ -195,8 +196,9 @@
 -type process_result() :: {action(), [event()]}.
 -type source_id() :: ff_source:id().
 -type source() :: ff_source:source_state().
--type wallet_id() :: ff_wallet:id().
--type wallet() :: ff_wallet:wallet_state().
+-type party_id() :: ff_party:id().
+-type wallet_id() :: ff_party:wallet_id().
+-type wallet() :: ff_party:wallet().
 -type revert() :: ff_deposit_revert:revert().
 -type revert_id() :: ff_deposit_revert:id().
 -type body() :: ff_accounting:body().
@@ -214,14 +216,13 @@
 -type adjustment_id() :: ff_adjustment:id().
 -type adjustments_index() :: ff_adjustment_utils:index().
 -type final_cash_flow() :: ff_cash_flow:final_cash_flow().
--type party_revision() :: ff_party:revision().
 -type domain_revision() :: ff_domain_config:revision().
--type identity() :: ff_identity:identity_state().
 -type terms() :: ff_party:terms().
 -type metadata() :: ff_entity_context:md().
 
 -type transfer_params() :: #{
     source_id := source_id(),
+    party_id := party_id(),
     wallet_id := wallet_id()
 }.
 
@@ -255,6 +256,10 @@ wallet_id(T) ->
 source_id(T) ->
     maps:get(source_id, params(T)).
 
+-spec party_id(deposit_state()) -> party_id().
+party_id(T) ->
+    maps:get(party_id, params(T)).
+
 -spec body(deposit_state()) -> body().
 body(#{body := V}) ->
     V.
@@ -283,10 +288,6 @@ p_transfer(Deposit) ->
 external_id(Deposit) ->
     maps:get(external_id, Deposit, undefined).
 
--spec party_revision(deposit_state()) -> party_revision() | undefined.
-party_revision(T) ->
-    maps:get(party_revision, T, undefined).
-
 -spec domain_revision(deposit_state()) -> domain_revision() | undefined.
 domain_revision(T) ->
     maps:get(domain_revision, T, undefined).
@@ -310,15 +311,13 @@ description(Deposit) ->
     | {error, create_error()}.
 create(Params) ->
     do(fun() ->
-        #{id := ID, source_id := SourceID, wallet_id := WalletID, body := Body} = Params,
+        #{id := ID, source_id := SourceID, party_id := PartyID, wallet_id := WalletID, body := Body} = Params,
         Machine = unwrap(source, ff_source_machine:get(SourceID)),
         Source = ff_source_machine:source(Machine),
         CreatedAt = ff_time:now(),
         DomainRevision = ff_domain_config:head(),
-        Wallet = unwrap(wallet, get_wallet(WalletID)),
-        Identity = get_wallet_identity(Wallet),
-        PartyID = ff_identity:party(Identity),
-        {ok, PartyRevision} = ff_party:get_revision(PartyID),
+        Party = unwrap(party, ff_party:checkout(PartyID, DomainRevision)),
+        Wallet = unwrap(wallet, ff_party:get_wallet(WalletID, Party, DomainRevision)),
         {_Amount, Currency} = Body,
         Varset = genlib_map:compact(#{
             currency => ff_dmsl_codec:marshal(currency_ref, Currency),
@@ -326,17 +325,13 @@ create(Params) ->
             wallet_id => WalletID
         }),
 
-        Terms = ff_identity:get_terms(Identity, #{
-            timestamp => CreatedAt,
-            party_revision => PartyRevision,
-            domain_revision => DomainRevision,
-            varset => Varset
-        }),
+        Terms = ff_party:get_terms(DomainRevision, Wallet, Varset),
 
-        valid = unwrap(validate_deposit_creation(Terms, Params, Source, Wallet)),
+        valid = unwrap(validate_deposit_creation(Terms, Params, Source, Wallet, DomainRevision)),
         TransferParams = #{
             wallet_id => WalletID,
-            source_id => SourceID
+            source_id => SourceID,
+            party_id => PartyID
         },
         [
             {created,
@@ -346,7 +341,6 @@ create(Params) ->
                     transfer_type => deposit,
                     body => Body,
                     params => TransferParams,
-                    party_revision => PartyRevision,
                     domain_revision => DomainRevision,
                     created_at => CreatedAt,
                     external_id => maps:get(external_id, Params, undefined),
@@ -547,7 +541,9 @@ do_process_transfer(p_transfer_prepare, Deposit) ->
     {continue, Events};
 do_process_transfer(p_transfer_commit, Deposit) ->
     {ok, Events} = ff_pipeline:with(p_transfer, Deposit, fun ff_postings_transfer:commit/1),
-    ok = ff_wallet:log_balance(wallet_id(Deposit)),
+    {ok, Party} = ff_party:checkout(party_id(Deposit), domain_revision(Deposit)),
+    {ok, Wallet} = ff_party:get_wallet(wallet_id(Deposit), Party, domain_revision(Deposit)),
+    ok = ff_party:wallet_log_balance(Wallet),
     {continue, Events};
 do_process_transfer(p_transfer_cancel, Deposit) ->
     {ok, Events} = ff_pipeline:with(p_transfer, Deposit, fun ff_postings_transfer:cancel/1),
@@ -577,23 +573,16 @@ create_p_transfer(Deposit) ->
 process_limit_check(Deposit) ->
     Body = body(Deposit),
     WalletID = wallet_id(Deposit),
-    DomainRevision = operation_domain_revision(Deposit),
-    {ok, Wallet} = get_wallet(WalletID),
-    Identity = get_wallet_identity(Wallet),
-    PartyRevision = operation_party_revision(Deposit),
+    DomainRevision = domain_revision(Deposit),
+    {ok, Party} = ff_party:checkout(party_id(Deposit), DomainRevision),
+    {ok, Wallet} = ff_party:get_wallet(WalletID, Party, DomainRevision),
     {_Amount, Currency} = Body,
-    Timestamp = operation_timestamp(Deposit),
     Varset = genlib_map:compact(#{
         currency => ff_dmsl_codec:marshal(currency_ref, Currency),
         cost => ff_dmsl_codec:marshal(cash, Body),
         wallet_id => WalletID
     }),
-    Terms = ff_identity:get_terms(Identity, #{
-        timestamp => Timestamp,
-        party_revision => PartyRevision,
-        domain_revision => DomainRevision,
-        varset => Varset
-    }),
+    Terms = ff_party:get_terms(DomainRevision, Wallet, Varset),
     Events =
         case validate_wallet_limits(Terms, Wallet) of
             {ok, valid} ->
@@ -621,8 +610,12 @@ make_final_cash_flow(Deposit) ->
     WalletID = wallet_id(Deposit),
     SourceID = source_id(Deposit),
     Body = body(Deposit),
-    {ok, WalletMachine} = ff_wallet_machine:get(WalletID),
-    WalletAccount = ff_wallet:account(ff_wallet_machine:wallet(WalletMachine)),
+    DomainRevision = domain_revision(Deposit),
+    {ok, Party} = ff_party:checkout(party_id(Deposit), DomainRevision),
+    {ok, Wallet} = ff_party:get_wallet(WalletID, Party, DomainRevision),
+    WalletRealm = ff_party:get_wallet_realm(Wallet, DomainRevision),
+    {AccountID, Currency} = ff_party:get_wallet_account(Wallet),
+    WalletAccount = ff_account:build(party_id(Deposit), WalletRealm, AccountID, Currency),
     {ok, SourceMachine} = ff_source_machine:get(SourceID),
     Source = ff_source_machine:source(SourceMachine),
     SourceAccount = ff_source:account(Source),
@@ -661,7 +654,9 @@ handle_child_result({undefined, Events} = Result, Deposit) ->
         true ->
             {continue, Events};
         false ->
-            ok = ff_wallet:log_balance(wallet_id(Deposit)),
+            {ok, Party} = ff_party:checkout(party_id(Deposit), domain_revision(Deposit)),
+            {ok, Wallet} = ff_party:get_wallet(wallet_id(Deposit), Party, domain_revision(Deposit)),
+            ok = ff_party:wallet_log_balance(Wallet),
             Result
     end;
 handle_child_result({_OtherAction, _Events} = Result, _Deposit) ->
@@ -700,46 +695,25 @@ is_childs_active(Deposit) ->
 operation_timestamp(Deposit) ->
     ff_maybe:get_defined(created_at(Deposit), ff_time:now()).
 
--spec operation_party_revision(deposit_state()) -> domain_revision().
-operation_party_revision(Deposit) ->
-    case party_revision(Deposit) of
-        undefined ->
-            {ok, Wallet} = get_wallet(wallet_id(Deposit)),
-            PartyID = ff_identity:party(get_wallet_identity(Wallet)),
-            {ok, Revision} = ff_party:get_revision(PartyID),
-            Revision;
-        Revision ->
-            Revision
-    end.
-
--spec operation_domain_revision(deposit_state()) -> domain_revision().
-operation_domain_revision(Deposit) ->
-    case domain_revision(Deposit) of
-        undefined ->
-            ff_domain_config:head();
-        Revision ->
-            Revision
-    end.
-
 %% Deposit validators
 
--spec validate_deposit_creation(terms(), params(), source(), wallet()) ->
+-spec validate_deposit_creation(terms(), params(), source(), wallet(), domain_revision()) ->
     {ok, valid}
     | {error, create_error()}.
-validate_deposit_creation(Terms, Params, Source, Wallet) ->
+validate_deposit_creation(Terms, Params, Source, Wallet, DomainRevision) ->
     #{body := Body} = Params,
     do(fun() ->
         valid = unwrap(ff_party:validate_deposit_creation(Terms, Body)),
-        valid = unwrap(validate_deposit_currency(Body, Source, Wallet)),
+        valid = unwrap(validate_deposit_currency(Body, Source, Wallet, DomainRevision)),
         valid = unwrap(validate_source_status(Source))
     end).
 
--spec validate_deposit_currency(body(), source(), wallet()) ->
+-spec validate_deposit_currency(body(), source(), wallet(), domain_revision()) ->
     {ok, valid}
     | {error, {inconsistent_currency, {currency_id(), currency_id(), currency_id()}}}.
-validate_deposit_currency(Body, Source, Wallet) ->
+validate_deposit_currency(Body, Source, Wallet, DomainRevision) ->
     SourceCurrencyID = ff_account:currency(ff_source:account(Source)),
-    WalletCurrencyID = ff_account:currency(ff_wallet:account(Wallet)),
+    WalletCurrencyID = ff_account:currency(ff_party:build_account_for_wallet(Wallet, DomainRevision)),
     case Body of
         {_Amount, DepositCurencyID} when
             DepositCurencyID =:= SourceCurrencyID andalso
@@ -996,8 +970,7 @@ make_adjustment_params(Params, Deposit) ->
         id => ID,
         changes_plan => make_adjustment_change(Change, Deposit),
         external_id => genlib_map:get(external_id, Params),
-        domain_revision => operation_domain_revision(Deposit),
-        party_revision => operation_party_revision(Deposit),
+        domain_revision => domain_revision(Deposit),
         operation_timestamp => operation_timestamp(Deposit)
     }).
 
@@ -1089,16 +1062,3 @@ build_failure(limit_check, Deposit) ->
             code => <<"amount">>
         }
     }.
-
--spec get_wallet(wallet_id()) -> {ok, wallet()} | {error, notfound}.
-get_wallet(WalletID) ->
-    do(fun() ->
-        WalletMachine = unwrap(ff_wallet_machine:get(WalletID)),
-        ff_wallet_machine:wallet(WalletMachine)
-    end).
-
--spec get_wallet_identity(wallet()) -> identity().
-get_wallet_identity(Wallet) ->
-    IdentityID = ff_wallet:identity(Wallet),
-    {ok, IdentityMachine} = ff_identity_machine:get(IdentityID),
-    ff_identity_machine:identity(IdentityMachine).

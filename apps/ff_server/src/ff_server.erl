@@ -76,8 +76,7 @@ init([]) ->
         contruct_backend_childspec('ff/destination_v2', ff_destination_machine, PartyClient),
         contruct_backend_childspec('ff/deposit_v1', ff_deposit_machine, PartyClient),
         contruct_backend_childspec('ff/withdrawal_v2', ff_withdrawal_machine, PartyClient),
-        contruct_backend_childspec('ff/withdrawal/session_v2', ff_withdrawal_session_machine, PartyClient),
-        contruct_backend_childspec('ff/w2w_transfer_v1', w2w_transfer_machine, PartyClient)
+        contruct_backend_childspec('ff/withdrawal/session_v2', ff_withdrawal_session_machine, PartyClient)
     ]),
     ok = application:set_env(fistful, backends, maps:from_list(Backends)),
 
@@ -96,8 +95,6 @@ init([]) ->
             {withdrawal_session_repairer, ff_withdrawal_session_repair},
             {withdrawal_repairer, ff_withdrawal_repair},
             {deposit_repairer, ff_deposit_repair},
-            {w2w_transfer_management, ff_w2w_transfer_handler},
-            {w2w_transfer_repairer, ff_w2w_transfer_repair},
             {ff_claim_committer, ff_claim_committer_handler}
         ],
     WoodyHandlers = [get_handler(Service, Handler, WrapperOpts) || {Service, Handler} <- Services],
@@ -186,9 +183,7 @@ get_namespace_schema('ff/deposit_v1') ->
 get_namespace_schema('ff/withdrawal_v2') ->
     ff_withdrawal_machinery_schema;
 get_namespace_schema('ff/withdrawal/session_v2') ->
-    ff_withdrawal_session_machinery_schema;
-get_namespace_schema('ff/w2w_transfer_v1') ->
-    ff_w2w_transfer_machinery_schema.
+    ff_withdrawal_session_machinery_schema.
 
 wrap_handler(Handler, WrapperOpts) ->
     FullOpts = maps:merge(#{handler => Handler}, WrapperOpts),

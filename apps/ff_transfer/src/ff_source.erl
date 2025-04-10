@@ -10,11 +10,12 @@
 -type id() :: binary().
 -type name() :: binary().
 -type account() :: ff_account:account().
--type identity() :: ff_identity:id().
 -type currency() :: ff_currency:id().
 -type status() :: unauthorized | authorized.
 -type metadata() :: ff_entity_context:md().
 -type timestamp() :: ff_time:timestamp_ms().
+-type realm() :: ff_payment_institution:realm().
+-type party_id() :: ff_party:id().
 
 -type resource() :: #{
     type := internal,
@@ -26,6 +27,9 @@
 -type source() :: #{
     version := ?ACTUAL_FORMAT_VERSION,
     resource := resource(),
+    id := id(),
+    realm := realm(),
+    party_id := party_id(),
     name := name(),
     created_at => timestamp(),
     external_id => id(),
@@ -35,6 +39,9 @@
 -type source_state() :: #{
     account := account() | undefined,
     resource := resource(),
+    id := id(),
+    realm := realm(),
+    party_id := party_id(),
     name := name(),
     status => status(),
     created_at => timestamp(),
@@ -44,7 +51,8 @@
 
 -type params() :: #{
     id := id(),
-    identity := ff_identity:id(),
+    realm := realm(),
+    party_id := party_id(),
     name := name(),
     currency := ff_currency:id(),
     resource := resource(),
@@ -77,9 +85,10 @@
 %% Accessors
 
 -export([id/1]).
+-export([realm/1]).
 -export([account/1]).
 -export([name/1]).
--export([identity/1]).
+-export([party_id/1]).
 -export([currency/1]).
 -export([resource/1]).
 -export([status/1]).
@@ -101,32 +110,31 @@
 
 %% Accessors
 
--spec id(source_state()) -> id() | undefined.
+-spec id(source_state()) -> id().
+-spec realm(source_state()) -> realm().
 -spec name(source_state()) -> name().
+-spec party_id(source_state()) -> party_id().
 -spec account(source_state()) -> account() | undefined.
--spec identity(source_state()) -> identity().
 -spec currency(source_state()) -> currency().
 -spec resource(source_state()) -> resource().
 -spec status(source_state()) -> status() | undefined.
 
-id(Source) ->
-    case account(Source) of
-        undefined ->
-            undefined;
-        Account ->
-            ff_account:id(Account)
-    end.
+id(#{id := V}) ->
+    V.
+
+realm(#{realm := V}) ->
+    V.
 
 name(#{name := V}) ->
+    V.
+
+party_id(#{party_id := V}) ->
     V.
 
 account(#{account := V}) ->
     V;
 account(_) ->
     undefined.
-
-identity(Source) ->
-    ff_account:identity(account(Source)).
 
 currency(Source) ->
     ff_account:currency(account(Source)).
@@ -166,20 +174,23 @@ create(Params) ->
     do(fun() ->
         #{
             id := ID,
-            identity := IdentityID,
+            party_id := PartyID,
             name := Name,
             currency := CurrencyID,
-            resource := Resource
+            resource := Resource,
+            realm := Realm
         } = Params,
-        Identity = ff_identity_machine:identity(unwrap(identity, ff_identity_machine:get(IdentityID))),
         Currency = unwrap(currency, ff_currency:get(CurrencyID)),
-        Events = unwrap(ff_account:create(ID, Identity, Currency)),
-        accessible = unwrap(identity, ff_identity:is_accessible(Identity)),
+        Events = unwrap(ff_account:create(PartyID, Realm, Currency)),
+        accessible = unwrap(identity, ff_party:is_accessible(PartyID)),
         CreatedAt = ff_time:now(),
         [
             {created,
                 genlib_map:compact(#{
                     version => ?ACTUAL_FORMAT_VERSION,
+                    party_id => PartyID,
+                    realm => Realm,
+                    id => ID,
                     name => Name,
                     resource => Resource,
                     external_id => maps:get(external_id, Params, undefined),
