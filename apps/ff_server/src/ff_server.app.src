@@ -16,8 +16,7 @@
         ff_validator,
         fistful,
         ff_transfer,
-        thrift,
-        ff_claim
+        thrift
     ]},
     {env, []},
     {modules, []},
