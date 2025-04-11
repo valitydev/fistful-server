@@ -12,6 +12,7 @@
 -export([prepare_standard_environment/1]).
 -export([create_wallet/4]).
 -export([create_party/0]).
+-export([get_wallet_balance/1]).
 
 -export([await_final_withdrawal_status/1]).
 -export([create_destination/2]).
@@ -103,6 +104,7 @@ await_wallet_balance({Amount, Currency}, ID) ->
     ),
     ok.
 
+-spec get_wallet_balance(_ID) -> {_Amount, _Range, _Currency}.
 get_wallet_balance(ID) ->
     WalletConfig = ct_domain_config:get({wallet_config, #domain_WalletConfigRef{id = ID}}),
     {SettlementID, Currency} = ff_party:get_wallet_account(WalletConfig),
@@ -169,16 +171,25 @@ create_destination(PartyID, Token) ->
                 cardholder_name = maps:get(cardholder_name, NewStoreResource, undefined)
             }
         }},
-    create_destination_(PartyID, Resource).
+    Currency = case Token of
+        <<"USD_CURRENCY">> ->
+            <<"USD">>;
+        _ ->
+            <<"RUB">>
+    end,
+    create_destination_(PartyID, Resource, Currency).
 
 -spec create_destination_(_PartyID, _Resource) -> _DestinationID.
 create_destination_(PartyID, Resource) ->
+    create_destination_(PartyID, Resource, <<"RUB">>).
+
+-spec create_destination_(_PartyID, _Resource, _Currency) -> _DestinationID.
+create_destination_(PartyID, Resource, Currency) ->
     AuthData =
         {sender_receiver, #destination_SenderReceiverAuthData{
             sender = <<"SenderToken">>,
             receiver = <<"ReceiverToken">>
         }},
-    Currency = <<"RUB">>,
     DstName = <<"loSHara card">>,
     ID = genlib:unique(),
     ExternalId = genlib:unique(),

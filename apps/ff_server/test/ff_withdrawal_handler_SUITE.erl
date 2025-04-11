@@ -299,10 +299,7 @@ create_currency_validation_error_test(_C) ->
         party_id := PartyID,
         wallet_id := WalletID,
         destination_id := DestinationID
-    } = ct_objects:prepare_standard_environment(Ctx#{
-        currency => <<"USD">>,
-        body => Cash
-    }),
+    } = ct_objects:prepare_standard_environment(Ctx),
     Params = #wthd_WithdrawalParams{
         id = generate_id(),
         party_id = PartyID,
@@ -322,15 +319,12 @@ create_currency_validation_error_test(_C) ->
 -spec create_inconsistent_currency_validation_error_test(config()) -> test_return().
 create_inconsistent_currency_validation_error_test(_C) ->
     Ctx = ct_objects:build_default_ctx(),
-    #{
-        party_id := PartyID,
-        wallet_id := WalletID,
-        destination_id := DestinationID
-    } = ct_objects:prepare_standard_environment(Ctx#{
-        token => <<"USD_CURRENCY">>,
-        currency => <<"USD">>,
-        body => make_cash({100, <<"USD">>})
-    }),
+    PartyID = ct_objects:create_party(),
+    TermsRef = maps:get(terms_ref, Ctx),
+    PaymentInstRef = maps:get(paymentInst_ref, Ctx),
+    WalletID = ct_objects:create_wallet(PartyID, <<"USD">>, TermsRef, PaymentInstRef),
+    DestinationID = ct_objects:create_destination(PartyID, <<"USD_CURRENCY">>),
+    
     Params = #wthd_WithdrawalParams{
         id = generate_id(),
         party_id = PartyID,
@@ -350,11 +344,11 @@ create_inconsistent_currency_validation_error_test(_C) ->
 create_destination_resource_no_bindata_fail_test(_C) ->
     Cash = make_cash({100, <<"RUB">>}),
     Ctx = ct_objects:build_default_ctx(),
-    #{
-        party_id := PartyID,
-        wallet_id := WalletID,
-        destination_id := DestinationID
-    } = ct_objects:prepare_standard_environment(Ctx#{token => <<"TEST_NOTFOUND">>}),
+    PartyID = ct_objects:create_party(),
+    TermsRef = maps:get(terms_ref, Ctx),
+    PaymentInstRef = maps:get(paymentInst_ref, Ctx),
+    WalletID = ct_objects:create_wallet(PartyID, <<"RUB">>, TermsRef, PaymentInstRef),
+    DestinationID = ct_objects:create_destination(PartyID, <<"TEST_NOTFOUND">>),
     Params = #wthd_WithdrawalParams{
         id = generate_id(),
         party_id = PartyID,
@@ -413,13 +407,19 @@ create_destination_generic_ok_test(_C) ->
         party_id := PartyID,
         wallet_id := WalletID
     } = ct_objects:prepare_standard_environment(Ctx#{body => Cash}),
-    Resource =
-        {generic, #{
-            generic => #{
-                provider => #{id => <<"IND">>},
-                data => #{type => <<"application/json">>, data => <<"{}">>}
+    Resource = {
+        generic, #'fistful_base_ResourceGeneric'{
+            generic = #'fistful_base_ResourceGenericData'{
+                provider = #'fistful_base_PaymentServiceRef'{
+                    id = <<"IND">>
+                },
+                data = #'fistful_base_Content'{
+                    type = <<"application/json">>, 
+                    data = <<"{}">>
+                }
             }
-        }},
+        }
+    },
     DestinationID = ct_objects:create_destination_(PartyID, Resource),
     WithdrawalID = generate_id(),
     ExternalID = generate_id(),
