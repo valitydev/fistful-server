@@ -12,7 +12,6 @@
 
 -opaque withdrawal_state() :: #{
     id := id(),
-    transfer_type := withdrawal,
     body := body(),
     params := transfer_params(),
     created_at => ff_time:timestamp_ms(),
@@ -30,7 +29,6 @@
 -opaque withdrawal() :: #{
     version := ?ACTUAL_FORMAT_VERSION,
     id := id(),
-    transfer_type := withdrawal,
     body := body(),
     params := transfer_params(),
     created_at => ff_time:timestamp_ms(),
@@ -137,7 +135,6 @@
     id := id(),
     body := body(),
     params := params(),
-    transfer_type := withdrawal,
     status => status(),
     route => route(),
     external_id => external_id(),
@@ -422,7 +419,6 @@ validation(_) ->
 gen(Args) ->
     TypeKeys = [
         id,
-        transfer_type,
         body,
         params,
         external_id,
@@ -477,7 +473,6 @@ create(Params) ->
                 genlib_map:compact(#{
                     version => ?ACTUAL_FORMAT_VERSION,
                     id => ID,
-                    transfer_type => withdrawal,
                     body => Body,
                     params => TransferParams,
                     created_at => CreatedAt,

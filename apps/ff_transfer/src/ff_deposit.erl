@@ -13,7 +13,6 @@
 
 -opaque deposit_state() :: #{
     id := id(),
-    transfer_type := deposit,
     body := body(),
     is_negative := is_negative(),
     params := transfer_params(),
@@ -30,11 +29,10 @@
 -opaque deposit() :: #{
     version := ?ACTUAL_FORMAT_VERSION,
     id := id(),
-    transfer_type := deposit,
     body := body(),
     params := transfer_params(),
-    domain_revision => domain_revision(),
-    created_at => ff_time:timestamp_ms(),
+    domain_revision := domain_revision(),
+    created_at := ff_time:timestamp_ms(),
     metadata => metadata(),
     external_id => id(),
     description => description()
@@ -47,7 +45,8 @@
     party_id := party_id(),
     wallet_id := wallet_id(),
     external_id => external_id(),
-    description => description()
+    description => description(),
+    metadata => metadata()
 }.
 
 -type status() ::
@@ -255,7 +254,6 @@ create(Params) ->
                 genlib_map:compact(#{
                     version => ?ACTUAL_FORMAT_VERSION,
                     id => ID,
-                    transfer_type => deposit,
                     body => Body,
                     params => TransferParams,
                     domain_revision => DomainRevision,

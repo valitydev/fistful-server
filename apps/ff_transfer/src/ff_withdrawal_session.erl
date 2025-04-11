@@ -44,10 +44,7 @@
     callbacks => callbacks_index(),
     result => session_result(),
     % For validate outstanding TransactionsInfo
-    transaction_info => transaction_info(),
-
-    % Deprecated. Remove after MSPF-560 finish
-    provider_legacy => binary() | ff_payouts_provider:id()
+    transaction_info => transaction_info()
 }.
 
 -type session() :: #{
@@ -55,10 +52,7 @@
     id := id(),
     status := status(),
     withdrawal := withdrawal(),
-    route := route(),
-
-    % Deprecated. Remove after MSPF-560 finish
-    provider_legacy => binary() | ff_payouts_provider:id()
+    route := route()
 }.
 
 -type transaction_info() :: ff_adapter_withdrawal:transaction_info().
