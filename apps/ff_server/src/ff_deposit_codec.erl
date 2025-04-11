@@ -55,7 +55,6 @@ marshal(deposit, Deposit) ->
     #deposit_Deposit{
         id = marshal(id, ff_deposit:id(Deposit)),
         body = marshal(cash, ff_deposit:body(Deposit)),
-        status = maybe_marshal(status, ff_deposit:status(Deposit)),
         wallet_id = marshal(id, ff_deposit:wallet_id(Deposit)),
         source_id = marshal(id, ff_deposit:source_id(Deposit)),
         external_id = maybe_marshal(id, ff_deposit:external_id(Deposit)),
@@ -110,7 +109,6 @@ unmarshal(deposit, Deposit) ->
         transfer_type => deposit,
         id => unmarshal(id, Deposit#deposit_Deposit.id),
         body => unmarshal(cash, Deposit#deposit_Deposit.body),
-        status => maybe_unmarshal(status, Deposit#deposit_Deposit.status),
         params => genlib_map:compact(#{
             wallet_id => unmarshal(id, Deposit#deposit_Deposit.wallet_id),
             source_id => unmarshal(id, Deposit#deposit_Deposit.source_id)
@@ -166,7 +164,6 @@ deposit_symmetry_test() ->
         source_id = genlib:unique(),
         wallet_id = genlib:unique(),
         external_id = undefined,
-        status = {pending, #deposit_status_Pending{}},
         id = genlib:unique(),
         domain_revision = 24500062,
         created_at = <<"2025-01-01T00:00:00.001Z">>
@@ -197,7 +194,6 @@ deposit_timestamped_change_codec_test() ->
         version => 3,
         transfer_type => deposit,
         id => genlib:unique(),
-        status => pending,
         body => {123, <<"RUB">>},
         created_at => ff_time:now(),
         domain_revision => 123,

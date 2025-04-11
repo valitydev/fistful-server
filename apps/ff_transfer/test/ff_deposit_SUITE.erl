@@ -241,7 +241,6 @@ preserve_revisions_test(C) ->
     ok = ff_deposit_machine:create(DepositParams, ff_entity_context:new()),
     Deposit = get_deposit(DepositID),
     ?assertNotEqual(undefined, ff_deposit:domain_revision(Deposit)),
-    ?assertNotEqual(undefined, ff_deposit:party_revision(Deposit)),
     ?assertNotEqual(undefined, ff_deposit:created_at(Deposit)).
 
 -spec create_ok_test(config()) -> test_return().

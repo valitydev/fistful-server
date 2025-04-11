@@ -1,7 +1,6 @@
 -module(ff_transfer_SUITE).
 
 -include_lib("fistful_proto/include/fistful_fistful_base_thrift.hrl").
--include_lib("fistful_proto/include/fistful_admin_thrift.hrl").
 -include_lib("fistful_proto/include/fistful_wthd_thrift.hrl").
 -include_lib("fistful_proto/include/fistful_source_thrift.hrl").
 -include_lib("fistful_proto/include/fistful_deposit_thrift.hrl").
@@ -16,10 +15,6 @@
 -export([end_per_testcase/2]).
 
 -export([get_missing_fails/1]).
--export([deposit_via_admin_ok/1]).
--export([deposit_via_admin_fails/1]).
--export([deposit_via_admin_amount_fails/1]).
--export([deposit_via_admin_currency_fails/1]).
 -export([deposit_withdrawal_ok/1]).
 -export([deposit_quote_withdrawal_ok/1]).
 -export([deposit_withdrawal_to_crypto_wallet/1]).
@@ -40,10 +35,6 @@ groups() ->
     [
         {default, [parallel], [
             get_missing_fails,
-            deposit_via_admin_ok,
-            deposit_via_admin_fails,
-            deposit_via_admin_amount_fails,
-            deposit_via_admin_currency_fails,
             deposit_withdrawal_ok,
             deposit_quote_withdrawal_ok,
             deposit_withdrawal_to_crypto_wallet,
@@ -91,10 +82,6 @@ end_per_testcase(_Name, _C) ->
 %%
 
 -spec get_missing_fails(config()) -> test_return().
--spec deposit_via_admin_ok(config()) -> test_return().
--spec deposit_via_admin_fails(config()) -> test_return().
--spec deposit_via_admin_amount_fails(config()) -> test_return().
--spec deposit_via_admin_currency_fails(config()) -> test_return().
 -spec deposit_withdrawal_ok(config()) -> test_return().
 -spec deposit_withdrawal_to_crypto_wallet(config()) -> test_return().
 -spec deposit_withdrawal_to_digital_wallet(config()) -> test_return().
@@ -104,215 +91,6 @@ end_per_testcase(_Name, _C) ->
 get_missing_fails(_C) ->
     ID = genlib:unique(),
     {error, {unknown_withdrawal, ID}} = ff_withdrawal_machine:get(ID).
-
-deposit_via_admin_ok(C) ->
-    Party = create_party(C),
-    IID = create_identity(Party, C),
-    WalID = create_wallet(IID, <<"HAHA NO">>, <<"RUB">>, C),
-    ok = await_wallet_balance({0, <<"RUB">>}, WalID),
-    SrcID = genlib:unique(),
-    DepID = genlib:unique(),
-    % Create source
-    {ok, Src1} = call_admin(
-        'CreateSource',
-        {
-            #admin_SourceParams{
-                id = SrcID,
-                name = <<"HAHA NO">>,
-                identity_id = IID,
-                currency = #'fistful_base_CurrencyRef'{symbolic_code = <<"RUB">>},
-                resource = {internal, #source_Internal{details = <<"Infinite source of cash">>}}
-            }
-        }
-    ),
-
-    SrcID = Src1#source_Source.id,
-    {authorized, #source_Authorized{}} = ct_helper:await(
-        {authorized, #source_Authorized{}},
-        fun() ->
-            {ok, Src} = call_admin('GetSource', {SrcID}),
-            Src#source_Source.status
-        end
-    ),
-
-    % Process deposit
-    {ok, Dep1} = call_admin(
-        'CreateDeposit',
-        {
-            #admin_DepositParams{
-                id = DepID,
-                source = SrcID,
-                destination = WalID,
-                body = #'fistful_base_Cash'{
-                    amount = 20000,
-                    currency = #'fistful_base_CurrencyRef'{symbolic_code = <<"RUB">>}
-                }
-            }
-        }
-    ),
-    DepID = Dep1#deposit_Deposit.id,
-    {pending, _} = Dep1#deposit_Deposit.status,
-    succeeded = ct_helper:await(
-        succeeded,
-        fun() ->
-            {ok, Dep} = call_admin('GetDeposit', {DepID}),
-            {Status, _} = Dep#deposit_Deposit.status,
-            Status
-        end,
-        genlib_retry:linear(15, 1000)
-    ),
-    ok = await_wallet_balance({20000, <<"RUB">>}, WalID).
-
-deposit_via_admin_fails(C) ->
-    Party = create_party(C),
-    IID = create_identity(Party, C),
-    WalID = create_wallet(IID, <<"HAHA NO">>, <<"RUB">>, C),
-    ok = await_wallet_balance({0, <<"RUB">>}, WalID),
-    SrcID = genlib:unique(),
-    DepID = genlib:unique(),
-    % Create source
-    {ok, Src1} = call_admin(
-        'CreateSource',
-        {
-            #admin_SourceParams{
-                id = SrcID,
-                name = <<"HAHA NO">>,
-                identity_id = IID,
-                currency = #'fistful_base_CurrencyRef'{symbolic_code = <<"RUB">>},
-                resource = {internal, #source_Internal{details = <<"Infinite source of cash">>}}
-            }
-        }
-    ),
-
-    SrcID = Src1#source_Source.id,
-    {authorized, #source_Authorized{}} = ct_helper:await(
-        {authorized, #source_Authorized{}},
-        fun() ->
-            {ok, Src} = call_admin('GetSource', {SrcID}),
-            Src#source_Source.status
-        end
-    ),
-
-    {ok, Dep1} = call_admin(
-        'CreateDeposit',
-        {
-            #admin_DepositParams{
-                id = DepID,
-                source = SrcID,
-                destination = WalID,
-                body = #'fistful_base_Cash'{
-                    amount = 10000002,
-                    currency = #'fistful_base_CurrencyRef'{symbolic_code = <<"RUB">>}
-                }
-            }
-        }
-    ),
-
-    DepID = Dep1#deposit_Deposit.id,
-    {pending, _} = Dep1#deposit_Deposit.status,
-    failed = ct_helper:await(
-        failed,
-        fun() ->
-            {ok, Dep} = call_admin('GetDeposit', {DepID}),
-            {Status, _} = Dep#deposit_Deposit.status,
-            Status
-        end,
-        genlib_retry:linear(15, 1000)
-    ),
-    ok = await_wallet_balance({0, <<"RUB">>}, WalID).
-
-deposit_via_admin_amount_fails(C) ->
-    Party = create_party(C),
-    IID = create_identity(Party, C),
-    WalID = create_wallet(IID, <<"HAHA NO">>, <<"RUB">>, C),
-    ok = await_wallet_balance({0, <<"RUB">>}, WalID),
-    SrcID = genlib:unique(),
-    DepID = genlib:unique(),
-    % Create source
-
-    {ok, _Src1} = call_admin(
-        'CreateSource',
-        {
-            #admin_SourceParams{
-                id = SrcID,
-                name = <<"HAHA NO">>,
-                identity_id = IID,
-                currency = #'fistful_base_CurrencyRef'{symbolic_code = <<"RUB">>},
-                resource = {internal, #source_Internal{details = <<"Infinite source of cash">>}}
-            }
-        }
-    ),
-
-    {authorized, #source_Authorized{}} = ct_helper:await(
-        {authorized, #source_Authorized{}},
-        fun() ->
-            {ok, Src} = call_admin('GetSource', {SrcID}),
-            Src#source_Source.status
-        end
-    ),
-
-    {exception, #admin_DepositAmountInvalid{}} = call_admin(
-        'CreateDeposit',
-        {
-            #admin_DepositParams{
-                id = DepID,
-                source = SrcID,
-                destination = WalID,
-                body = #'fistful_base_Cash'{
-                    amount = 0,
-                    currency = #'fistful_base_CurrencyRef'{symbolic_code = <<"RUB">>}
-                }
-            }
-        }
-    ),
-    ok = await_wallet_balance({0, <<"RUB">>}, WalID).
-
-deposit_via_admin_currency_fails(C) ->
-    Party = create_party(C),
-    IID = create_identity(Party, C),
-    WalID = create_wallet(IID, <<"HAHA NO">>, <<"RUB">>, C),
-    ok = await_wallet_balance({0, <<"RUB">>}, WalID),
-    SrcID = genlib:unique(),
-    DepID = genlib:unique(),
-    % Create source
-    {ok, Src1} = call_admin(
-        'CreateSource',
-        {
-            #admin_SourceParams{
-                id = SrcID,
-                name = <<"HAHA NO">>,
-                identity_id = IID,
-                currency = #'fistful_base_CurrencyRef'{symbolic_code = <<"RUB">>},
-                resource = {internal, #source_Internal{details = <<"Infinite source of cash">>}}
-            }
-        }
-    ),
-
-    SrcID = Src1#source_Source.id,
-    {authorized, #source_Authorized{}} = ct_helper:await(
-        {authorized, #source_Authorized{}},
-        fun() ->
-            {ok, Src} = call_admin('GetSource', {SrcID}),
-            Src#source_Source.status
-        end
-    ),
-    BadCurrency = <<"CAT">>,
-    {exception, #admin_DepositCurrencyInvalid{}} = call_admin(
-        'CreateDeposit',
-        {
-            #admin_DepositParams{
-                id = DepID,
-                source = SrcID,
-                destination = WalID,
-                body = #'fistful_base_Cash'{
-                    amount = 1000,
-                    currency = #'fistful_base_CurrencyRef'{symbolic_code = BadCurrency}
-                }
-            }
-        }
-    ),
-
-    ok = await_wallet_balance({0, <<"RUB">>}, WalID).
 
 deposit_withdrawal_ok(C) ->
     Party = create_party(C),
@@ -371,7 +149,6 @@ deposit_quote_withdrawal_ok(C) ->
     ok = process_deposit(SrcID, WalID),
     DestID = create_destination(IID, C),
     DomainRevision = ff_domain_config:head(),
-    {ok, PartyRevision} = ff_party:get_revision(Party),
     WdrID = process_withdrawal(WalID, DestID, #{
         wallet_id => WalID,
         destination_id => DestID,
@@ -383,8 +160,7 @@ deposit_quote_withdrawal_ok(C) ->
             expires_on => <<"2016-03-22T06:12:27Z">>,
             quote_data => #{<<"test">> => <<"test">>},
             route => ff_withdrawal_routing:make_route(3, 301),
-            domain_revision => DomainRevision,
-            party_revision => PartyRevision
+            domain_revision => DomainRevision
         }
     }),
 
@@ -467,15 +243,6 @@ create_destination(IdentityID, Name, Currency, Resource) ->
 
 generate_id() ->
     genlib:to_binary(genlib_time:ticks()).
-
-call_admin(Fun, Args) ->
-    Service = {fistful_admin_thrift, 'FistfulAdmin'},
-    Request = {Service, Fun, Args},
-    Client = ff_woody_client:new(#{
-        url => <<"http://localhost:8022/v1/admin">>,
-        event_handler => ff_woody_event_handler
-    }),
-    ff_woody_client:call(Client, Request).
 
 create_source(IID, _C) ->
     SrcResource = #{type => internal, details => <<"Infinite source of cash">>},

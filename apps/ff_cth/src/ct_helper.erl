@@ -121,10 +121,7 @@ start_app(ff_server = AppName) ->
     {
         start_app_with(AppName, [
             {ip, "::"},
-            {port, 8022},
-            {admin, #{
-                path => <<"/v1/admin">>
-            }}
+            {port, 8022}
         ]),
         #{}
     };

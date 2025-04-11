@@ -88,10 +88,11 @@
     | {wallet, ff_party:inaccessibility()}
     | {inconsistent_currency, {Withdrawal :: currency_id(), Wallet :: currency_id(), Destination :: currency_id()}}
     | {terms, ff_party:validate_withdrawal_creation_error()}
-    | {identity_providers_mismatch, {ff_provider:id(), ff_provider:id()}}
+    | {realms_mismatch, {realm(), realm()}}
     | {destination_resource, {bin_data, ff_bin_data:bin_data_error()}}.
 
 -type route() :: ff_withdrawal_routing:route().
+-type realm() :: ff_payment_institution:realm().
 
 -type attempts() :: ff_withdrawal_route_attempt_utils:attempts().
 
@@ -1382,7 +1383,6 @@ validate_withdrawal_creation(Terms, Body, Wallet, Destination, Resource) ->
         Method = ff_resource:method(Resource),
         valid = unwrap(terms, validate_withdrawal_creation_terms(Terms, Body, Method)),
         valid = unwrap(validate_withdrawal_currency(Body, Wallet, Destination)),
-        valid = unwrap(validate_destination_status(Destination)),
         valid = unwrap(validate_withdrawal_realms(Wallet, Destination))
     end).
 
@@ -1392,7 +1392,7 @@ validate_withdrawal_realms(#domain_WalletConfig{payment_institution = PaymentIns
     DestinationtRealm = ff_destination:realm(Destination),
     case WalletRealm =:= DestinationtRealm of
         true -> {ok, valid};
-        false -> {error, {identity_providers_mismatch, {WalletRealm, DestinationtRealm}}}
+        false -> {error, {realms_mismatch, {WalletRealm, DestinationtRealm}}}
     end.
 
 -spec validate_withdrawal_creation_terms(terms(), body(), ff_resource:method()) ->
@@ -1415,17 +1415,6 @@ validate_withdrawal_currency(Body, Wallet, Destination) ->
             {ok, valid};
         {_Amount, WithdrawalCurencyID} ->
             {error, {inconsistent_currency, {WithdrawalCurencyID, WalletCurrencyID, DestiantionCurrencyID}}}
-    end.
-
--spec validate_destination_status(destination()) ->
-    {ok, valid}
-    | {error, {destination, ff_destination:status()}}.
-validate_destination_status(Destination) ->
-    case ff_destination:status(Destination) of
-        authorized ->
-            {ok, valid};
-        unauthorized ->
-            {error, {destination, unauthorized}}
     end.
 
 %% Limit helpers

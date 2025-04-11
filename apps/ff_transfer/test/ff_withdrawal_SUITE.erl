@@ -607,7 +607,6 @@ preserve_revisions_test(C) ->
     ok = ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new()),
     Withdrawal = get_withdrawal(WithdrawalID),
     ?assertNotEqual(undefined, ff_withdrawal:domain_revision(Withdrawal)),
-    ?assertNotEqual(undefined, ff_withdrawal:party_revision(Withdrawal)),
     ?assertNotEqual(undefined, ff_withdrawal:created_at(Withdrawal)).
 
 -spec use_quote_revisions_test(config()) -> test_return().
@@ -637,7 +636,6 @@ use_quote_revisions_test(C) ->
             created_at => <<"2016-03-22T06:12:27Z">>,
             expires_on => <<"2016-03-22T06:12:27Z">>,
             domain_revision => DomainRevision,
-            party_revision => PartyRevision,
             operation_timestamp => Time,
             route => ff_withdrawal_routing:make_route(1, 1),
             quote_data => #{<<"test">> => <<"test">>}
@@ -646,7 +644,6 @@ use_quote_revisions_test(C) ->
     ok = ff_withdrawal_machine:create(WithdrawalParams, ff_entity_context:new()),
     Withdrawal = get_withdrawal(WithdrawalID),
     ?assertEqual(DomainRevision, ff_withdrawal:domain_revision(Withdrawal)),
-    ?assertEqual(PartyRevision, ff_withdrawal:party_revision(Withdrawal)),
     ?assertEqual(succeeded, await_final_withdrawal_status(WithdrawalID)).
 
 -spec force_status_change_test(config()) -> test_return().

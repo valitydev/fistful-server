@@ -80,7 +80,6 @@ init([]) ->
 
     Services =
         [
-            {fistful_admin, ff_server_admin_handler},
             {ff_withdrawal_adapter_host, ff_withdrawal_adapter_host},
             {destination_management, ff_destination_handler},
             {source_management, ff_source_handler},

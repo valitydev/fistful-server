@@ -13,7 +13,6 @@
 -type name() :: binary().
 -type account() :: ff_account:account().
 -type currency() :: ff_currency:id().
--type status() :: unauthorized | authorized.
 -type metadata() :: ff_entity_context:md().
 -type timestamp() :: ff_time:timestamp_ms().
 -type party_id() :: ff_party:id().
@@ -46,7 +45,6 @@
     party_id := party_id(),
     resource := resource(),
     name := name(),
-    status => status(),
     created_at => timestamp(),
     external_id => id(),
     metadata => metadata(),
@@ -72,20 +70,17 @@
 
 -type event() ::
     {created, destination()}
-    | {account, ff_account:event()}
-    | {status_changed, status()}.
+    | {account, ff_account:event()}.
 
 -type create_error() ::
-    {identity, notfound}
+    {party, notfound}
     | {currency, notfound}
     | ff_account:create_error()
-    | {terms, ff_party:withdrawal_method_validation_error()}
-    | {identity, ff_party:inaccessibility()}.
+    | {party, ff_party:inaccessibility()}.
 
 -export_type([id/0]).
 -export_type([destination/0]).
 -export_type([destination_state/0]).
--export_type([status/0]).
 -export_type([resource_params/0]).
 -export_type([resource/0]).
 -export_type([params/0]).
@@ -103,7 +98,6 @@
 -export([account/1]).
 -export([currency/1]).
 -export([resource/1]).
--export([status/1]).
 -export([external_id/1]).
 -export([created_at/1]).
 -export([metadata/1]).
@@ -128,7 +122,6 @@
 -spec account(destination_state()) -> account() | undefined.
 -spec currency(destination_state()) -> currency().
 -spec resource(destination_state()) -> resource().
--spec status(destination_state()) -> status() | undefined.
 
 party_id(#{party_id := V}) ->
     V.
@@ -152,11 +145,6 @@ currency(Destination) ->
 
 resource(#{resource := V}) ->
     V.
-
-status(#{status := V}) ->
-    V;
-status(_) ->
-    undefined.
 
 -spec external_id(destination_state()) -> id() | undefined.
 external_id(#{external_id := ExternalID}) ->
@@ -216,9 +204,7 @@ create(Params) ->
                     auth_data => maps:get(auth_data, Params, undefined),
                     created_at => CreatedAt
                 })}
-        ] ++
-            [{account, Ev} || Ev <- Events] ++
-            [{status_changed, authorized}]
+        ] ++ [{account, Ev} || Ev <- Events]
     end).
 
 -spec is_accessible(destination_state()) ->

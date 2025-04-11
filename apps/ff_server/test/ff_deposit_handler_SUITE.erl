@@ -207,10 +207,6 @@ create_ok_test(C) ->
         DepositState#deposit_DepositState.domain_revision
     ),
     ?assertEqual(
-        ff_deposit:party_revision(Expected),
-        DepositState#deposit_DepositState.party_revision
-    ),
-    ?assertEqual(
         ff_deposit:created_at(Expected),
         ff_codec:unmarshal(timestamp_ms, DepositState#deposit_DepositState.created_at)
     ).
@@ -234,10 +230,6 @@ create_negative_ok_test(C) ->
     ?assertEqual(
         ff_deposit:domain_revision(Expected),
         DepositState#deposit_DepositState.domain_revision
-    ),
-    ?assertEqual(
-        ff_deposit:party_revision(Expected),
-        DepositState#deposit_DepositState.party_revision
     ),
     ?assertEqual(
         ff_deposit:created_at(Expected),

@@ -15,8 +15,6 @@
 -type service_spec() :: {Path :: string(), service()}.
 
 -spec get_service(service_name()) -> service().
-get_service(fistful_admin) ->
-    {fistful_admin_thrift, 'FistfulAdmin'};
 get_service(fistful_provider) ->
     {fistful_provider_thrift, 'Management'};
 get_service(ff_withdrawal_adapter_host) ->
@@ -51,8 +49,6 @@ get_service_spec(Name) ->
     {get_service_path(Name), get_service(Name)}.
 
 -spec get_service_path(service_name()) -> string().
-get_service_path(fistful_admin) ->
-    "/v1/admin";
 get_service_path(fistful_provider) ->
     "/v1/provider";
 get_service_path(ff_withdrawal_adapter_host) ->

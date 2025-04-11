@@ -467,8 +467,7 @@ validate_deposit_creation(Terms, Params, Source, Wallet, DomainRevision) ->
     #{body := Body} = Params,
     do(fun() ->
         valid = unwrap(ff_party:validate_deposit_creation(Terms, Body)),
-        valid = unwrap(validate_deposit_currency(Body, Source, Wallet, DomainRevision)),
-        valid = unwrap(validate_source_status(Source))
+        valid = unwrap(validate_deposit_currency(Body, Source, Wallet, DomainRevision))
     end).
 
 -spec validate_deposit_currency(body(), source(), wallet(), domain_revision()) ->
@@ -485,17 +484,6 @@ validate_deposit_currency(Body, Source, Wallet, DomainRevision) ->
             {ok, valid};
         {_Amount, DepositCurencyID} ->
             {error, {inconsistent_currency, {DepositCurencyID, SourceCurrencyID, WalletCurrencyID}}}
-    end.
-
--spec validate_source_status(source()) ->
-    {ok, valid}
-    | {error, {source, ff_source:status()}}.
-validate_source_status(Source) ->
-    case ff_source:status(Source) of
-        authorized ->
-            {ok, valid};
-        unauthorized ->
-            {error, {source, unauthorized}}
     end.
 
 %% Limit helpers

@@ -119,16 +119,15 @@ marshal(three_ds_verification, Value) when
 marshal(account_change, {created, Account}) ->
     {created, marshal(account, Account)};
 marshal(account, #{
-    id := ID,
-    identity := IdentityID,
+    realm := Realm,
     currency := CurrencyID,
-    accounter_account_id := AAID
-}) ->
+    account_id := AID
+} = Account) ->
     #'account_Account'{
-        id = marshal(id, ID),
-        identity = marshal(id, IdentityID),
+        realm = Realm,
+        party_id = maybe_marshal(id, maps:get(party_id, Account, undefined)),
         currency = marshal(currency_ref, CurrencyID),
-        accounter_account_id = marshal(event_id, AAID)
+        account_id = marshal(integer, AID)
     };
 marshal(resource, {bank_card, #{bank_card := BankCard} = ResourceBankCard}) ->
     {bank_card, #'fistful_base_ResourceBankCard'{
@@ -277,8 +276,6 @@ marshal(timestamp_ms, V) ->
     ff_time:to_rfc3339(V);
 marshal(domain_revision, V) when is_integer(V) ->
     V;
-marshal(party_revision, V) when is_integer(V) ->
-    V;
 marshal(string, V) when is_binary(V) ->
     V;
 marshal(integer, V) when is_integer(V) ->
@@ -383,18 +380,18 @@ unmarshal(timer, {deadline, Deadline}) ->
 unmarshal(account_change, {created, Account}) ->
     {created, unmarshal(account, Account)};
 unmarshal(account, #'account_Account'{
-    id = ID,
-    identity = IdentityID,
+    party_id = PartyID,
+    realm = Realm,
     currency = CurrencyRef,
-    accounter_account_id = AAID
+    account_id = AID
 }) ->
     #{
-        id => unmarshal(id, ID),
-        identity => unmarshal(id, IdentityID),
+        realm => Realm,
+        party_id => maybe_unmarshal(id, PartyID),
         currency => unmarshal(currency_ref, CurrencyRef),
-        accounter_account_id => unmarshal(accounter_account_id, AAID)
+        account_id => unmarshal(account_id, AID)
     };
-unmarshal(accounter_account_id, V) ->
+unmarshal(account_id, V) ->
     unmarshal(integer, V);
 unmarshal(
     resource,
@@ -553,8 +550,6 @@ unmarshal(timestamp, Timestamp) when is_binary(Timestamp) ->
 unmarshal(timestamp_ms, V) ->
     ff_time:from_rfc3339(V);
 unmarshal(domain_revision, V) when is_integer(V) ->
-    V;
-unmarshal(party_revision, V) when is_integer(V) ->
     V;
 unmarshal(string, V) when is_binary(V) ->
     V;

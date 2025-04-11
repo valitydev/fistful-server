@@ -11,7 +11,6 @@
 -type name() :: binary().
 -type account() :: ff_account:account().
 -type currency() :: ff_currency:id().
--type status() :: unauthorized | authorized.
 -type metadata() :: ff_entity_context:md().
 -type timestamp() :: ff_time:timestamp_ms().
 -type realm() :: ff_payment_institution:realm().
@@ -43,7 +42,6 @@
     realm := realm(),
     party_id := party_id(),
     name := name(),
-    status => status(),
     created_at => timestamp(),
     external_id => id(),
     metadata => metadata()
@@ -62,21 +60,17 @@
 
 -type event() ::
     {created, source_state()}
-    | {account, ff_account:event()}
-    | {status_changed, status()}.
-
--type legacy_event() :: any().
+    | {account, ff_account:event()}.
 
 -type create_error() ::
-    {identity, notfound}
+    {party, notfound}
     | {currency, notfound}
     | ff_account:create_error()
-    | {identity, ff_party:inaccessibility()}.
+    | {party, ff_party:inaccessibility()}.
 
 -export_type([id/0]).
 -export_type([source/0]).
 -export_type([source_state/0]).
--export_type([status/0]).
 -export_type([resource/0]).
 -export_type([params/0]).
 -export_type([event/0]).
@@ -91,7 +85,6 @@
 -export([party_id/1]).
 -export([currency/1]).
 -export([resource/1]).
--export([status/1]).
 -export([external_id/1]).
 -export([created_at/1]).
 -export([metadata/1]).
@@ -100,9 +93,7 @@
 
 -export([create/1]).
 -export([is_accessible/1]).
--export([authorize/1]).
 -export([apply_event/2]).
--export([maybe_migrate/2]).
 
 %% Pipeline
 
@@ -117,7 +108,6 @@
 -spec account(source_state()) -> account() | undefined.
 -spec currency(source_state()) -> currency().
 -spec resource(source_state()) -> resource().
--spec status(source_state()) -> status() | undefined.
 
 id(#{id := V}) ->
     V.
@@ -141,11 +131,6 @@ currency(Source) ->
 
 resource(#{resource := V}) ->
     V.
-
-status(#{status := V}) ->
-    V;
-status(_) ->
-    undefined.
 
 -spec external_id(source_state()) -> id() | undefined.
 external_id(#{external_id := ExternalID}) ->
@@ -182,7 +167,7 @@ create(Params) ->
         } = Params,
         Currency = unwrap(currency, ff_currency:get(CurrencyID)),
         Events = unwrap(ff_account:create(PartyID, Realm, Currency)),
-        accessible = unwrap(identity, ff_party:is_accessible(PartyID)),
+        accessible = unwrap(party, ff_party:is_accessible(PartyID)),
         CreatedAt = ff_time:now(),
         [
             {created,
@@ -197,9 +182,7 @@ create(Params) ->
                     metadata => maps:get(metadata, Params, undefined),
                     created_at => CreatedAt
                 })}
-        ] ++
-            [{account, Ev} || Ev <- Events] ++
-            [{status_changed, unauthorized}]
+        ] ++ [{account, Ev} || Ev <- Events]
     end).
 
 -spec is_accessible(source_state()) ->
@@ -208,74 +191,10 @@ create(Params) ->
 is_accessible(Source) ->
     ff_account:is_accessible(account(Source)).
 
--spec authorize(source_state()) -> {ok, [event()]}.
-authorize(#{status := unauthorized}) ->
-    % TODO
-    %  - Do the actual authorization
-    {ok, [{status_changed, authorized}]};
-authorize(#{status := authorized}) ->
-    {ok, []}.
-
 -spec apply_event(event(), ff_maybe:'maybe'(source_state())) -> source_state().
 apply_event({created, Source}, undefined) ->
     Source;
-apply_event({status_changed, S}, Source) ->
-    Source#{status => S};
 apply_event({account, Ev}, #{account := Account} = Source) ->
     Source#{account => ff_account:apply_event(Ev, Account)};
 apply_event({account, Ev}, Source) ->
     apply_event({account, Ev}, Source#{account => undefined}).
-
--spec maybe_migrate(event() | legacy_event(), ff_machine:migrate_params()) -> event().
-maybe_migrate({created, #{version := ?ACTUAL_FORMAT_VERSION}} = Event, _MigrateParams) ->
-    Event;
-maybe_migrate({created, Source = #{version := 3}}, MigrateParams) ->
-    maybe_migrate(
-        {created, Source#{
-            version => 4
-        }},
-        MigrateParams
-    );
-maybe_migrate({created, Source = #{version := 2}}, MigrateParams) ->
-    Context = maps:get(ctx, MigrateParams, undefined),
-    %% TODO add metada migration for eventsink after decouple instruments
-    Metadata = ff_entity_context:try_get_legacy_metadata(Context),
-    maybe_migrate(
-        {created,
-            genlib_map:compact(Source#{
-                version => 3,
-                metadata => Metadata
-            })},
-        MigrateParams
-    );
-maybe_migrate({created, Source = #{version := 1}}, MigrateParams) ->
-    Timestamp = maps:get(timestamp, MigrateParams),
-    CreatedAt = ff_codec:unmarshal(timestamp_ms, ff_codec:marshal(timestamp, Timestamp)),
-    maybe_migrate(
-        {created, Source#{
-            version => 2,
-            created_at => CreatedAt
-        }},
-        MigrateParams
-    );
-maybe_migrate(
-    {created,
-        Source = #{
-            resource := Resource,
-            name := Name
-        }},
-    MigrateParams
-) ->
-    maybe_migrate(
-        {created,
-            genlib_map:compact(#{
-                version => 1,
-                resource => Resource,
-                name => Name,
-                external_id => maps:get(external_id, Source, undefined)
-            })},
-        MigrateParams
-    );
-%% Other events
-maybe_migrate(Event, _MigrateParams) ->
-    Event.

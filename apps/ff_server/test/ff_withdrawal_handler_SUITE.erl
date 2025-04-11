@@ -244,10 +244,6 @@ create_withdrawal_ok_test(C) ->
         WithdrawalState#wthd_WithdrawalState.domain_revision
     ),
     ?assertEqual(
-        ff_withdrawal:party_revision(Expected),
-        WithdrawalState#wthd_WithdrawalState.party_revision
-    ),
-    ?assertEqual(
         ff_withdrawal:created_at(Expected),
         ff_codec:unmarshal(timestamp_ms, WithdrawalState#wthd_WithdrawalState.created_at)
     ),
@@ -410,10 +406,6 @@ create_destination_generic_ok_test(C) ->
         WithdrawalState#wthd_WithdrawalState.domain_revision
     ),
     ?assertEqual(
-        ff_withdrawal:party_revision(Expected),
-        WithdrawalState#wthd_WithdrawalState.party_revision
-    ),
-    ?assertEqual(
         ff_withdrawal:created_at(Expected),
         ff_codec:unmarshal(timestamp_ms, WithdrawalState#wthd_WithdrawalState.created_at)
     ),
@@ -496,10 +488,6 @@ create_adjustment_ok_test(C) ->
     ?assertEqual(
         ff_adjustment:domain_revision(ExpectedAdjustment),
         AdjustmentState#wthd_adj_AdjustmentState.domain_revision
-    ),
-    ?assertEqual(
-        ff_adjustment:party_revision(ExpectedAdjustment),
-        AdjustmentState#wthd_adj_AdjustmentState.party_revision
     ),
     ?assertEqual(
         ff_withdrawal_adjustment_codec:marshal(changes_plan, ff_adjustment:changes_plan(ExpectedAdjustment)),

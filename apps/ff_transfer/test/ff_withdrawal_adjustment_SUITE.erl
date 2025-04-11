@@ -492,7 +492,6 @@ assert_adjustment_same_revisions(WithdrawalID, AdjustmentID) ->
     Adjustment = get_adjustment(WithdrawalID, AdjustmentID),
     Withdrawal = get_withdrawal(WithdrawalID),
     ?assertEqual(ff_withdrawal:final_domain_revision(Withdrawal), ff_adjustment:domain_revision(Adjustment)),
-    ?assertEqual(ff_withdrawal:party_revision(Withdrawal), ff_adjustment:party_revision(Adjustment)),
     ?assertEqual(ff_withdrawal:created_at(Withdrawal), ff_adjustment:operation_timestamp(Adjustment)),
     ok.
 
