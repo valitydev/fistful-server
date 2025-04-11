@@ -41,7 +41,7 @@
 -type params() :: #{
     id := id(),
     party_id := party_id(),
-    wallet_id := ff_wallet_machine:id(),
+    wallet_id := wallet_id(),
     destination_id := ff_destination:id(),
     body := body(),
     external_id => id(),
@@ -84,6 +84,7 @@
 
 -type create_error() ::
     {wallet, notfound}
+    | {party, notfound}
     | {destination, notfound | unauthorized}
     | {wallet, ff_party:inaccessibility()}
     | {inconsistent_currency, {Withdrawal :: currency_id(), Wallet :: currency_id(), Destination :: currency_id()}}
@@ -97,7 +98,8 @@
 -type attempts() :: ff_withdrawal_route_attempt_utils:attempts().
 
 -type quote_params() :: #{
-    wallet_id := ff_wallet_machine:id(),
+    wallet_id := wallet_id(),
+    party_id := party_id(),
     currency_from := ff_currency:id(),
     currency_to := ff_currency:id(),
     body := ff_accounting:body(),
@@ -130,18 +132,6 @@
 -type session() :: #{
     id := session_id(),
     result => session_result()
-}.
-
--type gen_args() :: #{
-    id := id(),
-    body := body(),
-    params := params(),
-    status => status(),
-    route => route(),
-    external_id => external_id(),
-    created_at => ff_time:timestamp_ms(),
-    domain_revision => domain_revision(),
-    metadata => metadata()
 }.
 
 -type limit_check_details() ::
@@ -195,7 +185,6 @@
 -export_type([quote/0]).
 -export_type([quote_params/0]).
 -export_type([session/0]).
--export_type([gen_args/0]).
 -export_type([create_error/0]).
 -export_type([action/0]).
 -export_type([adjustment_params/0]).
@@ -234,7 +223,6 @@
 %% API
 
 -export([create/1]).
--export([gen/1]).
 -export([get_quote/1]).
 -export([is_finished/1]).
 
@@ -415,21 +403,6 @@ validation(_) ->
     undefined.
 
 %% API
-
--spec gen(gen_args()) -> withdrawal().
-gen(Args) ->
-    TypeKeys = [
-        id,
-        body,
-        params,
-        external_id,
-        domain_revision,
-        created_at,
-        route,
-        metadata
-    ],
-    Withdrawal = genlib_map:compact(maps:with(TypeKeys, Args)),
-    Withdrawal#{version => 4}.
 
 -spec create(params()) ->
     {ok, [event()]}

@@ -153,7 +153,8 @@
     | p_transfer_commit
     | p_transfer_cancel
     | limit_check
-    | {fail, fail_type()}.
+    | {fail, fail_type()}
+    | finish.
 
 -type fail_type() ::
     limit_check.

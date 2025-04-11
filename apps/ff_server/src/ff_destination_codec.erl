@@ -126,9 +126,9 @@ unmarshal(change, {status, StatusChange}) ->
 unmarshal(destination, Dest) ->
     genlib_map:compact(#{
         version => 5,
-        id => unmarshal(id, Dest#destination_DestinationParams.id),
-        realm => Dest#destination_DestinationParams.realm,
-        party_id => unmarshal(id, Dest#destination_DestinationParams.party_id),
+        id => unmarshal(id, Dest#destination_Destination.id),
+        realm => Dest#destination_Destination.realm,
+        party_id => unmarshal(id, Dest#destination_Destination.party_id),
         resource => unmarshal(resource, Dest#destination_Destination.resource),
         name => unmarshal(string, Dest#destination_Destination.name),
         created_at => maybe_unmarshal(timestamp_ms, Dest#destination_Destination.created_at),

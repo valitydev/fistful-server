@@ -15,7 +15,6 @@
 -type wallet_id() :: dmsl_domain_thrift:'WalletID'().
 -type wallet() :: dmsl_domain_thrift:'WalletConfig'().
 -type terms() :: dmsl_domain_thrift:'TermSet'().
--type varset() :: dmsl_payproc_thrift:'Varset'().
 -type account_id() :: dmsl_domain_thrift:'AccountID'().
 -type realm() :: ff_payment_institution:realm().
 -type attempt_limit() :: integer().
@@ -26,11 +25,6 @@
 -type validate_deposit_creation_error() ::
     currency_validation_error()
     | {bad_deposit_amount, Cash :: cash()}.
-
--type get_terms_error() ::
-    {party_not_found, id()}
-    | {contract_not_found, id()}
-    | {party_not_exists_yet, id()}.
 
 -type validate_destination_creation_error() ::
     withdrawal_method_validation_error().
@@ -46,7 +40,6 @@
 -export_type([wallet/0]).
 -export_type([validate_deposit_creation_error/0]).
 -export_type([validate_account_creation_error/0]).
--export_type([get_terms_error/0]).
 -export_type([validate_destination_creation_error/0]).
 -export_type([validate_withdrawal_creation_error/0]).
 -export_type([withdrawal_method_validation_error/0]).
@@ -229,7 +222,7 @@ is_wallet_accessible(_) ->
 
 %%
 
--spec get_terms(domain_revision(), wallet(), varset() | hg_varset:varset()) -> {ok, terms()} | {error, get_terms_error()}.
+-spec get_terms(domain_revision(), wallet(), ff_varset:varset()) -> terms() | no_return().
 get_terms(DomainRevision, #domain_WalletConfig{terms = Ref}, Varset) ->
     DomainVarset = ff_varset:encode(Varset),
     Args = {Ref, DomainRevision, DomainVarset},

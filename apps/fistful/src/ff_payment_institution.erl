@@ -74,7 +74,7 @@ get(PaymentInstitutionID, VS, DomainRevision) ->
     get(ref(PaymentInstitutionID), VS, DomainRevision).
 
 -spec get_realm(payinst_ref(), domain_revision()) ->
-    {ok, payment_institution()}
+    {ok, realm()}
     | {error, notfound}.
 get_realm(Ref, DomainRevision) ->
     do(fun() ->

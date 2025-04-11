@@ -98,7 +98,7 @@ decode(ID, #domain_Provider{
     terms = Terms,
     accounts = Accounts
 }, DomainRevision) ->
-    Realm = ff_payment_institution:get_realm(PaymentInstitutionRef, DomainRevision),
+    {ok, Realm} = ff_payment_institution:get_realm(PaymentInstitutionRef, DomainRevision),
     genlib_map:compact(
         maps:merge(
             #{

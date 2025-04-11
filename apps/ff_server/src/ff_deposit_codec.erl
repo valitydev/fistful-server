@@ -15,6 +15,7 @@
 marshal_deposit_state(DepositState, Context) ->
     #deposit_DepositState{
         id = marshal(id, ff_deposit:id(DepositState)),
+        party_id = marshal(id, ff_deposit:party_id(DepositState)),
         body = marshal(cash, ff_deposit:negative_body(DepositState)),
         status = maybe_marshal(status, ff_deposit:status(DepositState)),
         wallet_id = marshal(id, ff_deposit:wallet_id(DepositState)),
@@ -54,6 +55,7 @@ marshal(change, {limit_check, Details}) ->
 marshal(deposit, Deposit) ->
     #deposit_Deposit{
         id = marshal(id, ff_deposit:id(Deposit)),
+        party_id = marshal(id, ff_deposit:party_id(Deposit)),
         body = marshal(cash, ff_deposit:body(Deposit)),
         wallet_id = marshal(id, ff_deposit:wallet_id(Deposit)),
         source_id = marshal(id, ff_deposit:source_id(Deposit)),
@@ -66,6 +68,7 @@ marshal(deposit, Deposit) ->
 marshal(deposit_params, DepositParams) ->
     #deposit_DepositParams{
         id = marshal(id, maps:get(id, DepositParams)),
+        party_id = marshal(id, maps:get(party_id, DepositParams)),
         body = marshal(cash, maps:get(body, DepositParams)),
         wallet_id = marshal(id, maps:get(wallet_id, DepositParams)),
         source_id = marshal(id, maps:get(source_id, DepositParams)),
@@ -106,12 +109,12 @@ unmarshal(status, Status) ->
 unmarshal(deposit, Deposit) ->
     genlib_map:compact(#{
         version => 3,
-        transfer_type => deposit,
         id => unmarshal(id, Deposit#deposit_Deposit.id),
         body => unmarshal(cash, Deposit#deposit_Deposit.body),
         params => genlib_map:compact(#{
             wallet_id => unmarshal(id, Deposit#deposit_Deposit.wallet_id),
-            source_id => unmarshal(id, Deposit#deposit_Deposit.source_id)
+            source_id => unmarshal(id, Deposit#deposit_Deposit.source_id),
+            party_id => unmarshal(id, Deposit#deposit_Deposit.party_id)
         }),
         external_id => maybe_unmarshal(id, Deposit#deposit_Deposit.external_id),
         domain_revision => maybe_unmarshal(domain_revision, Deposit#deposit_Deposit.domain_revision),

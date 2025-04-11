@@ -24,6 +24,7 @@
 -spec unmarshal_quote_params(fistful_wthd_thrift:'QuoteParams'()) -> ff_withdrawal:quote_params().
 unmarshal_quote_params(Params) ->
     genlib_map:compact(#{
+        party_id => unmarshal(id, Params#wthd_QuoteParams.party_id),
         wallet_id => unmarshal(id, Params#wthd_QuoteParams.wallet_id),
         currency_from => unmarshal(currency_ref, Params#wthd_QuoteParams.currency_from),
         currency_to => unmarshal(currency_ref, Params#wthd_QuoteParams.currency_to),
@@ -35,6 +36,7 @@ unmarshal_quote_params(Params) ->
 -spec marshal_withdrawal_params(ff_withdrawal:params()) -> fistful_wthd_thrift:'WithdrawalParams'().
 marshal_withdrawal_params(Params) ->
     #wthd_WithdrawalParams{
+        party_id = marshal(id, maps:get(party_id, Params)),
         id = marshal(id, maps:get(id, Params)),
         wallet_id = marshal(id, maps:get(wallet_id, Params)),
         destination_id = marshal(id, maps:get(destination_id, Params)),
@@ -67,6 +69,7 @@ marshal_withdrawal_state(WithdrawalState, Context) ->
         body = marshal(cash, ff_withdrawal:body(WithdrawalState)),
         wallet_id = marshal(id, ff_withdrawal:wallet_id(WithdrawalState)),
         destination_id = marshal(id, ff_withdrawal:destination_id(WithdrawalState)),
+        party_id = marshal(id, ff_withdrawal:party_id(WithdrawalState)),
         route = maybe_marshal(route, ff_withdrawal:route(WithdrawalState)),
         external_id = maybe_marshal(id, ff_withdrawal:external_id(WithdrawalState)),
         domain_revision = maybe_marshal(domain_revision, DomainRevision),
@@ -135,6 +138,7 @@ marshal(validation_status, V) when V =:= valid; V =:= invalid ->
 marshal(withdrawal, Withdrawal) ->
     #wthd_Withdrawal{
         id = marshal(id, ff_withdrawal:id(Withdrawal)),
+        party_id = marshal(id, ff_withdrawal:party_id(Withdrawal)),
         body = marshal(cash, ff_withdrawal:body(Withdrawal)),
         wallet_id = marshal(id, ff_withdrawal:wallet_id(Withdrawal)),
         destination_id = marshal(id, ff_withdrawal:destination_id(Withdrawal)),
@@ -257,10 +261,12 @@ unmarshal(validation_result, {personal, Validation}) ->
 unmarshal(validation_status, V) when V =:= valid; V =:= invalid ->
     V;
 unmarshal(withdrawal, #wthd_Withdrawal{} = Withdrawal) ->
-    ff_withdrawal:gen(#{
+    genlib_map:compact(#{
+        version => 4,
         id => unmarshal(id, Withdrawal#wthd_Withdrawal.id),
         body => unmarshal(cash, Withdrawal#wthd_Withdrawal.body),
         params => genlib_map:compact(#{
+            party_id => unmarshal(id, Withdrawal#wthd_Withdrawal.party_id),
             wallet_id => unmarshal(id, Withdrawal#wthd_Withdrawal.wallet_id),
             destination_id => unmarshal(id, Withdrawal#wthd_Withdrawal.destination_id),
             quote => maybe_unmarshal(quote_state, Withdrawal#wthd_Withdrawal.quote)
@@ -269,7 +275,6 @@ unmarshal(withdrawal, #wthd_Withdrawal{} = Withdrawal) ->
         external_id => maybe_unmarshal(id, Withdrawal#wthd_Withdrawal.external_id),
         domain_revision => maybe_unmarshal(domain_revision, Withdrawal#wthd_Withdrawal.domain_revision),
         created_at => maybe_unmarshal(timestamp_ms, Withdrawal#wthd_Withdrawal.created_at),
-        transfer_type => withdrawal,
         metadata => maybe_unmarshal(ctx, Withdrawal#wthd_Withdrawal.metadata)
     });
 unmarshal(route, Route) ->
