@@ -125,6 +125,7 @@ unmarshal(deposit, Deposit) ->
 unmarshal(deposit_params, DepositParams) ->
     genlib_map:compact(#{
         id => unmarshal(id, DepositParams#deposit_DepositParams.id),
+        party_id => unmarshal(id, DepositParams#deposit_DepositParams.party_id),
         body => unmarshal(cash, DepositParams#deposit_DepositParams.body),
         wallet_id => unmarshal(id, DepositParams#deposit_DepositParams.wallet_id),
         source_id => unmarshal(id, DepositParams#deposit_DepositParams.source_id),

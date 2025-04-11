@@ -148,11 +148,11 @@ get_wallet(ID, Party) ->
     get_wallet(ID, Party, get_party_revision()).
 
 -spec get_wallet(wallet_id(), party(), domain_revision()) -> {ok, wallet()} | {error, notfound}.
-get_wallet(ID, #domain_PartyConfig{wallets = Shops}, Revision) ->
+get_wallet(ID, #domain_PartyConfig{wallets = Wallets}, Revision) ->
     Ref = #domain_WalletConfigRef{id = ID},
-    case lists:member(Ref, Shops) of
+    case lists:member(Ref, Wallets) of
         true ->
-            ff_domain_config:object(Revision, {shop_config, Ref});
+            ff_domain_config:object(Revision, {wallet_config, Ref});
         false ->
             {error, notfound}
     end.

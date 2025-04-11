@@ -33,11 +33,8 @@ marshal(final_cash_flow_account, #{
     account := Account,
     type := AccountType
 }) ->
-    #{id := AccountID} = Account,
     #cashflow_FinalCashFlowAccount{
         account_type = marshal(account_type, AccountType),
-        % for compatability, deprecate
-        account_id = marshal(id, AccountID),
         account = ff_codec:marshal(account, Account)
     };
 marshal(account_type, CashflowAccount) ->

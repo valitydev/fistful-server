@@ -49,6 +49,7 @@ marshal_withdrawal_params(Params) ->
 unmarshal_withdrawal_params(Params) ->
     genlib_map:compact(#{
         id => unmarshal(id, Params#wthd_WithdrawalParams.id),
+        party_id => unmarshal(id, Params#wthd_WithdrawalParams.party_id),
         wallet_id => unmarshal(id, Params#wthd_WithdrawalParams.wallet_id),
         destination_id => unmarshal(id, Params#wthd_WithdrawalParams.destination_id),
         body => unmarshal(cash, Params#wthd_WithdrawalParams.body),

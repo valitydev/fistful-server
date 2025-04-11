@@ -5,7 +5,7 @@
 -module(ct_domain).
 
 -export([create_party/1]).
--export([create_wallet/4]).
+-export([create_wallet/5]).
 
 -export([currency/1]).
 -export([category/3]).
@@ -42,10 +42,10 @@
 -type object() :: dmsl_domain_thrift:'DomainObject'().
 
 -type party_id() :: dmsl_domain_thrift:'PartyID'().
+-type wallet_id() :: dmsl_domain_thrift:'WalletID'().
 -type party() :: dmsl_domain_thrift:'PartyConfig'().
 -type termset_ref() :: dmsl_domain_thrift:'TermSetHierarchyRef'().
 -type payment_inst_ref() :: dmsl_domain_thrift:'PaymentInstitutionRef'().
--type wallet_id() :: dmsl_domain_thrift:'PartyID'().
 -type currency() :: dmsl_domain_thrift:'CurrencySymbolicCode'().
 
 -spec create_party(party_id()) -> party().
@@ -90,10 +90,8 @@ change_party(PartyID, Fun) ->
     ),
     ok.
 
--spec create_wallet(party_id(), currency(), termset_ref(), payment_inst_ref()) -> wallet_id().
-create_wallet(PartyID, Currency, TermsRef, PaymentInstRef) ->
-    WalletID = hg_utils:unique_id(),
-
+-spec create_wallet(wallet_id(), party_id(), currency(), termset_ref(), payment_inst_ref()) -> wallet_id().
+create_wallet(WalletID, PartyID, Currency, TermsRef, PaymentInstRef) ->
     % Создаем счета
     {ok, SettlementID} = ff_accounting:create_account(Currency, atom_to_binary(test)),
 
@@ -144,28 +142,28 @@ create_wallet(PartyID, Currency, TermsRef, PaymentInstRef) ->
 -spec withdrawal_provider(
     ?DTP('ProviderRef'),
     ?DTP('ProxyRef'),
-    binary(),
+    ?DTP('PaymentInstitutionRealm'),
     ?DTP('ProvisionTermSet') | undefined
 ) -> object().
-withdrawal_provider(Ref, ProxyRef, IdentityID, TermSet) ->
+withdrawal_provider(Ref, ProxyRef, Realm, TermSet) ->
     {ok, AccountID} = ct_helper:create_account(<<"RUB">>),
-    withdrawal_provider(AccountID, Ref, ProxyRef, IdentityID, TermSet).
+    withdrawal_provider(AccountID, Ref, ProxyRef, Realm, TermSet).
 
 -spec withdrawal_provider(
     ff_account:account_id(),
     ?DTP('ProviderRef'),
     ?DTP('ProxyRef'),
-    binary(),
+    ?DTP('PaymentInstitutionRealm'),
     ?DTP('ProvisionTermSet') | undefined
 ) -> object().
-withdrawal_provider(AccountID, ?prv(ID) = Ref, ProxyRef, IdentityID, TermSet) ->
+withdrawal_provider(AccountID, ?prv(ID) = Ref, ProxyRef, Realm, TermSet) ->
     {provider, #domain_ProviderObject{
         ref = Ref,
         data = #domain_Provider{
             name = genlib:format("Withdrawal provider #~B", [ID]),
             description = <<>>,
             proxy = #domain_Proxy{ref = ProxyRef, additional = #{}},
-            identity = IdentityID,
+            realm = Realm,
             terms = TermSet,
             accounts = #{
                 ?cur(<<"RUB">>) => #domain_ProviderAccount{settlement = AccountID}

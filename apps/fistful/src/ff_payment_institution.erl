@@ -12,7 +12,6 @@
     id := id(),
     realm := realm(),
     system_accounts := dmsl_domain_thrift:'SystemAccountSetSelector'(),
-    identity := binary(),
     withdrawal_routing_rules := dmsl_domain_thrift:'RoutingRules'(),
     payment_system => dmsl_domain_thrift:'PaymentSystemSelector'()
 }.
@@ -108,38 +107,38 @@ payment_system(_PaymentInstitution) ->
     | {error, term()}.
 system_accounts(PaymentInstitution, DomainRevision) ->
     #{
-        identity := Identity,
+        realm := Realm,
         system_accounts := SystemAccountSetSelector
     } = PaymentInstitution,
     do(fun() ->
         SystemAccountSetRef = unwrap(get_selector_value(system_accounts, SystemAccountSetSelector)),
         SystemAccountSet = unwrap(ff_domain_config:object(DomainRevision, {system_account_set, SystemAccountSetRef})),
-        decode_system_account_set(Identity, SystemAccountSet)
+        decode_system_account_set(SystemAccountSet, Realm)
     end).
 
 %%
 
 decode(ID, #domain_PaymentInstitution{
     wallet_system_account_set = SystemAccounts,
-    identity = Identity,
     withdrawal_routing_rules = WithdrawalRoutingRules,
-    payment_system = PaymentSystem
+    payment_system = PaymentSystem,
+    realm = Realm
 }) ->
     genlib_map:compact(#{
         id => ID,
+        realm => Realm,
         system_accounts => SystemAccounts,
-        identity => Identity,
         withdrawal_routing_rules => WithdrawalRoutingRules,
         payment_system => PaymentSystem
     }).
 
-decode_system_account_set(Identity, #domain_SystemAccountSet{accounts = Accounts}) ->
+decode_system_account_set(#domain_SystemAccountSet{accounts = Accounts}, Realm) ->
     maps:fold(
         fun(CurrencyRef, SystemAccount, Acc) ->
             #domain_CurrencyRef{symbolic_code = CurrencyID} = CurrencyRef,
             maps:put(
                 CurrencyID,
-                decode_system_account(SystemAccount, CurrencyID, Identity),
+                decode_system_account(SystemAccount, CurrencyID, Realm),
                 Acc
             )
         end,
@@ -147,23 +146,17 @@ decode_system_account_set(Identity, #domain_SystemAccountSet{accounts = Accounts
         Accounts
     ).
 
-decode_system_account(SystemAccount, CurrencyID, Identity) ->
+decode_system_account(SystemAccount, CurrencyID, Realm) ->
     #domain_SystemAccount{
         settlement = SettlementAccountID,
         subagent = SubagentAccountID
     } = SystemAccount,
     #{
-        settlement => decode_account(SettlementAccountID, CurrencyID, Identity),
-        subagent => decode_account(SubagentAccountID, CurrencyID, Identity)
+        settlement => decode_account(SettlementAccountID, CurrencyID, Realm),
+        subagent => decode_account(SubagentAccountID, CurrencyID, Realm)
     }.
 
-decode_account(AccountID, CurrencyID, Identity) when AccountID =/= undefined ->
-    #{
-        % FIXME
-        id => Identity,
-        identity => Identity,
-        currency => CurrencyID,
-        accounter_account_id => AccountID
-    };
+decode_account(AccountID, CurrencyID, Realm) when AccountID =/= undefined ->
+    ff_account:build(Realm, AccountID, CurrencyID);
 decode_account(undefined, _, _) ->
     undefined.

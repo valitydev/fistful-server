@@ -87,18 +87,17 @@ ref(ID) ->
 get(ID, DomainRevision) ->
     do(fun() ->
         Provider = unwrap(ff_domain_config:object(DomainRevision, {provider, ref(ID)})),
-        decode(ID, Provider, DomainRevision)
+        decode(ID, Provider)
     end).
 
 %%
 
 decode(ID, #domain_Provider{
-    payment_institution = PaymentInstitutionRef,
+    realm = Realm,
     proxy = Proxy,
     terms = Terms,
     accounts = Accounts
-}, DomainRevision) ->
-    {ok, Realm} = ff_payment_institution:get_realm(PaymentInstitutionRef, DomainRevision),
+}) ->
     genlib_map:compact(
         maps:merge(
             #{
