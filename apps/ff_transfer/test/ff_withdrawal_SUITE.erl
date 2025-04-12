@@ -187,7 +187,7 @@ session_fail_test(_C) ->
     ),
     _ = ct_objects:create_deposit(PartyID, WalletID, maps:get(source_id, Env), Body),
     ok = ct_objects:await_wallet_balance(Body, WalletID),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         party_id => PartyID,
@@ -211,7 +211,7 @@ session_fail_test(_C) ->
 -spec quote_fail_test(config()) -> test_return().
 quote_fail_test(_C) ->
     Env = ct_objects:prepare_standard_environment(ct_objects:build_default_ctx()),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         party_id => maps:get(party_id, Env),
@@ -240,7 +240,7 @@ route_not_found_fail_test(C) ->
         destination_id := DestinationID,
         party_id := PartyID
     } = prepare_standard_environment(Cash, <<"USD_COUNTRY">>, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -260,7 +260,7 @@ provider_operations_forbidden_fail_test(C) ->
         destination_id := DestinationID,
         party_id := PartyID
     } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -280,7 +280,7 @@ misconfigured_terminal_fail_test(C) ->
         destination_id := DestinationID,
         party_id := PartyID
     } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -300,7 +300,7 @@ limit_check_fail_test(C) ->
         destination_id := DestinationID,
         party_id := PartyID
     } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -329,7 +329,7 @@ create_cashlimit_validation_error_test(C) ->
         destination_id := DestinationID,
         party_id := PartyID
     } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -350,7 +350,7 @@ create_wallet_currency_validation_error_test(C) ->
         party_id := PartyID
     } = prepare_standard_environment(Cash, C),
     WalletID = ct_objects:create_wallet(PartyID, <<"USD">>, #domain_TermSetHierarchyRef{id = 1}, #domain_PaymentInstitutionRef{id = 1}),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         party_id => PartyID,
@@ -369,7 +369,7 @@ create_destination_currency_validation_error_test(C) ->
         destination_id := DestinationID,
         party_id := PartyID
     } = prepare_standard_environment(Cash, <<"USD_CURRENCY">>, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -388,7 +388,7 @@ create_currency_validation_error_test(C) ->
         destination_id := DestinationID,
         party_id := PartyID
     } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -417,7 +417,7 @@ create_realms_mismatch_error_test(C) ->
     SourceID = ct_objects:create_source(PartyID, <<"RUB">>, test),
     _ = ct_objects:create_deposit(PartyID, WalletID, SourceID, Cash),
     ok = ct_objects:await_wallet_balance(Cash, WalletID),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         party_id => PartyID,
@@ -436,7 +436,7 @@ create_destination_resource_no_bindata_fail_test(C) ->
         destination_id := DestinationID,
         party_id := PartyID
     } = prepare_standard_environment(Cash, <<"TEST_NOTFOUND">>, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -458,7 +458,7 @@ create_destination_resource_no_bindata_ok_test(C) ->
         destination_id := DestinationID,
         party_id := PartyID
     } = prepare_standard_environment(Cash, <<"TEST_NOTFOUND">>, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -476,7 +476,7 @@ create_destination_notfound_test(C) ->
         wallet_id := WalletID,
         party_id := PartyID
     } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => <<"unknown_destination">>,
@@ -494,7 +494,7 @@ create_wallet_notfound_test(C) ->
         destination_id := DestinationID,
         party_id := PartyID
     } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -513,7 +513,7 @@ create_ok_test(C) ->
         destination_id := DestinationID,
         party_id := PartyID
     } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -539,7 +539,7 @@ create_with_generic_ok_test(C) ->
         party_id := PartyID
     } = prepare_standard_environment(Cash, C),
     DestinationID = create_generic_destination(<<"IND">>, PartyID, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -565,7 +565,7 @@ quote_ok_test(C) ->
         destination_id := DestinationID,
         party_id := PartyID
     } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -629,7 +629,7 @@ preserve_revisions_test(C) ->
         destination_id := DestinationID,
         party_id := PartyID
     } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -651,7 +651,7 @@ use_quote_revisions_test(C) ->
         wallet_id := WalletID,
         destination_id := DestinationID
     } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     Time = ff_time:now(),
     DomainRevision = ff_domain_config:head(),
     _ = ct_domain_config:bump_revision(),
@@ -686,7 +686,7 @@ force_status_change_test(C) ->
         destination_id := DestinationID,
         party_id := PartyID
     } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -740,7 +740,7 @@ provider_callback_test(C) ->
         destination_id := DestinationID,
         party_id := PartyID
     } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -786,7 +786,7 @@ session_repair_test(C) ->
         destination_id := DestinationID,
         party_id := PartyID
     } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -825,7 +825,7 @@ provider_terminal_terms_merging_test(C) ->
         party_id := PartyID
     } = prepare_standard_environment({601, <<"RUB">>}, C),
     ProduceWithdrawal = fun(Cash) ->
-        WithdrawalID = generate_id(),
+        WithdrawalID = genlib:bsuuid(),
         WithdrawalParams = #{
             id => WithdrawalID,
             destination_id => DestinationID,
@@ -958,11 +958,8 @@ await_wallet_balance({Amount, Currency}, ID) ->
 get_wallet_balance(ID) ->
     ct_objects:get_wallet_balance(ID).
 
-generate_id() ->
-    ff_id:generate_snowflake_id().
-
 create_crypto_destination(PartyID, _C) ->
-    ID = generate_id(),
+    ID = genlib:bsuuid(),
     Resource =
         {crypto_wallet, #{
             crypto_wallet => #{
@@ -975,7 +972,7 @@ create_crypto_destination(PartyID, _C) ->
     ID.
 
 create_generic_destination(Provider, IID, _C) ->
-    ID = generate_id(),
+    ID = genlib:bsuuid(),
     Resource =
         {generic, #{
             generic => #{

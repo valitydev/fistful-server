@@ -169,7 +169,7 @@ limit_success(C) ->
         wallet_id := WalletID,
         destination_id := DestinationID
     } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -212,7 +212,7 @@ sender_receiver_limit_success(C) ->
     },
     MarshaledAuthData = ff_adapter_withdrawal_codec:maybe_marshal(auth_data, AuthData),
     DestinationID = create_destination(PartyID, Currency, AuthData, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -241,7 +241,7 @@ limit_overflow(C) ->
         wallet_id := WalletID,
         destination_id := DestinationID
     } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -297,7 +297,7 @@ limit_hold_error_two_routes_failure(C) ->
         wallet_id := WalletID,
         destination_id := DestinationID
     } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -338,7 +338,7 @@ limit_hold_error(C) ->
         wallet_id := WalletID,
         destination_id := DestinationID
     } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -357,7 +357,7 @@ choose_provider_without_limit_overflow(C) ->
         wallet_id := WalletID,
         destination_id := DestinationID
     } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -389,7 +389,7 @@ provider_limits_exhaust_orderly(C) ->
     } = prepare_standard_environment(TotalCash, C),
 
     %% First withdrawal goes to limit 1 and spents half of its amount
-    WithdrawalID1 = generate_id(),
+    WithdrawalID1 = genlib:bsuuid(),
     WithdrawalParams1 = #{
         id => WithdrawalID1,
         destination_id => DestinationID,
@@ -409,7 +409,7 @@ provider_limits_exhaust_orderly(C) ->
     ),
 
     %% Second withdrawal goes to limit 2 as limit 1 doesn't have enough and spents all its amount
-    WithdrawalID2 = generate_id(),
+    WithdrawalID2 = genlib:bsuuid(),
     WithdrawalParams2 = #{
         id => WithdrawalID2,
         destination_id => DestinationID,
@@ -429,7 +429,7 @@ provider_limits_exhaust_orderly(C) ->
     ),
 
     %% Third withdrawal goes to limit 1 and spents all its amount
-    WithdrawalID3 = generate_id(),
+    WithdrawalID3 = genlib:bsuuid(),
     WithdrawalParams3 = #{
         id => WithdrawalID3,
         destination_id => DestinationID,
@@ -449,7 +449,7 @@ provider_limits_exhaust_orderly(C) ->
     ),
 
     %% Last withdrawal can't find route cause all limits are drained
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -469,7 +469,7 @@ provider_retry(C) ->
         wallet_id := WalletID,
         destination_id := DestinationID
     } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -502,7 +502,7 @@ await_provider_retry(FirstAmount, SecondAmount, TotalAmount, C) ->
         wallet_id := WalletID,
         destination_id := DestinationID
     } = prepare_standard_environment({TotalAmount, Currency}, C),
-    WithdrawalID1 = generate_id(),
+    WithdrawalID1 = genlib:bsuuid(),
     WithdrawalParams1 = #{
         id => WithdrawalID1,
         destination_id => DestinationID,
@@ -510,7 +510,7 @@ await_provider_retry(FirstAmount, SecondAmount, TotalAmount, C) ->
         body => {FirstAmount, Currency},
         external_id => WithdrawalID1
     },
-    WithdrawalID2 = generate_id(),
+    WithdrawalID2 = genlib:bsuuid(),
     WithdrawalParams2 = #{
         id => WithdrawalID2,
         destination_id => DestinationID,
@@ -654,14 +654,11 @@ get_account_balance(Account) ->
     {ok, {Amounts, Currency}} = ff_accounting:balance(Account),
     {ff_indef:current(Amounts), ff_indef:to_range(Amounts), Currency}.
 
-generate_id() ->
-    ff_id:generate_snowflake_id().
-
 create_destination(IID, Currency, C) ->
     create_destination(IID, Currency, undefined, C).
 
 create_destination(IID, Currency, AuthData, C) ->
-    ID = generate_id(),
+    ID = genlib:bsuuid(),
     StoreSource = ct_cardstore:bank_card(<<"4150399999000900">>, {12, 2025}, C),
     Resource = {bank_card, #{bank_card => StoreSource}},
     Params = genlib_map:compact(#{
@@ -684,7 +681,7 @@ create_destination(IID, Currency, AuthData, C) ->
     ID.
 
 set_wallet_balance({Amount, Currency}, ID) ->
-    TransactionID = generate_id(),
+    TransactionID = genlib:bsuuid(),
     {ok, Machine} = ff_wallet_machine:get(ID),
     Account = ff_wallet:account(ff_wallet_machine:wallet(Machine)),
     AccounterID = ff_account:accounter_account_id(Account),

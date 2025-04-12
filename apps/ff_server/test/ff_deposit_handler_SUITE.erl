@@ -107,7 +107,7 @@ create_bad_amount_test(_C) ->
         source_id := SourceID
     } = ct_objects:prepare_standard_environment(ct_objects:build_default_ctx()),
     Params = #deposit_DepositParams{
-        id = generate_id(),
+        id = genlib:bsuuid(),
         party_id = PartyID,
         body = Body,
         source_id = SourceID,
@@ -127,7 +127,7 @@ create_currency_validation_error_test(_C) ->
         source_id := SourceID
     } = ct_objects:prepare_standard_environment(ct_objects:build_default_ctx()),
     Params = #deposit_DepositParams{
-        id = generate_id(),
+        id = genlib:bsuuid(),
         party_id = PartyID,
         body = make_cash({5000, <<"EUR">>}),
         source_id = SourceID,
@@ -151,7 +151,7 @@ create_source_notfound_test(_C) ->
         wallet_id := WalletID
     } = ct_objects:prepare_standard_environment(ct_objects:build_default_ctx()),
     Params = #deposit_DepositParams{
-        id = generate_id(),
+        id = genlib:bsuuid(),
         party_id = PartyID,
         body = Body,
         source_id = <<"unknown_source">>,
@@ -169,7 +169,7 @@ create_wallet_notfound_test(_C) ->
         source_id := SourceID
     } = ct_objects:prepare_standard_environment(ct_objects:build_default_ctx()),
     Params = #deposit_DepositParams{
-        id = generate_id(),
+        id = genlib:bsuuid(),
         party_id = PartyID,
         body = Body,
         source_id = SourceID,
@@ -187,9 +187,9 @@ create_ok_test(_C) ->
         wallet_id := WalletID,
         source_id := SourceID
     } = ct_objects:prepare_standard_environment(ct_objects:build_default_ctx()),
-    DepositID = generate_id(),
-    ExternalID = generate_id(),
-    Context = #{<<"NS">> => #{generate_id() => generate_id()}},
+    DepositID = genlib:bsuuid(),
+    ExternalID = genlib:bsuuid(),
+    Context = #{<<"NS">> => #{genlib:bsuuid() => genlib:bsuuid()}},
     Metadata = ff_entity_context_codec:marshal(#{<<"metadata">> => #{<<"some key">> => <<"some data">>}}),
     Description = <<"testDesc">>,
     Params = #deposit_DepositParams{
@@ -228,9 +228,9 @@ create_negative_ok_test(_C) ->
         wallet_id := WalletID,
         source_id := SourceID
     } = ct_objects:prepare_standard_environment(ct_objects:build_default_ctx()),
-    DepositID = generate_id(),
-    ExternalID = generate_id(),
-    Context = #{<<"NS">> => #{generate_id() => generate_id()}},
+    DepositID = genlib:bsuuid(),
+    ExternalID = genlib:bsuuid(),
+    Context = #{<<"NS">> => #{genlib:bsuuid() => genlib:bsuuid()}},
     Metadata = ff_entity_context_codec:marshal(#{<<"metadata">> => #{<<"some key">> => <<"some data">>}}),
     Description = <<"testDesc">>,
     Params = #deposit_DepositParams{
@@ -303,9 +303,6 @@ call_deposit(Fun, Args) ->
         url => "http://localhost:8022" ++ ff_services:get_service_path(ServiceName)
     }),
     ff_woody_client:call(Client, Request).
-
-generate_id() ->
-    ff_id:generate_snowflake_id().
 
 make_cash({Amount, Currency}) ->
     #'fistful_base_Cash'{

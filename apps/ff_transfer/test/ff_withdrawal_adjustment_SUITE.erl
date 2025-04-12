@@ -165,7 +165,7 @@ adjustment_can_change_status_to_succeeded_test(C) ->
     } = prepare_standard_environment({100, <<"RUB">>}, C),
     ?assertEqual(?FINAL_BALANCE(0, <<"RUB">>), get_wallet_balance(WalletID)),
     ?assertEqual(?FINAL_BALANCE(80, <<"RUB">>), get_destination_balance(DestinationID)),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     Params = #{
         id => WithdrawalID,
         wallet_id => WalletID,
@@ -189,7 +189,7 @@ adjustment_can_not_change_status_to_pending_test(C) ->
         withdrawal_id := WithdrawalID
     } = prepare_standard_environment({100, <<"RUB">>}, C),
     Result = ff_withdrawal_machine:start_adjustment(WithdrawalID, #{
-        id => generate_id(),
+        id => genlib:bsuuid(),
         change => {change_status, pending}
     }),
     ?assertMatch({error, {invalid_status_change, {unavailable_status, pending}}}, Result).
@@ -200,7 +200,7 @@ adjustment_can_not_change_status_to_same(C) ->
         withdrawal_id := WithdrawalID
     } = prepare_standard_environment({100, <<"RUB">>}, C),
     Result = ff_withdrawal_machine:start_adjustment(WithdrawalID, #{
-        id => generate_id(),
+        id => genlib:bsuuid(),
         change => {change_status, succeeded}
     }),
     ?assertMatch({error, {invalid_status_change, {already_has_status, succeeded}}}, Result).
@@ -244,7 +244,7 @@ adjustment_idempotency_test(C) ->
     ?assertEqual(?FINAL_BALANCE(0, <<"RUB">>), get_wallet_balance(WalletID)),
     ?assertEqual(?FINAL_BALANCE(80, <<"RUB">>), get_destination_balance(DestinationID)),
     Params = #{
-        id => generate_id(),
+        id => genlib:bsuuid(),
         change => {change_status, {failed, #{code => <<"test">>}}}
     },
     _ = process_adjustment(WithdrawalID, Params),
@@ -262,7 +262,7 @@ no_parallel_adjustments_test(C) ->
         withdrawal_id := WithdrawalID
     } = prepare_standard_environment({100, <<"RUB">>}, C),
     Withdrawal0 = get_withdrawal(WithdrawalID),
-    AdjustmentID0 = generate_id(),
+    AdjustmentID0 = genlib:bsuuid(),
     Params0 = #{
         id => AdjustmentID0,
         change => {change_status, {failed, #{code => <<"test">>}}}
@@ -270,7 +270,7 @@ no_parallel_adjustments_test(C) ->
     {ok, {_, Events0}} = ff_withdrawal:start_adjustment(Params0, Withdrawal0),
     Withdrawal1 = lists:foldl(fun ff_withdrawal:apply_event/2, Withdrawal0, Events0),
     Params1 = #{
-        id => generate_id(),
+        id => genlib:bsuuid(),
         change => {change_status, succeeded}
     },
     Result = ff_withdrawal:start_adjustment(Params1, Withdrawal1),
@@ -283,14 +283,14 @@ no_pending_withdrawal_adjustments_test(C) ->
         destination_id := DestinationID
     } = prepare_standard_environment({100, <<"RUB">>}, C),
     {ok, Events0} = ff_withdrawal:create(#{
-        id => generate_id(),
+        id => genlib:bsuuid(),
         wallet_id => WalletID,
         destination_id => DestinationID,
         body => {100, <<"RUB">>}
     }),
     Withdrawal1 = lists:foldl(fun ff_withdrawal:apply_event/2, undefined, Events0),
     Params1 = #{
-        id => generate_id(),
+        id => genlib:bsuuid(),
         change => {change_status, succeeded}
     },
     Result = ff_withdrawal:start_adjustment(Params1, Withdrawal1),
@@ -300,7 +300,7 @@ no_pending_withdrawal_adjustments_test(C) ->
 unknown_withdrawal_test(_C) ->
     WithdrawalID = <<"unknown_withdrawal">>,
     Result = ff_withdrawal_machine:start_adjustment(WithdrawalID, #{
-        id => generate_id(),
+        id => genlib:bsuuid(),
         change => {change_status, pending}
     }),
     ?assertMatch({error, {unknown_withdrawal, WithdrawalID}}, Result).
@@ -313,7 +313,7 @@ adjustment_can_not_change_domain_revision_to_same(C) ->
     Withdrawal = get_withdrawal(WithdrawalID),
     DomainRevision = ff_withdrawal:domain_revision(Withdrawal),
     Result = ff_withdrawal_machine:start_adjustment(WithdrawalID, #{
-        id => generate_id(),
+        id => genlib:bsuuid(),
         change => {change_cash_flow, DomainRevision}
     }),
     ?assertMatch({error, {invalid_cash_flow_change, {already_has_domain_revision, DomainRevision}}}, Result).
@@ -324,7 +324,7 @@ adjustment_can_not_change_domain_revision_with_failed_status(C) ->
         wallet_id := WalletID,
         destination_id := DestinationID
     } = prepare_standard_environment({100, <<"RUB">>}, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     Params = #{
         id => WithdrawalID,
         wallet_id => WalletID,
@@ -334,7 +334,7 @@ adjustment_can_not_change_domain_revision_with_failed_status(C) ->
     ok = ff_withdrawal_machine:create(Params, ff_entity_context:new()),
     ?assertMatch({failed, _}, await_final_withdrawal_status(WithdrawalID)),
     Result = ff_withdrawal_machine:start_adjustment(WithdrawalID, #{
-        id => generate_id(),
+        id => genlib:bsuuid(),
         change => {change_cash_flow, ct_domain_config:head() - 1}
     }),
     ?assertMatch({error, {invalid_cash_flow_change, {unavailable_status, {failed, #{code := _}}}}}, Result).
@@ -399,13 +399,13 @@ get_adjustment(WithdrawalID, AdjustmentID) ->
     Adjustment.
 
 process_withdrawal(WithdrawalParams) ->
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     ok = ff_withdrawal_machine:create(WithdrawalParams#{id => WithdrawalID}, ff_entity_context:new()),
     succeeded = await_final_withdrawal_status(WithdrawalID),
     WithdrawalID.
 
 process_adjustment(WithdrawalID, AdjustmentParams0) ->
-    AdjustmentParams1 = maps:merge(#{id => generate_id()}, AdjustmentParams0),
+    AdjustmentParams1 = maps:merge(#{id => genlib:bsuuid()}, AdjustmentParams0),
     #{id := AdjustmentID} = AdjustmentParams1,
     ok = ff_withdrawal_machine:start_adjustment(WithdrawalID, AdjustmentParams1),
     succeeded = await_final_adjustment_status(WithdrawalID, AdjustmentID),
@@ -514,11 +514,8 @@ get_account_balance(Account) ->
     {ok, {Amounts, Currency}} = ff_accounting:balance(Account),
     {ff_indef:current(Amounts), ff_indef:to_range(Amounts), Currency}.
 
-generate_id() ->
-    ff_id:generate_snowflake_id().
-
 create_destination(IID, C) ->
-    ID = generate_id(),
+    ID = genlib:bsuuid(),
     Resource = {bank_card, #{bank_card => ct_cardstore:bank_card(<<"4150399999000900">>, {12, 2025}, C)}},
     Params = #{id => ID, identity => IID, name => <<"XDesination">>, currency => <<"RUB">>, resource => Resource},
     ok = ff_destination_machine:create(Params, ff_entity_context:new()),
@@ -533,7 +530,7 @@ create_destination(IID, C) ->
     ID.
 
 set_wallet_balance({Amount, Currency}, ID) ->
-    TransactionID = generate_id(),
+    TransactionID = genlib:bsuuid(),
     {ok, Machine} = ff_wallet_machine:get(ID),
     Account = ff_wallet:account(ff_wallet_machine:wallet(Machine)),
     AccounterID = ff_account:accounter_account_id(Account),

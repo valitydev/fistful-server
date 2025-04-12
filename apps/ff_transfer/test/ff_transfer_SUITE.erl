@@ -85,83 +85,93 @@ end_per_testcase(_Name, _C) ->
 %%
 
 -spec get_missing_fails(config()) -> test_return().
--spec deposit_withdrawal_ok(config()) -> test_return().
--spec deposit_withdrawal_to_crypto_wallet(config()) -> test_return().
--spec deposit_withdrawal_to_digital_wallet(config()) -> test_return().
--spec deposit_withdrawal_to_generic(config()) -> test_return().
--spec deposit_quote_withdrawal_ok(config()) -> test_return().
-
 get_missing_fails(_C) ->
-    ID = genlib:unique(),
+    ID = genlib:bsuuid(),
     {error, {unknown_withdrawal, ID}} = ff_withdrawal_machine:get(ID).
 
+-spec deposit_withdrawal_ok(config()) -> test_return().
 deposit_withdrawal_ok(C) ->
-    Party = ct_objects:create_party(),
-    WalID = create_wallet(Party, <<"HAHA NO">>, <<"RUB">>, C),
-    ok = ct_objects:await_wallet_balance({0, <<"RUB">>}, WalID),
-    SrcID = ct_objects:create_source(Party, <<"RUB">>),
-    ok = process_deposit(Party, SrcID, WalID),
-    DestID = ct_objects:create_destination(Party, undefined),
+    #{
+        wallet_id := WalID,
+        destination_id := DestID,
+        party_id := Party
+    } = prepare_standard_environment({10000, <<"RUB">>}, C),
     WdrID = process_withdrawal(Party, WalID, DestID),
     Events = get_withdrawal_events(WdrID),
     [1] = route_changes(Events).
 
+-spec deposit_withdrawal_to_crypto_wallet(config()) -> test_return().
 deposit_withdrawal_to_crypto_wallet(C) ->
-    Party = ct_objects:create_party(),
-    WalID = create_wallet(Party, <<"WalletName">>, <<"RUB">>, C),
-    ok = ct_objects:await_wallet_balance({0, <<"RUB">>}, WalID),
-    SrcID = ct_objects:create_source(Party, <<"RUB">>),
-    ok = process_deposit(Party, SrcID, WalID),
+    #{
+        wallet_id := WalID,
+        party_id := Party
+    } = prepare_standard_environment({10000, <<"RUB">>}, C),
     DestID = create_crypto_destination(Party, C),
     WdrID = process_withdrawal(Party, WalID, DestID),
     Events = get_withdrawal_events(WdrID),
     [2] = route_changes(Events).
 
+-spec deposit_withdrawal_to_digital_wallet(config()) -> test_return().
 deposit_withdrawal_to_digital_wallet(C) ->
-    Party = ct_objects:create_party(),
-    WalID = create_wallet(Party, <<"WalletName">>, <<"RUB">>, C),
-    ok = ct_objects:await_wallet_balance({0, <<"RUB">>}, WalID),
-    SrcID = ct_objects:create_source(Party, <<"RUB">>),
-    ok = process_deposit(Party, SrcID, WalID),
+    #{
+        wallet_id := WalID,
+        party_id := Party
+    } = prepare_standard_environment({10000, <<"RUB">>}, C),
     DestID = create_digital_destination(Party, C),
     WdrID = process_withdrawal(Party, WalID, DestID),
     Events = get_withdrawal_events(WdrID),
     [2] = route_changes(Events).
 
+-spec deposit_withdrawal_to_generic(config()) -> test_return().
 deposit_withdrawal_to_generic(C) ->
-    Party = ct_objects:create_party(),
-    WalID = create_wallet(Party, <<"WalletName">>, <<"RUB">>, C),
-    ok = ct_objects:await_wallet_balance({0, <<"RUB">>}, WalID),
-    SrcID = ct_objects:create_source(Party, <<"RUB">>),
-    ok = process_deposit(Party, SrcID, WalID),
+    #{
+        wallet_id := WalID,
+        party_id := Party
+    } = prepare_standard_environment({10000, <<"RUB">>}, C),
     DestID = create_generic_destination(Party, C),
     WdrID = process_withdrawal(Party, WalID, DestID),
     Events = get_withdrawal_events(WdrID),
     [2] = route_changes(Events).
 
+-spec deposit_quote_withdrawal_ok(config()) -> test_return().
 deposit_quote_withdrawal_ok(C) ->
-    Party = ct_objects:create_party(),
-    WalID = create_wallet(Party, <<"HAHA NO">>, <<"RUB">>, C),
-    ok = ct_objects:await_wallet_balance({0, <<"RUB">>}, WalID),
-    SrcID = ct_objects:create_source(Party, <<"RUB">>),
-    ok = process_deposit(Party, SrcID, WalID),
-    DestID = ct_objects:create_destination(Party, undefined),
+    #{
+        wallet_id := WalID,
+        destination_id := DestID,
+        party_id := Party
+    } = prepare_standard_environment({10000, <<"RUB">>}, C),
     WdrID = process_withdrawal(Party, WalID, DestID),
     Events = get_withdrawal_events(WdrID),
     [1] = route_changes(Events).
+
+%% Utils
+
+prepare_standard_environment({Amount, Currency}, C) ->
+    PartyID = ct_objects:create_party(),
+    WalID = create_wallet(PartyID, <<"WalletName">>, Currency, C),
+    ok = ct_objects:await_wallet_balance({0, Currency}, WalID),
+    DestID = ct_objects:create_destination(PartyID, undefined),
+    SrcID = ct_objects:create_source(PartyID, Currency),
+    ok = process_deposit(PartyID, SrcID, WalID, {Amount, Currency}),
+    ok = ct_objects:await_wallet_balance({Amount, Currency}, WalID),
+    #{
+        party_id => PartyID,
+        wallet_id => WalID,
+        destination_id => DestID,
+        source_id => SrcID
+    }.
 
 create_wallet(Party, _Name, Currency, _C) ->
     TermsRef = #domain_TermSetHierarchyRef{id = 1},
     PaymentInstRef = #domain_PaymentInstitutionRef{id = 1},
     ct_objects:create_wallet(Party, Currency, TermsRef, PaymentInstRef).
 
-process_deposit(PartyID, SrcID, WalID) ->
+process_deposit(PartyID, SrcID, WalID, {Amount, Currency}) ->
     Body = #'fistful_base_Cash'{
-        amount = 10000,
-        currency = #'fistful_base_CurrencyRef'{symbolic_code = <<"RUB">>}
+        amount = Amount,
+        currency = #'fistful_base_CurrencyRef'{symbolic_code = Currency}
     },
     {_DepID, _} = ct_objects:create_deposit(PartyID, WalID, SrcID, Body),
-    ok = ct_objects:await_wallet_balance({10000, <<"RUB">>}, WalID),
     ok.
 
 create_crypto_destination(PartyID, _C) ->
@@ -215,13 +225,13 @@ process_withdrawal(PartyID, WalID, DestID, Params) ->
             }
     end,
     WithdrawalParams = #wthd_WithdrawalParams{
-        id = genlib:unique(),
+        id = genlib:bsuuid(),
         party_id = PartyID,
         wallet_id = WalID,
         destination_id = DestID,
         body = Body,
         quote = Quote,
-        external_id = genlib:unique()
+        external_id = genlib:bsuuid()
     },
     Ctx = ff_entity_context_codec:marshal(#{<<"NS">> => #{}}),
     {ok, State} = call_withdrawal('Create', {WithdrawalParams, Ctx}),
@@ -236,19 +246,19 @@ make_cash({Amount, Currency}) ->
         currency = #'fistful_base_CurrencyRef'{symbolic_code = Currency}
     }.
 
+get_withdrawal(WithdrawalID) ->
+    {ok, Machine} = ff_withdrawal_machine:get(WithdrawalID),
+    ff_withdrawal_machine:withdrawal(Machine).
+
+get_withdrawal_status(WithdrawalID) ->
+    ff_withdrawal:status(get_withdrawal(WithdrawalID)).
+
 await_final_withdrawal_status(WithdrawalID) ->
     ct_helper:await(
         succeeded,
         fun() -> get_withdrawal_status(WithdrawalID) end,
         genlib_retry:linear(10, 1000)
     ).
-
-get_withdrawal_status(WithdrawalID) ->
-    ff_withdrawal:status(get_withdrawal(WithdrawalID)).
-
-get_withdrawal(WithdrawalID) ->
-    {ok, Machine} = ff_withdrawal_machine:get(WithdrawalID),
-    ff_withdrawal_machine:withdrawal(Machine).
 
 call_withdrawal(Fun, Args) ->
     Service = {fistful_wthd_thrift, 'Management'},

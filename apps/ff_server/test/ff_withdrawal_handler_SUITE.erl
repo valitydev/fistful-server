@@ -129,8 +129,8 @@ create_withdrawal_and_get_session_ok_test(_C) ->
         wallet_id := WalletID,
         destination_id := DestinationID
     } = ct_objects:prepare_standard_environment(Ctx#{body => Cash}),
-    WithdrawalID = generate_id(),
-    ExternalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
+    ExternalID = genlib:bsuuid(),
     Context = ff_entity_context_codec:marshal(#{<<"NS">> => #{}}),
     Metadata = ff_entity_context_codec:marshal(#{<<"metadata">> => #{<<"some key">> => <<"some data">>}}),
     Params = #wthd_WithdrawalParams{
@@ -158,8 +158,8 @@ session_get_context_test(_C) ->
         wallet_id := WalletID,
         destination_id := DestinationID
     } = ct_objects:prepare_standard_environment(Ctx#{body => Cash}),
-    WithdrawalID = generate_id(),
-    ExternalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
+    ExternalID = genlib:bsuuid(),
     Context = ff_entity_context_codec:marshal(#{<<"NS">> => #{}}),
     Metadata = ff_entity_context_codec:marshal(#{<<"metadata">> => #{<<"some key">> => <<"some data">>}}),
     Params = #wthd_WithdrawalParams{
@@ -187,8 +187,8 @@ session_get_events_test(_C) ->
         wallet_id := WalletID,
         destination_id := DestinationID
     } = ct_objects:prepare_standard_environment(Ctx#{body => Cash}),
-    WithdrawalID = generate_id(),
-    ExternalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
+    ExternalID = genlib:bsuuid(),
     Context = ff_entity_context_codec:marshal(#{<<"NS">> => #{}}),
     Metadata = ff_entity_context_codec:marshal(#{<<"metadata">> => #{<<"some key">> => <<"some data">>}}),
     Params = #wthd_WithdrawalParams{
@@ -229,8 +229,8 @@ create_withdrawal_ok_test(_C) ->
         wallet_id := WalletID,
         destination_id := DestinationID
     } = ct_objects:prepare_standard_environment(Ctx#{body => Cash}),
-    WithdrawalID = generate_id(),
-    ExternalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
+    ExternalID = genlib:bsuuid(),
     Context = ff_entity_context_codec:marshal(#{<<"NS">> => #{}}),
     Metadata = ff_entity_context_codec:marshal(#{<<"metadata">> => #{<<"some key">> => <<"some data">>}}),
     Params = #wthd_WithdrawalParams{
@@ -275,7 +275,7 @@ create_cashlimit_validation_error_test(_C) ->
         destination_id := DestinationID
     } = ct_objects:prepare_standard_environment(ct_objects:build_default_ctx()),
     Params = #wthd_WithdrawalParams{
-        id = generate_id(),
+        id = genlib:bsuuid(),
         party_id = PartyID,
         wallet_id = WalletID,
         destination_id = DestinationID,
@@ -301,7 +301,7 @@ create_currency_validation_error_test(_C) ->
         destination_id := DestinationID
     } = ct_objects:prepare_standard_environment(Ctx),
     Params = #wthd_WithdrawalParams{
-        id = generate_id(),
+        id = genlib:bsuuid(),
         party_id = PartyID,
         wallet_id = WalletID,
         destination_id = DestinationID,
@@ -326,7 +326,7 @@ create_inconsistent_currency_validation_error_test(_C) ->
     DestinationID = ct_objects:create_destination(PartyID, <<"USD_CURRENCY">>),
     
     Params = #wthd_WithdrawalParams{
-        id = generate_id(),
+        id = genlib:bsuuid(),
         party_id = PartyID,
         wallet_id = WalletID,
         destination_id = DestinationID,
@@ -350,7 +350,7 @@ create_destination_resource_no_bindata_fail_test(_C) ->
     WalletID = ct_objects:create_wallet(PartyID, <<"RUB">>, TermsRef, PaymentInstRef),
     DestinationID = ct_objects:create_destination(PartyID, <<"TEST_NOTFOUND">>),
     Params = #wthd_WithdrawalParams{
-        id = generate_id(),
+        id = genlib:bsuuid(),
         party_id = PartyID,
         wallet_id = WalletID,
         destination_id = DestinationID,
@@ -372,7 +372,7 @@ create_destination_resource_no_bindata_ok_test(_C) ->
         destination_id := DestinationID
     } = ct_objects:prepare_standard_environment(Ctx#{body => Cash}),
     Params = #wthd_WithdrawalParams{
-        id = generate_id(),
+        id = genlib:bsuuid(),
         party_id = PartyID,
         wallet_id = WalletID,
         destination_id = DestinationID,
@@ -389,7 +389,7 @@ create_destination_notfound_test(_C) ->
         wallet_id := WalletID
     } = ct_objects:prepare_standard_environment(ct_objects:build_default_ctx()),
     Params = #wthd_WithdrawalParams{
-        id = generate_id(),
+        id = genlib:bsuuid(),
         party_id = PartyID,
         wallet_id = WalletID,
         destination_id = <<"unknown_destination">>,
@@ -421,8 +421,8 @@ create_destination_generic_ok_test(_C) ->
         }
     },
     DestinationID = ct_objects:create_destination_(PartyID, Resource),
-    WithdrawalID = generate_id(),
-    ExternalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
+    ExternalID = genlib:bsuuid(),
     Context = ff_entity_context_codec:marshal(#{<<"NS">> => #{}}),
     Metadata = ff_entity_context_codec:marshal(#{<<"metadata">> => #{<<"some key">> => <<"some data">>}}),
     Params = #wthd_WithdrawalParams{
@@ -467,7 +467,7 @@ create_wallet_notfound_test(_C) ->
         destination_id := DestinationID
     } = ct_objects:prepare_standard_environment(ct_objects:build_default_ctx()),
     Params = #wthd_WithdrawalParams{
-        id = generate_id(),
+        id = genlib:bsuuid(),
         party_id = PartyID,
         wallet_id = <<"unknown_wallet">>,
         destination_id = DestinationID,
@@ -510,8 +510,8 @@ create_adjustment_ok_test(_C) ->
     #{
         withdrawal_id := WithdrawalID
     } = ct_objects:prepare_standard_environment(ct_objects:build_default_ctx()),
-    AdjustmentID = generate_id(),
-    ExternalID = generate_id(),
+    AdjustmentID = genlib:bsuuid(),
+    ExternalID = genlib:bsuuid(),
     Params = #wthd_adj_AdjustmentParams{
         id = AdjustmentID,
         change =
@@ -544,7 +544,7 @@ create_adjustment_unavailable_status_error_test(_C) ->
         withdrawal_id := WithdrawalID
     } = ct_objects:prepare_standard_environment(ct_objects:build_default_ctx()),
     Params = #wthd_adj_AdjustmentParams{
-        id = generate_id(),
+        id = genlib:bsuuid(),
         change =
             {change_status, #wthd_adj_ChangeStatusRequest{
                 new_status = {pending, #wthd_status_Pending{}}
@@ -562,7 +562,7 @@ create_adjustment_already_has_status_error_test(_C) ->
         withdrawal_id := WithdrawalID
     } = ct_objects:prepare_standard_environment(ct_objects:build_default_ctx()),
     Params = #wthd_adj_AdjustmentParams{
-        id = generate_id(),
+        id = genlib:bsuuid(),
         change =
             {change_status, #wthd_adj_ChangeStatusRequest{
                 new_status = {succeeded, #wthd_status_Succeeded{}}
@@ -582,7 +582,7 @@ create_adjustment_already_has_data_revision_error_test(_C) ->
     Withdrawal = get_withdrawal(WithdrawalID),
     DomainRevision = ff_withdrawal:domain_revision(Withdrawal),
     Params = #wthd_adj_AdjustmentParams{
-        id = generate_id(),
+        id = genlib:bsuuid(),
         change =
             {change_cash_flow, #wthd_adj_ChangeCashFlowRequest{
                 domain_revision = DomainRevision
@@ -600,7 +600,7 @@ withdrawal_state_content_test(_C) ->
         withdrawal_id := WithdrawalID
     } = ct_objects:prepare_standard_environment(ct_objects:build_default_ctx()),
     Params = #wthd_adj_AdjustmentParams{
-        id = generate_id(),
+        id = genlib:bsuuid(),
         change =
             {change_status, #wthd_adj_ChangeStatusRequest{
                 new_status = {failed, #wthd_status_Failed{failure = #'fistful_base_Failure'{code = <<"Ooops">>}}}
@@ -644,9 +644,6 @@ get_withdrawal(WithdrawalID) ->
 get_adjustment(WithdrawalID, AdjustmentID) ->
     {ok, Adjustment} = ff_withdrawal:find_adjustment(AdjustmentID, get_withdrawal(WithdrawalID)),
     Adjustment.
-
-generate_id() ->
-    ff_id:generate_snowflake_id().
 
 make_cash({Amount, Currency}) ->
     #'fistful_base_Cash'{

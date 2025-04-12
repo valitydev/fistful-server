@@ -132,7 +132,7 @@ allow_route_test(C) ->
         wallet_id := WalletID,
         destination_id := DestinationID
     } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -151,7 +151,7 @@ not_allow_route_test(C) ->
         wallet_id := WalletID,
         destination_id := DestinationID
     } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -173,7 +173,7 @@ not_reduced_allow_route_test(C) ->
         wallet_id := WalletID,
         destination_id := DestinationID
     } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -195,7 +195,7 @@ not_global_allow_route_test(C) ->
         wallet_id := WalletID,
         destination_id := DestinationID
     } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -217,7 +217,7 @@ adapter_unreachable_route_test(C) ->
         wallet_id := WalletID,
         destination_id := DestinationID
     } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -241,7 +241,7 @@ adapter_unreachable_route_retryable_test(C) ->
         party_id := PartyID
     } = prepare_standard_environment(Cash, C),
     _ = set_retryable_errors(PartyID, [<<"authorization_error">>]),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -267,7 +267,7 @@ adapter_unreachable_quote_test(C) ->
         wallet_id := WalletID,
         destination_id := DestinationID
     } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -298,7 +298,7 @@ attempt_limit_test(C) ->
         wallet_id := WalletID,
         destination_id := DestinationID
     } = prepare_standard_environment(Cash, C),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -322,7 +322,7 @@ termial_priority_test(C) ->
         party_id := PartyID
     } = prepare_standard_environment(Cash, C),
     _ = set_retryable_errors(PartyID, [<<"authorization_error">>]),
-    WithdrawalID = generate_id(),
+    WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
         destination_id => DestinationID,
@@ -428,7 +428,7 @@ get_account_balance(Account) ->
     {ff_indef:current(Amounts), ff_indef:to_range(Amounts), Currency}.
 
 create_destination(IID, Currency, C) ->
-    ID = generate_id(),
+    ID = genlib:bsuuid(),
     {{Y, _, _}, _} = genlib_time:unixtime_to_daytime(erlang:system_time(second)),
     StoreSource = ct_cardstore:bank_card(<<"4150399999000900">>, {12, Y + 1}, C),
     Resource = {bank_card, #{bank_card => StoreSource}},
@@ -444,11 +444,8 @@ create_destination(IID, Currency, C) ->
     ),
     ID.
 
-generate_id() ->
-    ff_id:generate_snowflake_id().
-
 set_wallet_balance({Amount, Currency}, ID) ->
-    TransactionID = generate_id(),
+    TransactionID = genlib:bsuuid(),
     {ok, Machine} = ff_wallet_machine:get(ID),
     Account = ff_wallet:account(ff_wallet_machine:wallet(Machine)),
     AccounterID = ff_account:accounter_account_id(Account),
