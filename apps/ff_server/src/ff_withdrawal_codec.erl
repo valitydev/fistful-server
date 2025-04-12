@@ -369,6 +369,7 @@ withdrawal_symmetry_test() ->
         },
         wallet_id = genlib:unique(),
         destination_id = genlib:unique(),
+        party_id = genlib:unique(),
         external_id = genlib:unique(),
         route = #wthd_Route{
             provider_id = 1,
@@ -390,6 +391,7 @@ withdrawal_params_symmetry_test() ->
         },
         wallet_id = genlib:unique(),
         destination_id = genlib:unique(),
+        party_id = genlib:unique(),
         external_id = undefined
     },
     ?assertEqual(In, marshal_withdrawal_params(unmarshal_withdrawal_params(In))).

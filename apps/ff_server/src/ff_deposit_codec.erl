@@ -167,6 +167,7 @@ deposit_symmetry_test() ->
         },
         source_id = genlib:unique(),
         wallet_id = genlib:unique(),
+        party_id = genlib:unique(),
         external_id = undefined,
         id = genlib:unique(),
         domain_revision = 24500062,
@@ -185,6 +186,7 @@ deposit_params_symmetry_test() ->
         },
         source_id = genlib:unique(),
         wallet_id = genlib:unique(),
+        party_id = genlib:unique(),
         external_id = undefined,
         id = genlib:unique(),
         metadata = Metadata,
@@ -194,16 +196,17 @@ deposit_params_symmetry_test() ->
 
 -spec deposit_timestamped_change_codec_test() -> _.
 deposit_timestamped_change_codec_test() ->
+    erlang:put(deposit_codec_keep_transfer_type, true),
     Deposit = #{
         version => 3,
-        transfer_type => deposit,
         id => genlib:unique(),
         body => {123, <<"RUB">>},
         created_at => ff_time:now(),
         domain_revision => 123,
         params => #{
             wallet_id => genlib:unique(),
-            source_id => genlib:unique()
+            source_id => genlib:unique(),
+            party_id => genlib:unique()
         },
         external_id => genlib:unique()
     },
@@ -212,6 +215,8 @@ deposit_timestamped_change_codec_test() ->
     Type = {struct, struct, {fistful_deposit_thrift, 'TimestampedChange'}},
     Binary = ff_proto_utils:serialize(Type, marshal(timestamped_change, TimestampedChange)),
     Decoded = ff_proto_utils:deserialize(Type, Binary),
-    ?assertEqual(TimestampedChange, unmarshal(timestamped_change, Decoded)).
+    Res = ?assertEqual(TimestampedChange, unmarshal(timestamped_change, Decoded)),
+    erlang:put(deposit_codec_keep_transfer_type, false),
+    Res.
 
 -endif.
