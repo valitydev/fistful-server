@@ -453,6 +453,14 @@ domain_config(Options) ->
                 delegate(
                     {condition,
                         {payment_tool,
+                            {digital_wallet, #domain_DigitalWalletCondition{
+                                definition = {payment_service_is, ?pmtsrv(<<"webmoney">>)}
+                            }}}},
+                    ?ruleset(?PAYINST1_ROUTING_POLICIES + 15)
+                ),
+                delegate(
+                    {condition,
+                        {payment_tool,
                             {generic,
                                 {payment_service_is, #domain_PaymentServiceRef{
                                     id = <<"IND">>
