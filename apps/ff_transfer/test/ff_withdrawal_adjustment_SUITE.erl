@@ -1,6 +1,7 @@
 -module(ff_withdrawal_adjustment_SUITE).
 
 -include_lib("stdlib/include/assert.hrl").
+-include_lib("damsel/include/dmsl_domain_thrift.hrl").
 
 %% Common test API
 
@@ -52,7 +53,7 @@ all() ->
 -spec groups() -> [{group_name(), list(), [test_case_name()]}].
 groups() ->
     [
-        {default, [parallel], [
+        {default, [], [
             adjustment_can_change_status_to_failed_test,
             adjustment_can_change_failure_test,
             adjustment_can_change_status_to_succeeded_test,
@@ -66,7 +67,7 @@ groups() ->
             adjustment_can_not_change_domain_revision_to_same,
             adjustment_can_not_change_domain_revision_with_failed_status
         ]},
-        {non_parallel, [sequence], [
+        {non_parallel, [], [
             adjustment_can_change_domain_revision_test
         ]}
     ].
@@ -369,21 +370,22 @@ adjustment_can_change_domain_revision_test(C) ->
 
 %% Utils
 
-prepare_standard_environment({_Amount, Currency} = WithdrawalCash, C) ->
-    Party = create_party(C),
-    IdentityID = create_identity(Party, C),
-    WalletID = create_wallet(IdentityID, <<"My wallet">>, <<"RUB">>, C),
+prepare_standard_environment({_Amount, Currency} = WithdrawalCash, _C) ->
+    PartyID = ct_objects:create_party(),
+    WalletID = ct_objects:create_wallet(PartyID, Currency, #domain_TermSetHierarchyRef{id = 1}, #domain_PaymentInstitutionRef{id = 1}),
     ok = await_wallet_balance({0, Currency}, WalletID),
-    DestinationID = create_destination(IdentityID, C),
-    ok = set_wallet_balance(WithdrawalCash, WalletID),
+    DestinationID = ct_objects:create_destination(PartyID, undefined),
+    SourceID = ct_objects:create_source(PartyID, Currency),
+    {_DepositID, _} = ct_objects:create_deposit(PartyID, WalletID, SourceID, WithdrawalCash),
+    ok = await_wallet_balance(WithdrawalCash, WalletID),
     WithdrawalID = process_withdrawal(#{
         destination_id => DestinationID,
         wallet_id => WalletID,
+        party_id => PartyID,
         body => WithdrawalCash
     }),
     #{
-        identity_id => IdentityID,
-        party_id => Party,
+        party_id => PartyID,
         wallet_id => WalletID,
         destination_id => DestinationID,
         withdrawal_id => WithdrawalID
@@ -452,42 +454,6 @@ await_final_adjustment_status(WithdrawalID, AdjustmentID) ->
     ),
     get_adjustment_status(WithdrawalID, AdjustmentID).
 
-create_party(_C) ->
-    ID = genlib:bsuuid(),
-    _ = ff_party:create(ID),
-    ID.
-
-create_identity(Party, C) ->
-    create_identity(Party, <<"good-one">>, C).
-
-create_identity(Party, ProviderID, C) ->
-    create_identity(Party, <<"Identity Name">>, ProviderID, C).
-
-create_identity(Party, Name, ProviderID, _C) ->
-    ID = genlib:unique(),
-    ok = ff_identity_machine:create(
-        #{id => ID, name => Name, party => Party, provider => ProviderID},
-        #{<<"com.valitydev.wapi">> => #{<<"name">> => Name}}
-    ),
-    ID.
-
-create_wallet(IdentityID, Name, Currency, _C) ->
-    ID = genlib:unique(),
-    ok = ff_wallet_machine:create(
-        #{id => ID, identity => IdentityID, name => Name, currency => Currency},
-        ff_entity_context:new()
-    ),
-    ID.
-
-await_wallet_balance({Amount, Currency}, ID) ->
-    Balance = {Amount, {{inclusive, Amount}, {inclusive, Amount}}, Currency},
-    Balance = ct_helper:await(
-        Balance,
-        fun() -> get_wallet_balance(ID) end,
-        genlib_retry:linear(3, 500)
-    ),
-    ok.
-
 assert_adjustment_same_revisions(WithdrawalID, AdjustmentID) ->
     Adjustment = get_adjustment(WithdrawalID, AdjustmentID),
     Withdrawal = get_withdrawal(WithdrawalID),
@@ -496,8 +462,7 @@ assert_adjustment_same_revisions(WithdrawalID, AdjustmentID) ->
     ok.
 
 get_wallet_balance(ID) ->
-    {ok, Machine} = ff_wallet_machine:get(ID),
-    get_account_balance(ff_wallet:account(ff_wallet_machine:wallet(Machine))).
+    ct_objects:get_wallet_balance(ID).
 
 get_destination_balance(ID) ->
     {ok, Machine} = ff_destination_machine:get(ID),
@@ -514,29 +479,5 @@ get_account_balance(Account) ->
     {ok, {Amounts, Currency}} = ff_accounting:balance(Account),
     {ff_indef:current(Amounts), ff_indef:to_range(Amounts), Currency}.
 
-create_destination(IID, C) ->
-    ID = genlib:bsuuid(),
-    Resource = {bank_card, #{bank_card => ct_cardstore:bank_card(<<"4150399999000900">>, {12, 2025}, C)}},
-    Params = #{id => ID, identity => IID, name => <<"XDesination">>, currency => <<"RUB">>, resource => Resource},
-    ok = ff_destination_machine:create(Params, ff_entity_context:new()),
-    authorized = ct_helper:await(
-        authorized,
-        fun() ->
-            {ok, Machine} = ff_destination_machine:get(ID),
-            Destination = ff_destination_machine:destination(Machine),
-            ff_destination:status(Destination)
-        end
-    ),
-    ID.
-
-set_wallet_balance({Amount, Currency}, ID) ->
-    TransactionID = genlib:bsuuid(),
-    {ok, Machine} = ff_wallet_machine:get(ID),
-    Account = ff_wallet:account(ff_wallet_machine:wallet(Machine)),
-    AccounterID = ff_account:accounter_account_id(Account),
-    {CurrentAmount, _, Currency} = get_account_balance(Account),
-    {ok, AnotherAccounterID} = ct_helper:create_account(Currency),
-    Postings = [{AnotherAccounterID, AccounterID, {Amount - CurrentAmount, Currency}}],
-    {ok, _} = ff_accounting:prepare_trx(TransactionID, Postings),
-    {ok, _} = ff_accounting:commit_trx(TransactionID, Postings),
-    ok.
+await_wallet_balance({Amount, Currency}, ID) ->
+    ct_objects:await_wallet_balance({Amount, Currency}, ID).
