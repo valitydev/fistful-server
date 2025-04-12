@@ -185,7 +185,7 @@ create(Params) ->
             currency := CurrencyID,
             resource := Resource
         } = Params,
-        accessible = unwrap(identity, ff_party:is_accessible(PartyID)),
+        accessible = unwrap(party, ff_party:is_accessible(PartyID)),
         valid = ff_resource:check_resource(Resource),
         CreatedAt = ff_time:now(),
         Currency = unwrap(currency, ff_currency:get(CurrencyID)),

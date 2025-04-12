@@ -792,6 +792,56 @@ domain_config(Options) ->
             }
         }},
 
+        {payment_institution, #domain_PaymentInstitutionObject{
+            ref = ?payinst(3),
+            data = #domain_PaymentInstitution{
+                name = <<"Generic Payment Institution">>,
+                system_account_set = {value, ?sas(1)},
+                default_contract_template = {value, ?tmpl(1)},
+                providers = {value, ?ordset([])},
+                inspector = {value, ?insp(1)},
+                residences = ['rus'],
+                realm = test,
+                wallet_system_account_set = {value, ?sas(1)},
+                withdrawal_routing_rules = #domain_RoutingRules{
+                    policies = ?ruleset(?PAYINST2_ROUTING_POLICIES),
+                    prohibitions = ?ruleset(?EMPTY_ROUTING_RULESET)
+                },
+                payment_system =
+                    {decisions, [
+                        #domain_PaymentSystemDecision{
+                            if_ =
+                                {any_of,
+                                    ordsets:from_list([
+                                        {condition,
+                                            {bin_data, #domain_BinDataCondition{
+                                                payment_system = {equals, <<"VISA">>},
+                                                bank_name = {equals, <<"uber">>}
+                                            }}},
+                                        {condition,
+                                            {bin_data, #domain_BinDataCondition{
+                                                payment_system = {equals, <<"VISA">>},
+                                                bank_name = {equals, <<"sber">>}
+                                            }}}
+                                    ])},
+                            then_ = {value, ?pmtsys(<<"VISA">>)}
+                        },
+                        #domain_PaymentSystemDecision{
+                            if_ =
+                                {any_of,
+                                    ordsets:from_list([
+                                        {condition,
+                                            {bin_data, #domain_BinDataCondition{
+                                                payment_system = {equals, <<"NSPK MIR">>},
+                                                bank_name = {equals, <<"poopa">>}
+                                            }}}
+                                    ])},
+                            then_ = {value, ?pmtsys(<<"NSPK MIR">>)}
+                        }
+                    ]}
+            }
+        }},
+
         ct_domain:system_account_set(?sas(1), <<"System">>, ?cur(<<"RUB">>)),
 
         ct_domain:inspector(?insp(1), <<"Low Life">>, ?prx(1), #{<<"risk_score">> => <<"low">>}),

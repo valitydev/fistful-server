@@ -64,8 +64,6 @@ marshal(blocking, blocked) ->
     blocked;
 marshal(blocking, unblocked) ->
     unblocked;
-marshal(identity_provider, Provider) when is_binary(Provider) ->
-    Provider;
 marshal(withdrawal_method, #{id := {generic, #{payment_service := PaymentService}}}) ->
     {generic, marshal(payment_service, PaymentService)};
 marshal(withdrawal_method, #{id := {digital_wallet, PaymentService}}) ->

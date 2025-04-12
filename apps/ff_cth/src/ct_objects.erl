@@ -12,13 +12,16 @@
 -export([prepare_standard_environment/1]).
 -export([create_wallet/4]).
 -export([create_party/0]).
+-export([await_wallet_balance/2]).
 -export([get_wallet_balance/1]).
 
 -export([await_final_withdrawal_status/1]).
 -export([create_destination/2]).
 -export([create_destination_/2]).
 -export([create_deposit/0]).
+-export([create_deposit/4]).
 -export([create_source/2]).
+-export([create_source/3]).
 
 -type standard_environment_ctx() :: #{
     body => _Body,
@@ -95,6 +98,8 @@ create_wallet(PartyID, Currency, TermsRef, PaymentInstRef) ->
     _ = ct_domain:create_wallet(ID, PartyID, Currency, TermsRef, PaymentInstRef),
     ID.
 
+
+-spec await_wallet_balance({_Amount, _Currency}, _ID) -> _.
 await_wallet_balance({Amount, Currency}, ID) ->
     Balance = {Amount, {{inclusive, Amount}, {inclusive, Amount}}, Currency},
     Balance = ct_helper:await(
@@ -220,16 +225,23 @@ create_deposit() ->
     } = prepare_standard_environment(build_default_ctx()),
     create_deposit(PartyID, WalletID, SourceID, Body).
 
-create_deposit(PartyID, WalletID, SourceID, Body) ->
+-spec create_deposit(_PartyID, _WalletID, _SourceID, _Body) -> {_DepositID, _Context}.
+create_deposit(PartyID, WalletID, SourceID, Body0) ->
     DepositID = genlib:unique(),
     ExternalID = genlib:unique(),
     Context = #{<<"NS">> => #{genlib:unique() => genlib:unique()}},
     Metadata = ff_entity_context_codec:marshal(#{<<"metadata">> => #{<<"some key">> => <<"some data">>}}),
     Description = <<"testDesc">>,
+    Body1 = case Body0 of
+        #'fistful_base_Cash'{} ->
+            Body0;
+        _ ->
+            make_cash(Body0)
+    end,
     Params = #deposit_DepositParams{
         id = DepositID,
         party_id = PartyID,
-        body = Body,
+        body = Body1,
         source_id = SourceID,
         wallet_id = WalletID,
         metadata = Metadata,
@@ -256,6 +268,10 @@ get_deposit(DepositID) ->
 
 -spec create_source(_PartyID, _Currency) -> _SourceID.
 create_source(PartyID, Currency) ->
+    create_source(PartyID, Currency, live).
+
+-spec create_source(_PartyID, _Currency, _Realm) -> _SourceID.
+create_source(PartyID, Currency, Realm) ->
     Name = <<"name">>,
     ID = genlib:unique(),
     ExternalId = genlib:unique(),
@@ -264,7 +280,7 @@ create_source(PartyID, Currency) ->
     Resource = {internal, #source_Internal{details = <<"details">>}},
     Params = #source_SourceParams{
         id = ID,
-        realm = live,
+        realm = Realm,
         party_id = PartyID,
         name = Name,
         currency = #'fistful_base_CurrencyRef'{symbolic_code = Currency},
