@@ -92,7 +92,7 @@ create_destination_ok_test(_C) ->
 create_destination_party_notfound_fail_test(_C) ->
     ResourceBankCard = ct_cardstore:bank_card(<<"4150399999000900">>, {12, 2025}),
     Resource = {bank_card, #{bank_card => ResourceBankCard}},
-    AuthData = {sender_receiver, #{sender => <<"SenderToken">>, receiver => <<"ReceiverToken">>}},
+    AuthData = #{sender => <<"SenderToken">>, receiver => <<"ReceiverToken">>},
     Params = #{
         id => genlib:unique(),
         party_id => <<"BadPartyID">>,
@@ -110,7 +110,7 @@ create_destination_currency_notfound_fail_test(_C) ->
     PartyID = ct_objects:create_party(),
     ResourceBankCard = ct_cardstore:bank_card(<<"4150399999000900">>, {12, 2025}),
     Resource = {bank_card, #{bank_card => ResourceBankCard}},
-    AuthData = {sender_receiver, #{sender => <<"SenderToken">>, receiver => <<"ReceiverToken">>}},
+    AuthData = #{sender => <<"SenderToken">>, receiver => <<"ReceiverToken">>},
     Params = #{
         id => genlib:unique(),
         party_id => PartyID,

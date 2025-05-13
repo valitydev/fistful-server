@@ -75,6 +75,7 @@
 -type create_error() ::
     {source, notfound | unauthorized}
     | {wallet, notfound}
+    | {party, notfound}
     | ff_party:validate_deposit_creation_error()
     | {inconsistent_currency, {Deposit :: currency_id(), Source :: currency_id(), Wallet :: currency_id()}}.
 

@@ -32,6 +32,7 @@
 }.
 
 -type standard_environment() :: #{
+    body := _Body,
     party_id := _PartyID,
     wallet_id := _WalletID,
     source_id := _SourceID,

@@ -41,6 +41,7 @@ marshal_withdrawal_params(Params) ->
         wallet_id = marshal(id, maps:get(wallet_id, Params)),
         destination_id = marshal(id, maps:get(destination_id, Params)),
         body = marshal(cash, maps:get(body, Params)),
+        quote = maybe_marshal(quote, maps:get(quote, Params, undefined)),
         external_id = maybe_marshal(id, maps:get(external_id, Params, undefined)),
         metadata = maybe_marshal(ctx, maps:get(metadata, Params, undefined))
     }.

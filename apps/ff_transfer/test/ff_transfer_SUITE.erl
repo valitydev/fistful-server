@@ -140,7 +140,21 @@ deposit_quote_withdrawal_ok(C) ->
         destination_id := DestID,
         party_id := Party
     } = prepare_standard_environment({10000, <<"RUB">>}, C),
-    WdrID = process_withdrawal(Party, WalID, DestID),
+    WdrID = process_withdrawal(Party, WalID, DestID, #{
+        wallet_id => WalID,
+        destination_id => DestID,
+        body => {4240, <<"RUB">>},
+        quote => #{
+            cash_from => {4240, <<"RUB">>},
+            cash_to => {2120, <<"USD">>},
+            created_at => <<"2016-03-22T06:12:27Z">>,
+            expires_on => <<"2016-03-22T06:12:27Z">>,
+            quote_data => #{<<"test">> => <<"test">>},
+            route => ff_withdrawal_routing:make_route(1, 1),
+            domain_revision => ct_domain_config:head(),
+            operation_timestamp => ff_time:from_rfc3339(<<"2016-03-22T06:12:27Z">>)
+        }
+    }),
     Events = get_withdrawal_events(WdrID),
     [1] = route_changes(Events).
 
@@ -217,15 +231,7 @@ process_withdrawal(PartyID, WalID, DestID, Params) ->
             undefined ->
                 undefined;
             QuoteData ->
-                #wthd_Quote{
-                    cash_from = make_cash(maps:get(cash_from, QuoteData)),
-                    cash_to = make_cash(maps:get(cash_to, QuoteData)),
-                    created_at = maps:get(created_at, QuoteData),
-                    expires_on = maps:get(expires_on, QuoteData),
-                    quote_data = maps:get(quote_data, QuoteData),
-                    route = maps:get(route, QuoteData),
-                    domain_revision = maps:get(domain_revision, QuoteData)
-                }
+                ff_withdrawal_codec:marshal(quote, QuoteData)
         end,
     WithdrawalParams = #wthd_WithdrawalParams{
         id = genlib:bsuuid(),
