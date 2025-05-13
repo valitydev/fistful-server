@@ -349,7 +349,9 @@ create_wallet_currency_validation_error_test(C) ->
         destination_id := DestinationID,
         party_id := PartyID
     } = prepare_standard_environment(Cash, C),
-    WalletID = ct_objects:create_wallet(PartyID, <<"USD">>, #domain_TermSetHierarchyRef{id = 1}, #domain_PaymentInstitutionRef{id = 1}),
+    WalletID = ct_objects:create_wallet(
+        PartyID, <<"USD">>, #domain_TermSetHierarchyRef{id = 1}, #domain_PaymentInstitutionRef{id = 1}
+    ),
     WithdrawalID = genlib:bsuuid(),
     WithdrawalParams = #{
         id => WithdrawalID,
@@ -413,7 +415,9 @@ create_realms_mismatch_error_test(C) ->
         destination_id := DestinationID,
         party_id := PartyID
     } = prepare_standard_environment(Cash, C),
-    WalletID = ct_objects:create_wallet(PartyID, <<"RUB">>, #domain_TermSetHierarchyRef{id = 1}, #domain_PaymentInstitutionRef{id = 3}),
+    WalletID = ct_objects:create_wallet(
+        PartyID, <<"RUB">>, #domain_TermSetHierarchyRef{id = 1}, #domain_PaymentInstitutionRef{id = 3}
+    ),
     SourceID = ct_objects:create_source(PartyID, <<"RUB">>, test),
     _ = ct_objects:create_deposit(PartyID, WalletID, SourceID, Cash),
     ok = ct_objects:await_wallet_balance(Cash, WalletID),
@@ -590,7 +594,9 @@ crypto_quote_ok_test(C) ->
     Currency = <<"RUB">>,
     Cash = {100, Currency},
     PartyID = ct_objects:create_party(),
-    WalletID = ct_objects:create_wallet(PartyID, Currency, #domain_TermSetHierarchyRef{id = 1}, #domain_PaymentInstitutionRef{id = 1}),
+    WalletID = ct_objects:create_wallet(
+        PartyID, Currency, #domain_TermSetHierarchyRef{id = 1}, #domain_PaymentInstitutionRef{id = 1}
+    ),
     ok = await_wallet_balance({0, Currency}, WalletID),
     DestinationID = create_crypto_destination(PartyID, C),
     Params = #{
@@ -856,7 +862,9 @@ prepare_standard_environment(WithdrawalCash, C) ->
 
 prepare_standard_environment({_Amount, Currency} = WithdrawalCash, Token, _C) ->
     PartyID = ct_objects:create_party(),
-    WalletID = ct_objects:create_wallet(PartyID, Currency, #domain_TermSetHierarchyRef{id = 1}, #domain_PaymentInstitutionRef{id = 1}),
+    WalletID = ct_objects:create_wallet(
+        PartyID, Currency, #domain_TermSetHierarchyRef{id = 1}, #domain_PaymentInstitutionRef{id = 1}
+    ),
     ok = await_wallet_balance({0, Currency}, WalletID),
     DestinationID = ct_objects:create_destination(PartyID, Token),
     SourceID = ct_objects:create_source(PartyID, Currency),
@@ -967,7 +975,14 @@ create_crypto_destination(PartyID, _C) ->
                 currency => #{id => <<"Litecoin">>}
             }
         }},
-    Params = #{id => ID, party_id => PartyID, realm => live, name => <<"CryptoDestination">>, currency => <<"RUB">>, resource => Resource},
+    Params = #{
+        id => ID,
+        party_id => PartyID,
+        realm => live,
+        name => <<"CryptoDestination">>,
+        currency => <<"RUB">>,
+        resource => Resource
+    },
     ok = ff_destination_machine:create(Params, ff_entity_context:new()),
     ID.
 
@@ -981,7 +996,12 @@ create_generic_destination(Provider, IID, _C) ->
             }
         }},
     Params = #{
-        id => ID, party_id => IID, realm => live, name => <<"GenericDestination">>, currency => <<"RUB">>, resource => Resource
+        id => ID,
+        party_id => IID,
+        realm => live,
+        name => <<"GenericDestination">>,
+        currency => <<"RUB">>,
+        resource => Resource
     },
     ok = ff_destination_machine:create(Params, ff_entity_context:new()),
     ID.

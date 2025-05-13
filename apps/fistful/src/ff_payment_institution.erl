@@ -77,7 +77,9 @@ get(PaymentInstitutionID, VS, DomainRevision) ->
     | {error, notfound}.
 get_realm(Ref, DomainRevision) ->
     do(fun() ->
-        #domain_PaymentInstitution{realm = Realm} = unwrap(ff_domain_config:object(DomainRevision, {payment_institution, Ref})),
+        #domain_PaymentInstitution{realm = Realm} = unwrap(
+            ff_domain_config:object(DomainRevision, {payment_institution, Ref})
+        ),
         Realm
     end).
 

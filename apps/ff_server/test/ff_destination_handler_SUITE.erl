@@ -151,7 +151,7 @@ create_destination_ok(AuthData, Resource, _C) ->
     Currency = <<"RUB">>,
     DstName = <<"loSHara card">>,
     ID = genlib:unique(),
-    ExternalId = genlib:unique(),
+    ExternalID = genlib:unique(),
     Ctx = ff_entity_context_codec:marshal(#{<<"NS">> => #{}}),
     Metadata = ff_entity_context_codec:marshal(#{<<"metadata">> => #{<<"some key">> => <<"some data">>}}),
     Params = #destination_DestinationParams{
@@ -161,7 +161,7 @@ create_destination_ok(AuthData, Resource, _C) ->
         name = DstName,
         currency = Currency,
         resource = Resource,
-        external_id = ExternalId,
+        external_id = ExternalID,
         metadata = Metadata,
         auth_data = AuthData
     },
@@ -169,7 +169,7 @@ create_destination_ok(AuthData, Resource, _C) ->
     DstName = Dst#destination_DestinationState.name,
     ID = Dst#destination_DestinationState.id,
     Resource = Dst#destination_DestinationState.resource,
-    ExternalId = Dst#destination_DestinationState.external_id,
+    ExternalID = Dst#destination_DestinationState.external_id,
     Metadata = Dst#destination_DestinationState.metadata,
     Ctx = Dst#destination_DestinationState.context,
     AuthData = Dst#destination_DestinationState.auth_data,

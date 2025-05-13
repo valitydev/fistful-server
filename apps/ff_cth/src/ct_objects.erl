@@ -28,7 +28,7 @@
     token => _Token,
     currency := _Currency,
     terms_ref := _TermsRef,
-    paymentInst_ref := _PaymentInstRef
+    payment_inst_ref := _PaymentInstRef
 }.
 
 -type standard_environment() :: #{
@@ -44,12 +44,13 @@
 
 %%
 -spec build_default_ctx() -> standard_environment_ctx().
-build_default_ctx() -> #{
-    body => make_cash({100, <<"RUB">>}),
-    currency => <<"RUB">>,
-    terms_ref => #domain_TermSetHierarchyRef{id = 1},
-    paymentInst_ref => #domain_PaymentInstitutionRef{id = 1}
-}.
+build_default_ctx() ->
+    #{
+        body => make_cash({100, <<"RUB">>}),
+        currency => <<"RUB">>,
+        terms_ref => #domain_TermSetHierarchyRef{id = 1},
+        payment_inst_ref => #domain_PaymentInstitutionRef{id = 1}
+    }.
 
 -spec prepare_standard_environment_with(standard_environment_ctx(), _) -> standard_environment().
 prepare_standard_environment_with(Ctx, Fun) ->
@@ -57,23 +58,26 @@ prepare_standard_environment_with(Ctx, Fun) ->
     Fun(Result).
 
 -spec prepare_standard_environment(standard_environment_ctx()) -> standard_environment().
-prepare_standard_environment(#{
-    currency := Currency,
-    terms_ref := TermsRef,
-    paymentInst_ref := PaymentInstRef
-} = Ctx) ->
+prepare_standard_environment(
+    #{
+        currency := Currency,
+        terms_ref := TermsRef,
+        payment_inst_ref := PaymentInstRef
+    } = Ctx
+) ->
     PartyID = create_party(),
     WalletID = create_wallet(PartyID, Currency, TermsRef, PaymentInstRef),
     ok = await_wallet_balance({0, Currency}, WalletID),
     SourceID = create_source(PartyID, Currency),
-    Body1 = case maps:get(body, Ctx) of
-        undefined ->
-            make_cash({100, <<"RUB">>});
-        Body0 ->
-            Body0
-    end,
+    Body1 =
+        case maps:get(body, Ctx) of
+            undefined ->
+                make_cash({100, <<"RUB">>});
+            Body0 ->
+                Body0
+        end,
     {Amount0, BodyCurrency} = remake_cash(Body1),
-    DepositBody = make_cash({2*Amount0, BodyCurrency}),
+    DepositBody = make_cash({2 * Amount0, BodyCurrency}),
     {DepositID, DepositContext} = create_deposit(PartyID, WalletID, SourceID, DepositBody),
     ok = await_wallet_balance(remake_cash(DepositBody), WalletID),
     DestinationID = create_destination(PartyID, maps:get(token, Ctx, undefined)),
@@ -97,7 +101,6 @@ create_wallet(PartyID, Currency, TermsRef, PaymentInstRef) ->
     ID = genlib:unique(),
     _ = ct_domain:create_wallet(ID, PartyID, Currency, TermsRef, PaymentInstRef),
     ID.
-
 
 -spec await_wallet_balance({_Amount, _Currency}, _ID) -> _.
 await_wallet_balance({Amount, Currency}, ID) ->
@@ -176,12 +179,13 @@ create_destination(PartyID, Token) ->
                 cardholder_name = maps:get(cardholder_name, NewStoreResource, undefined)
             }
         }},
-    Currency = case Token of
-        <<"USD_CURRENCY">> ->
-            <<"USD">>;
-        _ ->
-            <<"RUB">>
-    end,
+    Currency =
+        case Token of
+            <<"USD_CURRENCY">> ->
+                <<"USD">>;
+            _ ->
+                <<"RUB">>
+        end,
     create_destination_(PartyID, Resource, Currency).
 
 -spec create_destination_(_PartyID, _Resource) -> _DestinationID.
@@ -197,7 +201,7 @@ create_destination_(PartyID, Resource, Currency) ->
         }},
     DstName = <<"loSHara card">>,
     ID = genlib:unique(),
-    ExternalId = genlib:unique(),
+    ExternalID = genlib:unique(),
     Ctx = ff_entity_context_codec:marshal(#{<<"NS">> => #{}}),
     Metadata = ff_entity_context_codec:marshal(#{<<"metadata">> => #{<<"some key">> => <<"some data">>}}),
     Params = #destination_DestinationParams{
@@ -207,13 +211,12 @@ create_destination_(PartyID, Resource, Currency) ->
         name = DstName,
         currency = Currency,
         resource = Resource,
-        external_id = ExternalId,
+        external_id = ExternalID,
         metadata = Metadata,
         auth_data = AuthData
     },
     {ok, _Dst} = call_destination('Create', {Params, Ctx}),
     ID.
-
 
 -spec create_deposit() -> {_DepositID, _Context}.
 create_deposit() ->
@@ -232,12 +235,13 @@ create_deposit(PartyID, WalletID, SourceID, Body0) ->
     Context = #{<<"NS">> => #{genlib:unique() => genlib:unique()}},
     Metadata = ff_entity_context_codec:marshal(#{<<"metadata">> => #{<<"some key">> => <<"some data">>}}),
     Description = <<"testDesc">>,
-    Body1 = case Body0 of
-        #'fistful_base_Cash'{} ->
-            Body0;
-        _ ->
-            make_cash(Body0)
-    end,
+    Body1 =
+        case Body0 of
+            #'fistful_base_Cash'{} ->
+                Body0;
+            _ ->
+                make_cash(Body0)
+        end,
     Params = #deposit_DepositParams{
         id = DepositID,
         party_id = PartyID,
@@ -274,7 +278,7 @@ create_source(PartyID, Currency) ->
 create_source(PartyID, Currency, Realm) ->
     Name = <<"name">>,
     ID = genlib:unique(),
-    ExternalId = genlib:unique(),
+    ExternalID = genlib:unique(),
     Ctx = ff_entity_context_codec:marshal(#{<<"NS">> => #{}}),
     Metadata = ff_entity_context_codec:marshal(#{<<"metadata">> => #{<<"some key">> => <<"some data">>}}),
     Resource = {internal, #source_Internal{details = <<"details">>}},
@@ -285,7 +289,7 @@ create_source(PartyID, Currency, Realm) ->
         name = Name,
         currency = #'fistful_base_CurrencyRef'{symbolic_code = Currency},
         resource = Resource,
-        external_id = ExternalId,
+        external_id = ExternalID,
         metadata = Metadata
     },
     {ok, _Src} = call_source('Create', {Params, Ctx}),
@@ -346,4 +350,3 @@ call_source(Fun, Args) ->
         event_handler => ff_woody_event_handler
     }),
     ff_woody_client:call(Client, Request).
-

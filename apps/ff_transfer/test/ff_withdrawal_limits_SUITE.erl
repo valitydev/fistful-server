@@ -577,15 +577,16 @@ set_retryable_errors(PartyID, ErrorList) ->
     }).
 
 get_limit_withdrawal(Cash, WalletID, DestinationID, AuthData) ->
-    MarshaledAuthData = case AuthData of
-        #{sender := _, receiver := _} ->
-            {sender_receiver, #wthd_domain_SenderReceiverAuthData{
-                sender = maps:get(sender, AuthData),
-                receiver = maps:get(receiver, AuthData)
-            }};
-        _ ->
-            AuthData
-    end,
+    MarshaledAuthData =
+        case AuthData of
+            #{sender := _, receiver := _} ->
+                {sender_receiver, #wthd_domain_SenderReceiverAuthData{
+                    sender = maps:get(sender, AuthData),
+                    receiver = maps:get(receiver, AuthData)
+                }};
+            _ ->
+                AuthData
+        end,
     #wthd_domain_Withdrawal{
         created_at = ff_codec:marshal(timestamp_ms, ff_time:now()),
         body = ff_dmsl_codec:marshal(cash, Cash),
@@ -608,7 +609,9 @@ get_destination_resource(DestinationID) ->
 
 prepare_standard_environment({_Amount, Currency} = WithdrawalCash, C) ->
     PartyID = ct_helper:cfg('$party', C),
-    WalletID = ct_objects:create_wallet(PartyID, Currency, #domain_TermSetHierarchyRef{id = 1}, #domain_PaymentInstitutionRef{id = 1}),
+    WalletID = ct_objects:create_wallet(
+        PartyID, Currency, #domain_TermSetHierarchyRef{id = 1}, #domain_PaymentInstitutionRef{id = 1}
+    ),
     ok = await_wallet_balance({0, Currency}, WalletID),
     DestinationID = ct_objects:create_destination(PartyID, undefined),
     SourceID = ct_objects:create_source(PartyID, Currency),
@@ -675,18 +678,19 @@ get_wallet_balance(ID) ->
 create_destination(IID, Currency, AuthData, _C) ->
     ID = genlib:bsuuid(),
     StoreSource = ct_cardstore:bank_card(<<"4150399999000900">>, {12, 2025}),
-    Resource = {bank_card, #'fistful_base_ResourceBankCard'{
-        bank_card = #'fistful_base_BankCard'{
-            token = maps:get(token, StoreSource),
-            bin = maps:get(bin, StoreSource, undefined),
-            masked_pan = maps:get(masked_pan, StoreSource, undefined),
-            exp_date = #'fistful_base_BankCardExpDate'{
-                month = 12,
-                year = 2025
-            },
-            cardholder_name = maps:get(cardholder_name, StoreSource, undefined)
-        }
-    }},
+    Resource =
+        {bank_card, #'fistful_base_ResourceBankCard'{
+            bank_card = #'fistful_base_BankCard'{
+                token = maps:get(token, StoreSource),
+                bin = maps:get(bin, StoreSource, undefined),
+                masked_pan = maps:get(masked_pan, StoreSource, undefined),
+                exp_date = #'fistful_base_BankCardExpDate'{
+                    month = 12,
+                    year = 2025
+                },
+                cardholder_name = maps:get(cardholder_name, StoreSource, undefined)
+            }
+        }},
     Params = genlib_map:compact(#{
         id => ID,
         party_id => IID,

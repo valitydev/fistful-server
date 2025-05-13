@@ -120,7 +120,7 @@ create_source_ok(Resource, C) ->
     Currency = <<"RUB">>,
     Name = <<"name">>,
     ID = genlib:unique(),
-    ExternalId = genlib:unique(),
+    ExternalID = genlib:unique(),
     Ctx = ff_entity_context_codec:marshal(#{<<"NS">> => #{}}),
     Metadata = ff_entity_context_codec:marshal(#{<<"metadata">> => #{<<"some key">> => <<"some data">>}}),
     Params = #source_SourceParams{
@@ -130,7 +130,7 @@ create_source_ok(Resource, C) ->
         name = Name,
         currency = #'fistful_base_CurrencyRef'{symbolic_code = Currency},
         resource = Resource,
-        external_id = ExternalId,
+        external_id = ExternalID,
         metadata = Metadata
     },
     {ok, Src} = call_service('Create', {Params, Ctx}),
@@ -139,7 +139,7 @@ create_source_ok(Resource, C) ->
     PartyID = Src#source_SourceState.party_id,
     live = Src#source_SourceState.realm,
     Resource = Src#source_SourceState.resource,
-    ExternalId = Src#source_SourceState.external_id,
+    ExternalID = Src#source_SourceState.external_id,
     Metadata = Src#source_SourceState.metadata,
     Ctx = Src#source_SourceState.context,
 

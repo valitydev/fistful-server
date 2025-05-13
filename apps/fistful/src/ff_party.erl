@@ -181,7 +181,13 @@ wallet_log_balance(#domain_WalletConfig{id = WalletID} = Wallet) ->
 -spec get_wallet_account(wallet()) -> {account_id(), currency_id()}.
 get_wallet_account(#domain_WalletConfig{currency_configs = Configs}) when is_map(Configs) ->
     %% TODO: fix it when add multi currency support
-    [{#domain_CurrencyRef{symbolic_code = Currency}, #domain_WalletCurrencyConfig{settlement = SettlementID}} | _] = maps:to_list(
+    [
+        {
+            #domain_CurrencyRef{symbolic_code = Currency},
+            #domain_WalletCurrencyConfig{settlement = SettlementID}
+        }
+        | _
+    ] = maps:to_list(
         Configs
     ),
     {SettlementID, Currency}.

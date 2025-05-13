@@ -321,10 +321,10 @@ create_inconsistent_currency_validation_error_test(_C) ->
     Ctx = ct_objects:build_default_ctx(),
     PartyID = ct_objects:create_party(),
     TermsRef = maps:get(terms_ref, Ctx),
-    PaymentInstRef = maps:get(paymentInst_ref, Ctx),
+    PaymentInstRef = maps:get(payment_inst_ref, Ctx),
     WalletID = ct_objects:create_wallet(PartyID, <<"USD">>, TermsRef, PaymentInstRef),
     DestinationID = ct_objects:create_destination(PartyID, <<"USD_CURRENCY">>),
-    
+
     Params = #wthd_WithdrawalParams{
         id = genlib:bsuuid(),
         party_id = PartyID,
@@ -346,7 +346,7 @@ create_destination_resource_no_bindata_fail_test(_C) ->
     Ctx = ct_objects:build_default_ctx(),
     PartyID = ct_objects:create_party(),
     TermsRef = maps:get(terms_ref, Ctx),
-    PaymentInstRef = maps:get(paymentInst_ref, Ctx),
+    PaymentInstRef = maps:get(payment_inst_ref, Ctx),
     WalletID = ct_objects:create_wallet(PartyID, <<"RUB">>, TermsRef, PaymentInstRef),
     DestinationID = ct_objects:create_destination(PartyID, <<"TEST_NOTFOUND">>),
     Params = #wthd_WithdrawalParams{
@@ -414,7 +414,7 @@ create_destination_generic_ok_test(_C) ->
                     id = <<"IND">>
                 },
                 data = #'fistful_base_Content'{
-                    type = <<"application/json">>, 
+                    type = <<"application/json">>,
                     data = <<"{}">>
                 }
             }

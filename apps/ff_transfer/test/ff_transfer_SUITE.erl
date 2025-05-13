@@ -206,24 +206,27 @@ create_generic_destination(PartyID, _C) ->
     ct_objects:create_destination_(PartyID, Resource).
 
 process_withdrawal(PartyID, WalID, DestID) ->
-    process_withdrawal(PartyID, WalID, DestID, #{wallet_id => WalID, destination_id => DestID, body => {4240, <<"RUB">>}}).
+    process_withdrawal(PartyID, WalID, DestID, #{
+        wallet_id => WalID, destination_id => DestID, body => {4240, <<"RUB">>}
+    }).
 
 process_withdrawal(PartyID, WalID, DestID, Params) ->
     Body = make_cash({4240, <<"RUB">>}),
-    Quote = case maps:get(quote, Params, undefined) of
-        undefined ->
-            undefined;
-        QuoteData ->
-            #wthd_Quote{
-                cash_from = make_cash(maps:get(cash_from, QuoteData)),
-                cash_to = make_cash(maps:get(cash_to, QuoteData)),
-                created_at = maps:get(created_at, QuoteData),
-                expires_on = maps:get(expires_on, QuoteData),
-                quote_data = maps:get(quote_data, QuoteData),
-                route = maps:get(route, QuoteData),
-                domain_revision = maps:get(domain_revision, QuoteData)
-            }
-    end,
+    Quote =
+        case maps:get(quote, Params, undefined) of
+            undefined ->
+                undefined;
+            QuoteData ->
+                #wthd_Quote{
+                    cash_from = make_cash(maps:get(cash_from, QuoteData)),
+                    cash_to = make_cash(maps:get(cash_to, QuoteData)),
+                    created_at = maps:get(created_at, QuoteData),
+                    expires_on = maps:get(expires_on, QuoteData),
+                    quote_data = maps:get(quote_data, QuoteData),
+                    route = maps:get(route, QuoteData),
+                    domain_revision = maps:get(domain_revision, QuoteData)
+                }
+        end,
     WithdrawalParams = #wthd_WithdrawalParams{
         id = genlib:bsuuid(),
         party_id = PartyID,

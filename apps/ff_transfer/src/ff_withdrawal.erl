@@ -1002,7 +1002,6 @@ make_final_cash_flow(Withdrawal) ->
 make_final_cash_flow(DomainRevision, Withdrawal) ->
     Body = body(Withdrawal),
     WalletID = wallet_id(Withdrawal),
-    DomainRevision = final_domain_revision(Withdrawal),
     {ok, Party} = ff_party:checkout(party_id(Withdrawal), DomainRevision),
     {ok, Wallet} = ff_party:get_wallet(WalletID, Party, DomainRevision),
     {AccountID, Currency} = ff_party:get_wallet_account(Wallet),

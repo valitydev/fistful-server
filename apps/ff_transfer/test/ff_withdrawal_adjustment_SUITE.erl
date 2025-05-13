@@ -162,7 +162,8 @@ adjustment_can_change_failure_test(C) ->
 adjustment_can_change_status_to_succeeded_test(C) ->
     #{
         wallet_id := WalletID,
-        destination_id := DestinationID
+        destination_id := DestinationID,
+        party_id := PartyID
     } = prepare_standard_environment({100, <<"RUB">>}, C),
     ?assertEqual(?FINAL_BALANCE(0, <<"RUB">>), get_wallet_balance(WalletID)),
     ?assertEqual(?FINAL_BALANCE(80, <<"RUB">>), get_destination_balance(DestinationID)),
@@ -171,6 +172,7 @@ adjustment_can_change_status_to_succeeded_test(C) ->
         id => WithdrawalID,
         wallet_id => WalletID,
         destination_id => DestinationID,
+        party_id => PartyID,
         body => {1000, <<"RUB">>}
     },
     ok = ff_withdrawal_machine:create(Params, ff_entity_context:new()),
@@ -281,12 +283,14 @@ no_parallel_adjustments_test(C) ->
 no_pending_withdrawal_adjustments_test(C) ->
     #{
         wallet_id := WalletID,
-        destination_id := DestinationID
+        destination_id := DestinationID,
+        party_id := PartyID
     } = prepare_standard_environment({100, <<"RUB">>}, C),
     {ok, Events0} = ff_withdrawal:create(#{
         id => genlib:bsuuid(),
         wallet_id => WalletID,
         destination_id => DestinationID,
+        party_id => PartyID,
         body => {100, <<"RUB">>}
     }),
     Withdrawal1 = lists:foldl(fun ff_withdrawal:apply_event/2, undefined, Events0),
@@ -323,13 +327,15 @@ adjustment_can_not_change_domain_revision_to_same(C) ->
 adjustment_can_not_change_domain_revision_with_failed_status(C) ->
     #{
         wallet_id := WalletID,
-        destination_id := DestinationID
+        destination_id := DestinationID,
+        party_id := PartyID
     } = prepare_standard_environment({100, <<"RUB">>}, C),
     WithdrawalID = genlib:bsuuid(),
     Params = #{
         id => WithdrawalID,
         wallet_id => WalletID,
         destination_id => DestinationID,
+        party_id => PartyID,
         body => {1000, <<"RUB">>}
     },
     ok = ff_withdrawal_machine:create(Params, ff_entity_context:new()),
@@ -347,7 +353,8 @@ adjustment_can_change_domain_revision_test(C) ->
     #{
         withdrawal_id := WithdrawalID,
         wallet_id := WalletID,
-        destination_id := DestinationID
+        destination_id := DestinationID,
+        party_id := PartyID
     } = prepare_standard_environment({100, <<"RUB">>}, C),
     ?assertEqual(?FINAL_BALANCE(0, <<"RUB">>), get_wallet_balance(WalletID)),
     ?assertEqual(?FINAL_BALANCE(80, <<"RUB">>), get_destination_balance(DestinationID)),
@@ -355,8 +362,11 @@ adjustment_can_change_domain_revision_test(C) ->
     #{provider_id := ProviderID} = ff_withdrawal:route(Withdrawal),
     DomainRevision = ff_withdrawal:domain_revision(Withdrawal),
     ?assertEqual(?FINAL_BALANCE(StartProviderAmount + 5, <<"RUB">>), get_provider_balance(ProviderID, DomainRevision)),
+    _OtherWalletToChangeDomain = ct_objects:create_wallet(
+        PartyID, <<"RUB">>, #domain_TermSetHierarchyRef{id = 1}, #domain_PaymentInstitutionRef{id = 1}
+    ),
     AdjustmentID = process_adjustment(WithdrawalID, #{
-        change => {change_cash_flow, ct_domain_config:head() - 1},
+        change => {change_cash_flow, ct_domain_config:head()},
         external_id => <<"true_unique_id">>
     }),
     ?assertMatch(succeeded, get_adjustment_status(WithdrawalID, AdjustmentID)),
@@ -364,7 +374,7 @@ adjustment_can_change_domain_revision_test(C) ->
     ?assertEqual(<<"true_unique_id">>, ExternalID),
     ?assertEqual(succeeded, get_withdrawal_status(WithdrawalID)),
     assert_adjustment_same_revisions(WithdrawalID, AdjustmentID),
-    ?assertEqual(?FINAL_BALANCE(StartProviderAmount + 2, <<"RUB">>), get_provider_balance(ProviderID, DomainRevision)),
+    ?assertEqual(?FINAL_BALANCE(StartProviderAmount + 5, <<"RUB">>), get_provider_balance(ProviderID, DomainRevision)),
     ?assertEqual(?FINAL_BALANCE(0, <<"RUB">>), get_wallet_balance(WalletID)),
     ?assertEqual(?FINAL_BALANCE(80, <<"RUB">>), get_destination_balance(DestinationID)).
 
@@ -372,7 +382,9 @@ adjustment_can_change_domain_revision_test(C) ->
 
 prepare_standard_environment({_Amount, Currency} = WithdrawalCash, _C) ->
     PartyID = ct_objects:create_party(),
-    WalletID = ct_objects:create_wallet(PartyID, Currency, #domain_TermSetHierarchyRef{id = 1}, #domain_PaymentInstitutionRef{id = 1}),
+    WalletID = ct_objects:create_wallet(
+        PartyID, Currency, #domain_TermSetHierarchyRef{id = 1}, #domain_PaymentInstitutionRef{id = 1}
+    ),
     ok = await_wallet_balance({0, Currency}, WalletID),
     DestinationID = ct_objects:create_destination(PartyID, undefined),
     SourceID = ct_objects:create_source(PartyID, Currency),

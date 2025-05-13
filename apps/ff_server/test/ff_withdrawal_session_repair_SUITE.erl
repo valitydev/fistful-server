@@ -130,11 +130,11 @@ repair_failed_session_with_failure(C) ->
 
 create_failed_session(PartyID, DestinationID, _C) ->
     ID = genlib:unique(),
-    
+
     {ok, DestinationMachine} = ff_destination_machine:get(DestinationID),
     Destination = ff_destination_machine:destination(DestinationMachine),
     {ok, DestinationResource} = ff_resource:create_resource(ff_destination:resource(Destination)),
-    
+
     TransferData = #{
         id => ID,
         % invalid currency
@@ -142,7 +142,7 @@ create_failed_session(PartyID, DestinationID, _C) ->
         sender => PartyID,
         receiver => PartyID
     },
-    
+
     SessionParams = #{
         withdrawal_id => ID,
         resource => DestinationResource,

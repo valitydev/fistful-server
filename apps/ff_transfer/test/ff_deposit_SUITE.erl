@@ -285,7 +285,8 @@ create_ok_test(C) ->
     },
     ok = ff_deposit_machine:create(DepositParams, ff_entity_context:new()),
     succeeded = await_final_deposit_status(DepositID),
-    ok = ct_objects:await_wallet_balance({5000 + 100, <<"RUB">>}, WalletID), %% 100 added by setup env
+    %% 100 added by setup env
+    ok = ct_objects:await_wallet_balance({5000 + 100, <<"RUB">>}, WalletID),
     Deposit = get_deposit(DepositID),
     DepositCash = ff_deposit:body(Deposit),
     WalletID = ff_deposit:wallet_id(Deposit),
