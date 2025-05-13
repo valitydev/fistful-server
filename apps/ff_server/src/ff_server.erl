@@ -70,24 +70,17 @@ init([]) ->
     % TODO
     %  - Make it palatable
     {Backends, MachineHandlers, ModernizerHandlers} = lists:unzip3([
-        contruct_backend_childspec('ff/identity', ff_identity_machine, PartyClient),
-        contruct_backend_childspec('ff/wallet_v2', ff_wallet_machine, PartyClient),
         contruct_backend_childspec('ff/source_v1', ff_source_machine, PartyClient),
         contruct_backend_childspec('ff/destination_v2', ff_destination_machine, PartyClient),
         contruct_backend_childspec('ff/deposit_v1', ff_deposit_machine, PartyClient),
         contruct_backend_childspec('ff/withdrawal_v2', ff_withdrawal_machine, PartyClient),
-        contruct_backend_childspec('ff/withdrawal/session_v2', ff_withdrawal_session_machine, PartyClient),
-        contruct_backend_childspec('ff/w2w_transfer_v1', w2w_transfer_machine, PartyClient)
+        contruct_backend_childspec('ff/withdrawal/session_v2', ff_withdrawal_session_machine, PartyClient)
     ]),
     ok = application:set_env(fistful, backends, maps:from_list(Backends)),
 
     Services =
         [
-            {fistful_admin, ff_server_admin_handler},
-            {fistful_provider, ff_provider_handler},
             {ff_withdrawal_adapter_host, ff_withdrawal_adapter_host},
-            {wallet_management, ff_wallet_handler},
-            {identity_management, ff_identity_handler},
             {destination_management, ff_destination_handler},
             {source_management, ff_source_handler},
             {withdrawal_management, ff_withdrawal_handler},
@@ -95,10 +88,7 @@ init([]) ->
             {deposit_management, ff_deposit_handler},
             {withdrawal_session_repairer, ff_withdrawal_session_repair},
             {withdrawal_repairer, ff_withdrawal_repair},
-            {deposit_repairer, ff_deposit_repair},
-            {w2w_transfer_management, ff_w2w_transfer_handler},
-            {w2w_transfer_repairer, ff_w2w_transfer_repair},
-            {ff_claim_committer, ff_claim_committer_handler}
+            {deposit_repairer, ff_deposit_repair}
         ],
     WoodyHandlers = [get_handler(Service, Handler, WrapperOpts) || {Service, Handler} <- Services],
 
@@ -173,10 +163,6 @@ get_service_client(ServiceID) ->
             error({unknown_service, ServiceID})
     end.
 
-get_namespace_schema('ff/identity') ->
-    ff_identity_machinery_schema;
-get_namespace_schema('ff/wallet_v2') ->
-    ff_wallet_machinery_schema;
 get_namespace_schema('ff/source_v1') ->
     ff_source_machinery_schema;
 get_namespace_schema('ff/destination_v2') ->
@@ -186,9 +172,7 @@ get_namespace_schema('ff/deposit_v1') ->
 get_namespace_schema('ff/withdrawal_v2') ->
     ff_withdrawal_machinery_schema;
 get_namespace_schema('ff/withdrawal/session_v2') ->
-    ff_withdrawal_session_machinery_schema;
-get_namespace_schema('ff/w2w_transfer_v1') ->
-    ff_w2w_transfer_machinery_schema.
+    ff_withdrawal_session_machinery_schema.
 
 wrap_handler(Handler, WrapperOpts) ->
     FullOpts = maps:merge(#{handler => Handler}, WrapperOpts),
