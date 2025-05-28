@@ -148,8 +148,7 @@ get_namespaces_params(machinegun = BackendMode) ->
         {BackendMode, 'ff/destination_v2', ff_destination_machine, ff_destination_machinery_schema},
         {BackendMode, 'ff/deposit_v1', ff_deposit_machine, ff_deposit_machinery_schema},
         {BackendMode, 'ff/withdrawal_v2', ff_withdrawal_machine, ff_withdrawal_machinery_schema},
-        {BackendMode, 'ff/withdrawal/session_v2', ff_withdrawal_session_machine,
-            ff_withdrawal_session_machinery_schema}
+        {BackendMode, 'ff/withdrawal/session_v2', ff_withdrawal_session_machine, ff_withdrawal_session_machinery_schema}
     ];
 get_namespaces_params(BackendMode) when BackendMode == progressor orelse BackendMode == hybrid ->
     {ok, Namespaces} = application:get_env(progressor, namespaces),
