@@ -133,19 +133,21 @@ services:
     image: ghcr.io/valitydev/bender:sha-b0f17b2
     command: /opt/bender/bin/bender foreground
     depends_on:
-      machinegun:
+      db:
         condition: service_healthy
     healthcheck:
       test: "/opt/bender/bin/bender ping"
       interval: 10s
       timeout: 5s
       retries: 10
+    volumes:
+      - ./test/bender/sys.config:/opt/bender/releases/1.0.0/sys.config
 
   db:
     image: postgres:15-bookworm
     command: -c 'max_connections=1000'
     environment:
-      POSTGRES_MULTIPLE_DATABASES: "fistful,dmt,party_management,shumway,liminator"
+      POSTGRES_MULTIPLE_DATABASES: "fistful,bender,dmt,party_management,shumway,liminator"
       POSTGRES_PASSWORD: "postgres"
     volumes:
       - ./test/postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
