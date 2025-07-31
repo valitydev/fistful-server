@@ -13,7 +13,6 @@
 -export([payment_system/2]).
 -export([payment_service/2]).
 -export([crypto_currency/2]).
--export([contract_template/2]).
 -export([inspector/3]).
 -export([inspector/4]).
 -export([proxy/2]).
@@ -24,7 +23,6 @@
 -export([term_set_hierarchy/1]).
 -export([term_set_hierarchy/2]).
 -export([term_set_hierarchy/3]).
--export([timed_term_set/1]).
 -export([globals/2]).
 -export([withdrawal_provider/4]).
 -export([withdrawal_provider/5]).
@@ -42,7 +40,7 @@
 -type object() :: dmsl_domain_thrift:'DomainObject'().
 
 -type party_id() :: dmsl_domain_thrift:'PartyID'().
--type wallet_id() :: dmsl_domain_thrift:'WalletID'().
+-type wallet_id() :: dmsl_domain_thrift:'WalletConfigID'().
 -type party() :: dmsl_domain_thrift:'PartyConfig'().
 -type termset_ref() :: dmsl_domain_thrift:'TermSetHierarchyRef'().
 -type payment_inst_ref() :: dmsl_domain_thrift:'PaymentInstitutionRef'().
@@ -51,12 +49,10 @@
 -spec create_party(party_id()) -> party().
 create_party(PartyID) ->
     PartyConfig = #domain_PartyConfig{
-        id = PartyID,
         contact_info = #domain_PartyContactInfo{
             registration_email = <<"test@test.ru">>
         },
-        created_at = ff_time:rfc3339(),
-        blocking =
+        block =
             {unblocked, #domain_Unblocked{
                 reason = <<"">>,
                 since = ff_time:rfc3339()
@@ -97,9 +93,7 @@ create_wallet(WalletID, PartyID, Currency, TermsRef, PaymentInstRef) ->
 
     % Создаем Wallet как объект конфигурации
     WalletConfig = #domain_WalletConfig{
-        id = WalletID,
-        created_at = ff_time:rfc3339(),
-        blocking =
+        block =
             {unblocked, #domain_Unblocked{
                 reason = <<"">>,
                 since = ff_time:rfc3339()
@@ -108,15 +102,11 @@ create_wallet(WalletID, PartyID, Currency, TermsRef, PaymentInstRef) ->
             {active, #domain_Active{
                 since = ff_time:rfc3339()
             }},
-        details = #domain_Details{
-            name = <<"Test Wallet">>,
-            description = <<"Test description">>
-        },
-        currency_configs = #{
-            #domain_CurrencyRef{symbolic_code = Currency} => #domain_WalletCurrencyConfig{
-                currency = #domain_CurrencyRef{symbolic_code = Currency},
-                settlement = SettlementID
-            }
+        name = <<"Test Wallet">>,
+        description = <<"Test description">>,
+        account = #domain_WalletAccount{
+            currency = #domain_CurrencyRef{symbolic_code = Currency},
+            settlement = SettlementID
         },
         payment_institution = PaymentInstRef,
         terms = TermsRef,
@@ -291,20 +281,6 @@ crypto_currency(Ref, Name) ->
         }
     }}.
 
--spec contract_template(?DTP('ContractTemplateRef'), ?DTP('TermSetHierarchyRef')) -> object().
-contract_template(Ref, TermsRef) ->
-    contract_template(Ref, TermsRef, undefined, undefined).
-
-contract_template(Ref, TermsRef, ValidSince, ValidUntil) ->
-    {contract_template, #domain_ContractTemplateObject{
-        ref = Ref,
-        data = #domain_ContractTemplate{
-            valid_since = ValidSince,
-            valid_until = ValidUntil,
-            terms = TermsRef
-        }
-    }}.
-
 -spec inspector(?DTP('InspectorRef'), binary(), ?DTP('ProxyRef')) -> object().
 inspector(Ref, Name, ProxyRef) ->
     inspector(Ref, Name, ProxyRef, #{}).
@@ -398,13 +374,6 @@ term_set_hierarchy(Ref, ParentRef, TermSets) ->
             term_sets = TermSets
         }
     }}.
-
--spec timed_term_set(?DTP('TermSet')) -> ?DTP('TimedTermSet').
-timed_term_set(TermSet) ->
-    #domain_TimedTermSet{
-        action_time = #'base_TimestampInterval'{},
-        terms = TermSet
-    }.
 
 -spec globals(?DTP('ExternalAccountSetRef'), [?DTP('PaymentInstitutionRef')]) -> object().
 globals(EASRef, PIRefs) ->
