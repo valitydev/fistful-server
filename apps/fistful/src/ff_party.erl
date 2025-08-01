@@ -180,7 +180,7 @@ wallet_log_balance(WalletID, Wallet) ->
 
 -spec get_wallet_account(wallet()) -> {account_id(), currency_id()}.
 get_wallet_account(#domain_WalletConfig{
-    account = #domain_WalletAccount{settlement = SettlementID, currency = Currency}
+    account = #domain_WalletAccount{settlement = SettlementID, currency = #domain_CurrencyRef{symbolic_code = Currency}}
 }) ->
     {SettlementID, Currency}.
 

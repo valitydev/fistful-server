@@ -977,8 +977,8 @@ domain_config(Options) ->
         ct_domain:withdrawal_provider(?prv(16), ?prx(2), live, undefined),
         ct_domain:withdrawal_provider(?prv(17), ?prx(2), live, ProviderTermSet),
 
-        ct_domain:term_set_hierarchy(?trms(1), [default_termset(Options)]),
-        ct_domain:term_set_hierarchy(?trms(2), [company_termset(Options)]),
+        ct_domain:term_set_hierarchy(?trms(1), default_termset(Options)),
+        ct_domain:term_set_hierarchy(?trms(2), company_termset(Options)),
 
         ct_domain:withdrawal_terminal(?trm(1), ?prv(1)),
         ct_domain:withdrawal_terminal(?trm(2), ?prv(1)),

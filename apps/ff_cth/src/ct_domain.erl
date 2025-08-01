@@ -20,7 +20,6 @@
 -export([proxy/4]).
 -export([system_account_set/3]).
 -export([external_account_set/3]).
--export([term_set_hierarchy/1]).
 -export([term_set_hierarchy/2]).
 -export([term_set_hierarchy/3]).
 -export([globals/2]).
@@ -49,6 +48,8 @@
 -spec create_party(party_id()) -> party().
 create_party(PartyID) ->
     PartyConfig = #domain_PartyConfig{
+        name = <<"Test Party">>,
+        description = <<"Test description">>,
         contact_info = #domain_PartyContactInfo{
             registration_email = <<"test@test.ru">>
         },
@@ -356,22 +357,18 @@ external_account_set(Ref, Name, ?cur(SymCode)) ->
         }
     }}.
 
--spec term_set_hierarchy(?DTP('TermSetHierarchyRef')) -> object().
-term_set_hierarchy(Ref) ->
-    term_set_hierarchy(Ref, []).
+-spec term_set_hierarchy(?DTP('TermSetHierarchyRef'), ?DTP('TermSet')) -> object().
+term_set_hierarchy(Ref, TermSet) ->
+    term_set_hierarchy(Ref, undefined, TermSet).
 
--spec term_set_hierarchy(?DTP('TermSetHierarchyRef'), [?DTP('TimedTermSet')]) -> object().
-term_set_hierarchy(Ref, TermSets) ->
-    term_set_hierarchy(Ref, undefined, TermSets).
-
--spec term_set_hierarchy(Ref, ff_maybe:'maybe'(Ref), [?DTP('TimedTermSet')]) -> object() when
+-spec term_set_hierarchy(Ref, ff_maybe:'maybe'(Ref), ?DTP('TermSet')) -> object() when
     Ref :: ?DTP('TermSetHierarchyRef').
-term_set_hierarchy(Ref, ParentRef, TermSets) ->
+term_set_hierarchy(Ref, ParentRef, TermSet) ->
     {term_set_hierarchy, #domain_TermSetHierarchyObject{
         ref = Ref,
         data = #domain_TermSetHierarchy{
             parent_terms = ParentRef,
-            term_sets = TermSets
+            term_set = TermSet
         }
     }}.
 
