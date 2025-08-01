@@ -202,7 +202,7 @@ services(Options) ->
         partymgmt => "http://party-management:8022/v1/processing/partymgmt",
         binbase => "http://localhost:8222/binbase",
         limiter => "http://limiter:8022/v1/limiter",
-        party_config => "http://party-management:8022/v1/processing/partycfg"
+        party_config => "http://party-management:8022/v1/processing/partymgmt"
     },
     maps:get(services, Options, Default).
 

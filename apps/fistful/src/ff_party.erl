@@ -224,7 +224,7 @@ is_wallet_accessible(_) ->
 get_terms(DomainRevision, #domain_WalletConfig{terms = Ref}, Varset) ->
     DomainVarset = ff_varset:encode(Varset),
     Args = {Ref, DomainRevision, DomainVarset},
-    Request = {{dmsl_payproc_thrift, 'PartyConfigManagement'}, 'ComputeTerms', Args},
+    Request = {{dmsl_payproc_thrift, 'PartyManagement'}, 'ComputeTerms', Args},
     case ff_woody_client:call(party_config, Request) of
         {ok, Terms} ->
             Terms;
