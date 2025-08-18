@@ -61,9 +61,7 @@ create_party(PartyID) ->
         suspension =
             {active, #domain_Active{
                 since = ff_time:rfc3339()
-            }},
-        shops = [],
-        wallets = []
+            }}
     },
 
     % Вставляем Party в домен
@@ -75,17 +73,6 @@ create_party(PartyID) ->
     ),
 
     PartyConfig.
-
-change_party(PartyID, Fun) ->
-    PartyConfig0 = ct_domain_config:get({party_config, #domain_PartyConfigRef{id = PartyID}}),
-    PartyConfig1 = Fun(PartyConfig0),
-    _ = ct_domain_config:upsert(
-        {party_config, #domain_PartyConfigObject{
-            ref = #domain_PartyConfigRef{id = PartyID},
-            data = PartyConfig1
-        }}
-    ),
-    ok.
 
 -spec create_wallet(wallet_id(), party_id(), currency(), termset_ref(), payment_inst_ref()) -> wallet_id().
 create_wallet(WalletID, PartyID, Currency, TermsRef, PaymentInstRef) ->
@@ -111,7 +98,7 @@ create_wallet(WalletID, PartyID, Currency, TermsRef, PaymentInstRef) ->
         },
         payment_institution = PaymentInstRef,
         terms = TermsRef,
-        party_id = PartyID
+        party_ref = #domain_PartyConfigRef{id = PartyID}
     },
 
     % Вставляем Wallet в домен
@@ -121,12 +108,6 @@ create_wallet(WalletID, PartyID, Currency, TermsRef, PaymentInstRef) ->
             data = WalletConfig
         }}
     ),
-
-    change_party(PartyID, fun(PartyConfig) ->
-        PartyConfig#domain_PartyConfig{
-            wallets = [#domain_WalletConfigRef{id = WalletID} | PartyConfig#domain_PartyConfig.wallets]
-        }
-    end),
 
     WalletID.
 

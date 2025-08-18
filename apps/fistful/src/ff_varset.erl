@@ -32,9 +32,14 @@ encode(Varset) ->
         wallet_id = genlib_map:get(wallet_id, Varset),
         payment_tool = PaymentTool,
         payment_method = encode_payment_method(PaymentTool),
-        party_id = genlib_map:get(party_id, Varset),
+        party_ref = encode_party_ref(genlib_map:get(party_id, Varset)),
         bin_data = genlib_map:get(bin_data, Varset)
     }.
+
+encode_party_ref(undefined) ->
+    undefined;
+encode_party_ref(PartyID) ->
+    #domain_PartyConfigRef{id = PartyID}.
 
 -spec encode_payment_method(ff_destination:resource_params() | undefined) ->
     dmsl_domain_thrift:'PaymentMethodRef'() | undefined.

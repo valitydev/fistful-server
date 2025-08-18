@@ -1665,7 +1665,7 @@ condition(cost_in, {Min, Max, Currency}) ->
                 {exclusive, ?cash(Max, Currency)}
             )}};
 condition(party, ID) ->
-    {condition, {party, #domain_PartyCondition{id = ID}}}.
+    {condition, {party, #domain_PartyCondition{party_ref = #domain_PartyConfigRef{id = ID}}}}.
 
 delegate(Allowed, RuleSetRef) ->
     #domain_RoutingDelegate{
