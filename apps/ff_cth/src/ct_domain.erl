@@ -38,8 +38,8 @@
 
 -type object() :: dmsl_domain_thrift:'DomainObject'().
 
--type party_id() :: dmsl_domain_thrift:'PartyID'().
--type wallet_id() :: dmsl_domain_thrift:'WalletConfigID'().
+-type party_id() :: dmsl_base_thrift:'ID'().
+-type wallet_id() :: dmsl_base_thrift:'ID'().
 -type party() :: dmsl_domain_thrift:'PartyConfig'().
 -type termset_ref() :: dmsl_domain_thrift:'TermSetHierarchyRef'().
 -type payment_inst_ref() :: dmsl_domain_thrift:'PaymentInstitutionRef'().

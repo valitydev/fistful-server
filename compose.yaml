@@ -28,7 +28,7 @@ services:
     command: /sbin/init
 
   dmt:
-    image: ghcr.io/valitydev/dominant-v2:sha-f55c065
+    image: ghcr.io/valitydev/dominant-v2:sha-cfe21ab
     command: /opt/dmt/bin/dmt foreground
     healthcheck:
       test: "/opt/dmt/bin/dmt ping"

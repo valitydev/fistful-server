@@ -35,7 +35,7 @@
   0},
  {<<"dmt_client">>,
   {git,"https://github.com/valitydev/dmt_client.git",
-       {ref,"fff521d3d50b48e3c6b628fe4796b3628aedc6b7"}},
+       {ref,"20c18cc9b51d0f273db60c929e8a8a871d6a1866"}},
   0},
  {<<"epg_connector">>,
   {git,"https://github.com/valitydev/epg_connector.git",

@@ -273,8 +273,11 @@ marshal_withdrawal(Withdrawal) ->
     } = ff_withdrawal:params(Withdrawal),
     DomainRevision = ff_withdrawal:final_domain_revision(Withdrawal),
     PartyID = ff_withdrawal:party_id(Withdrawal),
-    {ok, Party} = ff_party:checkout(ff_withdrawal:party_id(Withdrawal), DomainRevision),
-    {ok, Wallet} = ff_party:get_wallet(WalletID, Party, DomainRevision),
+    {ok, Wallet} = ff_party:get_wallet(
+        WalletID,
+        #domain_PartyConfigRef{id = PartyID},
+        DomainRevision
+    ),
     {AccountID, Currency} = ff_party:get_wallet_account(Wallet),
     WalletRealm = ff_party:get_wallet_realm(Wallet, DomainRevision),
     WalletAccount = ff_account:build(PartyID, WalletRealm, AccountID, Currency),
