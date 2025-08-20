@@ -588,7 +588,7 @@ get_limit_withdrawal(Cash, WalletID, DestinationID, AuthData) ->
             _ ->
                 AuthData
         end,
-    #domain_WalletConfig{party_ref = Sender} = ct_objects:get_wallet_balance(WalletID),
+    #domain_WalletConfig{party_ref = Sender} = ct_objects:get_wallet(WalletID),
     #wthd_domain_Withdrawal{
         created_at = ff_codec:marshal(timestamp_ms, ff_time:now()),
         body = ff_dmsl_codec:marshal(cash, Cash),
