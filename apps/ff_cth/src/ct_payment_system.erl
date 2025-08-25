@@ -361,8 +361,8 @@ domain_config_add_version(_Options) ->
     ].
 
 domain_config(Options) ->
-    ct_domain:create_party(<<"12345">>),
-    ct_domain:create_party(<<"67890">>),
+    _ = ct_domain:create_party(<<"12345">>),
+    _ = ct_domain:create_party(<<"67890">>),
     ProviderTermSet = #domain_ProvisionTermSet{
         wallet = #domain_WalletProvisionTerms{
             withdrawals = #domain_WithdrawalProvisionTerms{
