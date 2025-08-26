@@ -296,8 +296,8 @@ marshal_withdrawal(Withdrawal) ->
         destination = MarshaledResource,
         auth_data = MarshaledAuthData,
         %% TODO: change proto
-        sender = ff_account:party_id(WalletAccount),
-        receiver = ff_account:party_id(DestinationAccount)
+        sender = #domain_PartyConfigRef{id =ff_account:party_id(WalletAccount)},
+        receiver = #domain_PartyConfigRef{id =ff_account:party_id(DestinationAccount)}
     }.
 
 -spec get(limit_id(), limit_version(), clock(), context()) -> limit() | no_return().
