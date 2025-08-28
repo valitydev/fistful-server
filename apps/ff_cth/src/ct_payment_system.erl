@@ -150,7 +150,7 @@ start_optional_apps(_) ->
 
 setup_dominant(Config0, Options) ->
     Config1 = setup_dominant_internal(Config0, Options),
-    DomainConfig = domain_config(Options),
+    DomainConfig = domain_config(Config1, Options),
     _ = ct_domain_config:upsert(DomainConfig),
     DomainConfigUpdate = domain_config_add_version(Options),
     _ = ct_domain_config:upsert(DomainConfigUpdate),
@@ -360,7 +360,7 @@ domain_config_add_version(_Options) ->
         ct_domain:withdrawal_provider(AccountID, ?prv(1), ?prx(2), live, ProviderTermSet)
     ].
 
-domain_config(Options) ->
+domain_config(Config, Options) ->
     _ = ct_domain:create_party(<<"12345">>),
     _ = ct_domain:create_party(<<"67890">>),
     ProviderTermSet = #domain_ProvisionTermSet{
@@ -1056,7 +1056,7 @@ domain_config(Options) ->
                         currencies = {value, ?ordset([?cur(<<"RUB">>), ?cur(<<"BTC">>)])},
                         turnover_limit =
                             {value, [
-                                ?trnvrlimit(?LIMIT_TURNOVER_NUM_PAYTOOL_ID1, 1000)
+                                ?trnvrlimit(?LIMIT_TURNOVER_NUM_PAYTOOL_ID1, 1000, Config)
                             ]}
                     }
                 }
@@ -1071,7 +1071,7 @@ domain_config(Options) ->
                     withdrawals = #domain_WithdrawalProvisionTerms{
                         turnover_limit =
                             {value, [
-                                ?trnvrlimit(?LIMIT_TURNOVER_NUM_PAYTOOL_ID2, 0)
+                                ?trnvrlimit(?LIMIT_TURNOVER_NUM_PAYTOOL_ID2, 0, Config)
                             ]}
                     }
                 }
@@ -1086,7 +1086,7 @@ domain_config(Options) ->
                     withdrawals = #domain_WithdrawalProvisionTerms{
                         turnover_limit =
                             {value, [
-                                ?trnvrlimit(?LIMIT_TURNOVER_NUM_PAYTOOL_ID2, 1000)
+                                ?trnvrlimit(?LIMIT_TURNOVER_NUM_PAYTOOL_ID2, 1000, Config)
                             ]}
                     }
                 }
@@ -1101,7 +1101,7 @@ domain_config(Options) ->
                     withdrawals = #domain_WithdrawalProvisionTerms{
                         turnover_limit =
                             {value, [
-                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID1, 1804000)
+                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID1, 1804000, Config)
                             ]}
                     }
                 }
@@ -1116,7 +1116,7 @@ domain_config(Options) ->
                     withdrawals = #domain_WithdrawalProvisionTerms{
                         turnover_limit =
                             {value, [
-                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID2, 903000)
+                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID2, 903000, Config)
                             ]}
                     }
                 }
@@ -1131,7 +1131,7 @@ domain_config(Options) ->
                     withdrawals = #domain_WithdrawalProvisionTerms{
                         turnover_limit =
                             {value, [
-                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID2, 2000000)
+                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID2, 2000000, Config)
                             ]}
                     }
                 }
@@ -1146,7 +1146,7 @@ domain_config(Options) ->
                     withdrawals = #domain_WithdrawalProvisionTerms{
                         turnover_limit =
                             {value, [
-                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID2, 3000000)
+                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID2, 3000000, Config)
                             ]}
                     }
                 }
@@ -1161,7 +1161,7 @@ domain_config(Options) ->
                     withdrawals = #domain_WithdrawalProvisionTerms{
                         turnover_limit =
                             {value, [
-                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID3, 2000000)
+                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID3, 2000000, Config)
                             ]}
                     }
                 }
@@ -1176,7 +1176,7 @@ domain_config(Options) ->
                     withdrawals = #domain_WithdrawalProvisionTerms{
                         turnover_limit =
                             {value, [
-                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID4, 3000000)
+                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID4, 3000000, Config)
                             ]}
                     }
                 }
@@ -1191,7 +1191,7 @@ domain_config(Options) ->
                     withdrawals = #domain_WithdrawalProvisionTerms{
                         turnover_limit =
                             {value, [
-                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID3, 4000000)
+                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID3, 4000000, Config)
                             ]}
                     }
                 }
@@ -1207,7 +1207,7 @@ domain_config(Options) ->
                         currencies = {value, ?ordset([?cur(<<"RUB">>), ?cur(<<"BTC">>)])},
                         turnover_limit =
                             {value, [
-                                ?trnvrlimit(?LIMIT_TURNOVER_NUM_SENDER_ID1, 1000)
+                                ?trnvrlimit(?LIMIT_TURNOVER_NUM_SENDER_ID1, 1000, Config)
                             ]}
                     }
                 }
@@ -1235,7 +1235,7 @@ domain_config(Options) ->
                         allow = {constant, false},
                         turnover_limit =
                             {value, [
-                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID2, 123123)
+                                ?trnvrlimit(?LIMIT_TURNOVER_AMOUNT_PAYTOOL_ID2, 123123, Config)
                             ]}
                     }
                 }
