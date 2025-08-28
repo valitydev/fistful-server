@@ -33,7 +33,9 @@
 -define(payinst(ID), #domain_PaymentInstitutionRef{id = ID}).
 -define(ruleset(ID), #domain_RoutingRulesetRef{id = ID}).
 -define(trnvrlimit(ID, UpperBoundary, C), #domain_TurnoverLimit{
-    id = ID, domain_revision = ct_helper:cfg_with_default('$limits_domain_revision', C, 1), upper_boundary = UpperBoundary
+    id = ID,
+    domain_revision = ct_helper:cfg_with_default('$limits_domain_revision', C, 1),
+    upper_boundary = UpperBoundary
 }).
 
 -define(cash(Amount, SymCode), #domain_Cash{amount = Amount, currency = ?cur(SymCode)}).
