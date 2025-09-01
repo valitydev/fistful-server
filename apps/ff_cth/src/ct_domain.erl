@@ -5,6 +5,7 @@
 -module(ct_domain).
 
 -export([create_party/1]).
+-export([build_party_obj/1]).
 -export([create_wallet/5]).
 
 -export([currency/1]).
@@ -40,13 +41,19 @@
 
 -type party_id() :: dmsl_base_thrift:'ID'().
 -type wallet_id() :: dmsl_base_thrift:'ID'().
--type party() :: dmsl_domain_thrift:'PartyConfig'().
 -type termset_ref() :: dmsl_domain_thrift:'TermSetHierarchyRef'().
 -type payment_inst_ref() :: dmsl_domain_thrift:'PaymentInstitutionRef'().
 -type currency() :: dmsl_domain_thrift:'CurrencySymbolicCode'().
 
--spec create_party(party_id()) -> party().
+-spec create_party(party_id()) -> ok.
 create_party(PartyID) ->
+    _ = ct_domain_config:upsert(
+        build_party_obj(PartyID)
+    ),
+    ok.
+
+-spec build_party_obj(party_id()) -> object().
+build_party_obj(PartyID) ->
     PartyConfig = #domain_PartyConfig{
         name = <<"Test Party">>,
         description = <<"Test description">>,
@@ -63,16 +70,10 @@ create_party(PartyID) ->
                 since = ff_time:rfc3339()
             }}
     },
-
-    % Вставляем Party в домен
-    _ = ct_domain_config:upsert(
-        {party_config, #domain_PartyConfigObject{
-            ref = #domain_PartyConfigRef{id = PartyID},
-            data = PartyConfig
-        }}
-    ),
-
-    PartyConfig.
+    {party_config, #domain_PartyConfigObject{
+        ref = #domain_PartyConfigRef{id = PartyID},
+        data = PartyConfig
+    }}.
 
 -spec create_wallet(wallet_id(), party_id(), currency(), termset_ref(), payment_inst_ref()) -> wallet_id().
 create_wallet(WalletID, PartyID, Currency, TermsRef, PaymentInstRef) ->

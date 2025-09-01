@@ -361,8 +361,6 @@ domain_config_add_version(_Options) ->
     ].
 
 domain_config(Config, Options) ->
-    _ = ct_domain:create_party(<<"12345">>),
-    _ = ct_domain:create_party(<<"67890">>),
     ProviderTermSet = #domain_ProvisionTermSet{
         wallet = #domain_WalletProvisionTerms{
             withdrawals = #domain_WithdrawalProvisionTerms{
@@ -425,6 +423,9 @@ domain_config(Config, Options) ->
     Default = [
         ct_domain:globals(?eas(1), [?payinst(1)]),
         ct_domain:external_account_set(?eas(1), <<"Default">>, ?cur(<<"RUB">>)),
+
+        ct_domain:build_party_obj(<<"12345">>),
+        ct_domain:build_party_obj(<<"67890">>),
 
         routing_ruleset(
             ?ruleset(?EMPTY_ROUTING_RULESET),
