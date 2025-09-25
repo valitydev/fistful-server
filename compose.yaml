@@ -144,7 +144,7 @@ services:
       - ./test/bender/sys.config:/opt/bender/releases/1.0.0/sys.config
 
   db:
-    image: postgres:15-bookworm
+    image: postgres:17-bookworm
     command: -c 'max_connections=1000'
     environment:
       POSTGRES_MULTIPLE_DATABASES: "fistful,bender,dmt,party_management,shumway,liminator"
