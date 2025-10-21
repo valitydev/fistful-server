@@ -83,7 +83,7 @@ start_processing_apps(Options) ->
         dmt_client,
         party_client,
         {fistful, [
-            {machinery_backend, hybrid},
+            {machinery_backend, progressor},
             {services, services(Options)}
         ]},
         ff_server,
@@ -197,7 +197,6 @@ do_set_env([Key | Path], Value, Env) ->
 services(Options) ->
     Default = #{
         ff_withdrawal_adapter_host => "http://fistful-server:8022/v1/ff_withdrawal_adapter_host",
-        automaton => "http://machinegun:8022/v1/automaton",
         accounter => "http://shumway:8022/accounter",
         partymgmt => "http://party-management:8022/v1/processing/partymgmt",
         binbase => "http://localhost:8222/binbase",
