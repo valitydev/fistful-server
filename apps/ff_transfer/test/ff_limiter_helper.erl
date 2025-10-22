@@ -16,8 +16,6 @@
 -type config() :: ct_suite:ct_config().
 -type id() :: binary().
 
--define(PLACEHOLDER_UNINITIALIZED_LIMIT_ID, <<"uninitialized limit">>).
-
 -spec init_per_suite(config()) -> _.
 init_per_suite(Config) ->
     SenderScopes = [{sender, #limiter_config_LimitScopeEmptyDetails{}}],

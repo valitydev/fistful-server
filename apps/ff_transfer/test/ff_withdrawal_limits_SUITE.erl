@@ -76,9 +76,7 @@ init_per_suite(C) ->
     ct_helper:makeup_cfg(
         [
             ct_helper:test_case_name(init),
-            ct_payment_system:setup(#{
-                setup_dominant => fun ff_limiter_helper:init_per_suite/1
-            })
+            ct_payment_system:setup()
         ],
         C
     ).

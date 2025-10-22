@@ -150,11 +150,12 @@ start_optional_apps(_) ->
 
 setup_dominant(Config0, Options) ->
     Config1 = setup_dominant_internal(Config0, Options),
-    DomainConfig = domain_config(Config1, Options),
+    Config2 = ff_limiter_helper:init_per_suite(Config1),
+    DomainConfig = domain_config(Config2, Options),
     _ = ct_domain_config:upsert(DomainConfig),
     DomainConfigUpdate = domain_config_add_version(Options),
     _ = ct_domain_config:upsert(DomainConfigUpdate),
-    Config1.
+    Config2.
 
 setup_dominant_internal(Config, #{setup_dominant := Func}) when is_function(Func, 1) ->
     Func(Config);
