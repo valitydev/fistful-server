@@ -72,7 +72,10 @@ remove(NS, ID, Backend) ->
 
 %%
 
--type handler_opts() :: _.
+-type handler_opts() :: machinery:handler_opts(#{
+    woody_ctx := woody_context:ctx(),
+    otel_ctx => otel_ctx:t()
+}).
 
 -spec init(args(_), machine(E, A), options(), handler_opts()) -> result(E, A).
 init(Args, Machine, #{handler := Handler} = Options, MachineryOptions) ->
