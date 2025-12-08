@@ -71,7 +71,7 @@
   0},
  {<<"machinery">>,
   {git,"https://github.com/valitydev/machinery-erlang.git",
-       {ref,"0d64b25db364589523dd5719b6f719bc6279b715"}},
+       {ref,"5d28bc0acf3e963a61ae5043772a9b03d95772d8"}},
   0},
  {<<"metrics">>,{pkg,<<"metrics">>,<<"1.0.1">>},2},
  {<<"mg_proto">>,
@@ -134,7 +134,7 @@
   0},
  {<<"woody">>,
   {git,"https://github.com/valitydev/woody_erlang",
-       {ref,"43175ef5930a28c3e44ea7ad57d18665d0b8a01f"}},
+       {ref,"3de9a236b66807d5397b28aed42e2b1c85f36739"}},
   0}]}.
 [
 {pkg_hash,[
