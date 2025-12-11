@@ -127,7 +127,13 @@ decode_adapter(#domain_Proxy{ref = ProxyRef, additional = ProviderOpts}) ->
         url = URL,
         options = ProxyOpts
     } = Proxy,
+    Opts = #{
+        url => URL,
+        transport_opts => #{
+            recv_timeout => 60000
+        }
+    },
     #{
-        adapter => ff_woody_client:new(URL),
+        adapter => ff_woody_client:new(Opts),
         adapter_opts => maps:merge(ProviderOpts, ProxyOpts)
     }.
