@@ -97,7 +97,7 @@ init([]) ->
                 handlers => WoodyHandlers,
                 event_handler => ff_woody_event_handler,
                 additional_routes =>
-                    get_prometheus_routes() ++
+                    get_prometheus_routes() ++ ff_machine_handler:get_routes() ++
                     [erl_health_handle:get_route(enable_health_logging(HealthCheck))]
             }
         )

@@ -23,6 +23,7 @@
 -export([repair/5]).
 -export([notify/5]).
 -export([remove/3]).
+-export([trace/3]).
 
 -export([init/4]).
 -export([process_timeout/3]).
@@ -69,6 +70,10 @@ notify(NS, ID, Range, Args, Backend) ->
 -spec remove(namespace(), id(), machinery:backend(_)) -> ok | {error, notfound}.
 remove(NS, ID, Backend) ->
     machinery:remove(NS, ID, set_backend_context(Backend)).
+
+-spec trace(namespace(), id(), machinery:backend(_)) -> _.
+trace(NS, ID, Backend) ->
+    machinery:trace(NS, ID, Backend).
 
 %%
 
