@@ -133,6 +133,8 @@ services:
     environment:
       POSTGRES_MULTIPLE_DATABASES: "fistful,bender,dmt,party_management,shumway,liminator"
       POSTGRES_PASSWORD: "postgres"
+    ports:
+      - "5432:5432"
     volumes:
       - ./test/postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
     healthcheck:
