@@ -43,6 +43,7 @@
 -export([create_adjustment_already_has_status_error_test/1]).
 -export([create_adjustment_already_has_data_revision_error_test/1]).
 -export([withdrawal_state_content_test/1]).
+-export([trace_withdrawal_test/1]).
 
 -type config() :: ct_helper:config().
 -type test_case_name() :: ct_helper:test_case_name().
@@ -282,6 +283,82 @@ create_withdrawal_ok_test(_C) ->
         {succeeded, _},
         FinalWithdrawalState#wthd_WithdrawalState.status
     ).
+
+-spec trace_withdrawal_test(config()) -> test_return().
+trace_withdrawal_test(_C) ->
+    Cash = make_cash({1000, <<"RUB">>}),
+    Ctx = ct_objects:build_default_ctx(),
+    #{
+        party_id := PartyID,
+        wallet_id := WalletID,
+        destination_id := DestinationID
+    } = ct_objects:prepare_standard_environment(Ctx#{body => Cash}),
+    WithdrawalID = genlib:bsuuid(),
+    ExternalID = genlib:bsuuid(),
+    Context = ff_entity_context_codec:marshal(#{<<"NS">> => #{}}),
+    Metadata = ff_entity_context_codec:marshal(#{<<"metadata">> => #{<<"some key">> => <<"some data">>}}),
+    ContactInfo = #fistful_base_ContactInfo{
+        phone_number = <<"1234567890">>,
+        email = <<"test@mail.com">>
+    },
+    Params = #wthd_WithdrawalParams{
+        id = WithdrawalID,
+        party_id = PartyID,
+        wallet_id = WalletID,
+        destination_id = DestinationID,
+        body = Cash,
+        metadata = Metadata,
+        external_id = ExternalID,
+        contact_info = ContactInfo
+    },
+    {ok, _WithdrawalState} = call_withdrawal('Create', {Params, Context}),
+    succeeded = ct_objects:await_final_withdrawal_status(WithdrawalID),
+
+    TraceUrl = <<"http://localhost:8022/traces/internal/withdrawal_v2/", WithdrawalID/binary>>,
+    {ok, 200, _Headers, Ref} = hackney:get(TraceUrl),
+    {ok, Body} = hackney:body(Ref),
+    [
+        #{
+            <<"args">> := [
+                [
+                    #{<<"created">> := _},
+                    #{<<"status_changed">> := <<"pending">>},
+                    #{<<"resource_got">> := #{<<"bank_card">> := _}}
+                ],
+                #{<<"NS">> := #{}}
+            ],
+            <<"error">> := null,
+            <<"events">> := [
+                #{<<"event_id">> := 1, <<"event_timestamp">> := _, <<"event_payload">> := #{<<"created">> := _}},
+                #{<<"event_id">> := 2, <<"event_timestamp">> := _, <<"event_payload">> := #{<<"status_changed">> := _}},
+                #{<<"event_id">> := 3, <<"event_timestamp">> := _, <<"event_payload">> := #{<<"resource_got">> := _}}
+            ],
+            <<"finished">> := _,
+            <<"otel_trace_id">> := _,
+            <<"retry_attempts">> := _,
+            <<"retry_interval">> := _,
+            <<"running">> := _,
+            <<"scheduled">> := _,
+            <<"task_id">> := _,
+            <<"task_metadata">> := #{<<"range">> := #{}},
+            <<"task_status">> := <<"finished">>,
+            <<"task_type">> := <<"init">>
+        },
+        #{<<"task_status">> := <<"finished">>, <<"task_type">> := <<"timeout">>},
+        #{<<"task_status">> := <<"finished">>, <<"task_type">> := <<"timeout">>},
+        #{<<"task_status">> := <<"finished">>, <<"task_type">> := <<"timeout">>},
+        #{<<"task_status">> := <<"finished">>, <<"task_type">> := <<"timeout">>},
+        #{<<"task_status">> := <<"finished">>, <<"task_type">> := <<"timeout">>},
+        #{<<"task_status">> := <<"finished">>, <<"task_type">> := <<"timeout">>},
+        #{
+            <<"args">> := #{<<"notify">> := [<<"session_finished">> | _]},
+            <<"task_status">> := <<"finished">>,
+            <<"task_type">> := <<"call">>
+        },
+        #{<<"task_status">> := <<"finished">>, <<"task_type">> := <<"timeout">>},
+        #{<<"task_status">> := <<"finished">>, <<"task_type">> := <<"timeout">>}
+    ] = json:decode(Body),
+    ok.
 
 -spec create_withdrawal_fail_email_test(config()) -> test_return().
 create_withdrawal_fail_email_test(_C) ->
