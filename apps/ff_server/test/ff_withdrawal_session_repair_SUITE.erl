@@ -152,12 +152,7 @@ repair_failed_session_with_failure(C) ->
             <<"task_type">> := <<"init">>
         },
         #{
-            %% MAYBE io_lib:format instead of json compatible value
-            <<"error">> := [
-                <<"exception">>,
-                <<"error">>,
-                #{<<"badmatch">> := #{<<"error">> := <<"notfound">>}}
-            ],
+            <<"error">> := <<"{exception,error,{badmatch,{error,notfound}}}">>,
             <<"task_status">> := <<"error">>,
             <<"task_type">> := <<"timeout">>
         },
@@ -180,11 +175,7 @@ repair_failed_session_with_failure(C) ->
         },
         #{
             %% Error because can`t notify withdrawal machine
-            <<"error">> := [
-                <<"exception">>,
-                <<"error">>,
-                #{<<"unable_to_finish_session">> := #{<<"error">> := <<"notfound">>}}
-            ],
+            <<"error">> := <<"{exception,error,{unable_to_finish_session,{error,notfound}}}">>,
             <<"task_status">> := <<"error">>,
             <<"task_type">> := <<"timeout">>
         }

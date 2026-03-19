@@ -176,7 +176,8 @@ extract_trace_id(_) ->
     null.
 
 extract_error(#{response := {error, Reason}}) ->
-    json_compatible_value(Reason);
+    %% unification with hellgate
+    unicode:characters_to_binary(io_lib:format("~p", [Reason]));
 extract_error(_) ->
     null.
 
